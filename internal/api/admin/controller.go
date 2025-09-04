@@ -1,44 +1,78 @@
 package api
 
 import (
-	"errors"
+	"database/sql"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vention/booking_api/internal/config"
+	common "github.com/vention/booking_api/internal/api/common"
+	db "github.com/vention/booking_api/internal/repository"
+	"golang.org/x/crypto/bcrypt"
 )
 
-type AdminsHandler struct {
-	cfg        *config.Config
-	adminsRepo AdminsRepository
-}
-
-type AdminsHandlerParams struct {
-	Router     *gin.Engine
-	Cfg        *config.Config
-	AdminsRepo AdminsRepository
-}
-
-func AdminsRegister(p AdminsHandlerParams) error {
-	if p.Router == nil {
-		return errors.New("missing router")
+// CreateProfessional handles POST /api/admin/professionals
+func (h *AdminsHandler) CreateProfessional(c *gin.Context) {
+	var req CreateProfessionalRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid request body", err)
+		return
 	}
 
-	if p.AdminsRepo == nil {
-		return errors.New("missing clients repository")
+	// Hash the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusInternalServerError, "password_hash_error", "Failed to hash password", err)
+		return
 	}
 
-	h := &AdminsHandler{
-		cfg:        p.Cfg,
-		adminsRepo: p.AdminsRepo,
+	// Convert phone number to sql.NullString
+	var phoneNumber sql.NullString
+	if req.PhoneNumber != "" {
+		phoneNumber = sql.NullString{String: req.PhoneNumber, Valid: true}
 	}
 
-	api := p.Router.Group("/api")
-	{
-		clients := api.Group("/admins")
-		{
-			clients.POST("/professionals", h.CreateProfessional)
+	// Convert chat_id to sql.NullInt64 (can be NULL for admin-created professionals)
+	var chatID sql.NullInt64
+	// chatID will be NULL by default
+
+	// Create new professional
+	user, err := h.adminsRepo.CreateProfessional(c, &db.CreateProfessionalParams{
+		Username:     req.Username,
+		FirstName:    req.FirstName,
+		LastName:     req.LastName,
+		PhoneNumber:  phoneNumber,
+		PasswordHash: sql.NullString{String: string(hashedPassword), Valid: true},
+		ChatID:       chatID,
+	})
+	if err != nil {
+		// Check if it's a unique constraint violation
+		if common.IsUniqueConstraintError(err) {
+			common.HandleErrorResponse(c, http.StatusConflict, "username_taken", "The provided username is already taken", nil)
+			return
 		}
+		common.HandleErrorResponse(c, http.StatusInternalServerError, "database_error", "Failed to create professional", err)
+		return
 	}
 
-	return nil
+	// Convert to response format
+	responseUser := User{
+		ID:        user.ID.String(),
+		Username:  user.Username,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		UserType:  "professional",
+		CreatedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt: user.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+
+	// Handle optional fields
+	if user.PhoneNumber.Valid {
+		responseUser.PhoneNumber = &user.PhoneNumber.String
+	}
+
+	response := CreateProfessionalResponse{
+		User: responseUser,
+	}
+
+	c.JSON(http.StatusCreated, response)
 }

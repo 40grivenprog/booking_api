@@ -26,7 +26,7 @@ func (h *ProfessionalsHandler) GetProfessionals(c *gin.Context) {
 			Username:  prof.Username,
 			FirstName: prof.FirstName,
 			LastName:  prof.LastName,
-			UserType:  string(prof.UserType),
+			UserType:  "professional",
 			CreatedAt: prof.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			UpdatedAt: prof.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		}
@@ -58,15 +58,9 @@ func (h *ProfessionalsHandler) SignInProfessional(c *gin.Context) {
 	}
 
 	// Get user by username
-	user, err := h.professionalsRepo.GetUserByUsername(c.Request.Context(), req.Username)
+	user, err := h.professionalsRepo.GetProfessionalByUsername(c.Request.Context(), req.Username)
 	if err != nil {
 		common.HandleErrorResponse(c, http.StatusUnauthorized, "invalid_credentials", "Username or password is incorrect", nil)
-		return
-	}
-
-	// Check if user is a professional
-	if user.UserType != "professional" {
-		common.HandleErrorResponse(c, http.StatusUnauthorized, "invalid_credentials", "User is not a professional", nil)
 		return
 	}
 
@@ -84,7 +78,7 @@ func (h *ProfessionalsHandler) SignInProfessional(c *gin.Context) {
 	}
 
 	// Update user's chat_id after successful authentication
-	updatedUser, err := h.professionalsRepo.UpdateUserChatID(c.Request.Context(), &db.UpdateUserChatIDParams{
+	updatedUser, err := h.professionalsRepo.UpdateProfessionalChatID(c.Request.Context(), &db.UpdateProfessionalChatIDParams{
 		ID:     user.ID,
 		ChatID: sql.NullInt64{Int64: req.ChatID, Valid: true},
 	})
@@ -99,7 +93,7 @@ func (h *ProfessionalsHandler) SignInProfessional(c *gin.Context) {
 		Username:  updatedUser.Username,
 		FirstName: updatedUser.FirstName,
 		LastName:  updatedUser.LastName,
-		UserType:  string(updatedUser.UserType),
+		UserType:  "professional",
 		CreatedAt: updatedUser.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt: updatedUser.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
@@ -113,7 +107,7 @@ func (h *ProfessionalsHandler) SignInProfessional(c *gin.Context) {
 	}
 
 	response := ProfessionalSignInResponse{
-		User:    responseUser,
+		User: responseUser,
 	}
 
 	c.JSON(http.StatusOK, response)

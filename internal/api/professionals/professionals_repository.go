@@ -6,7 +6,7 @@ import (
 )
 
 type ProfessionalsRepository interface {
-	GetProfessionals(ctx context.Context) ([]*db.User, error)
-	GetUserByUsername(ctx context.Context, username string) (*db.User, error)
-	UpdateUserChatID(ctx context.Context, arg *db.UpdateUserChatIDParams) (*db.User, error)
+	GetProfessionals(ctx context.Context) ([]*db.Professional, error)
+	GetProfessionalByUsername(ctx context.Context, username string) (*db.Professional, error)
+	UpdateProfessionalChatID(ctx context.Context, arg *db.UpdateProfessionalChatIDParams) (*db.Professional, error)
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	common "github.com/vention/booking_api/internal/api/common"
 	db "github.com/vention/booking_api/internal/repository"
 )
@@ -29,11 +30,11 @@ func (h *ClientsHandler) RegisterClient(c *gin.Context) {
 
 	// Create new client
 	user, err := h.clientsRepo.CreateClient(c.Request.Context(), &db.CreateClientParams{
-		Username:    req.Username,
 		FirstName:   req.FirstName,
 		LastName:    req.LastName,
 		PhoneNumber: phoneNumber,
 		ChatID:      chatID,
+		CreatedBy:   uuid.NullUUID{}, // NULL for now
 	})
 	if err != nil {
 		// Check if it's a unique constraint violation
@@ -48,10 +49,10 @@ func (h *ClientsHandler) RegisterClient(c *gin.Context) {
 	// Convert to response format
 	responseUser := User{
 		ID:        user.ID.String(),
-		Username:  user.Username,
+		Username:  "", // Clients don't have username
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
-		UserType:  string(user.UserType),
+		UserType:  "client",
 		CreatedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt: user.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}

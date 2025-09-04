@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/vention/booking_api/internal/api/common"
+	common "github.com/vention/booking_api/internal/api/common"
 	db "github.com/vention/booking_api/internal/repository"
 )
 
@@ -74,19 +74,25 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 		},
 		Client: Client{
 			ID:          result.ClientIDFull.String(),
-			Username:    result.ClientUsername.String,
+			Username:    "", // Clients don't have username
 			FirstName:   result.ClientFirstName.String,
 			LastName:    result.ClientLastName.String,
 			PhoneNumber: result.ClientPhoneNumber.String,
-			ChatID:      result.ClientChatID.Int64,
 		},
 		Professional: Professional{
 			ID:        result.ProfessionalIDFull.String(),
 			Username:  result.ProfessionalUsername.String,
 			FirstName: result.ProfessionalFirstName.String,
 			LastName:  result.ProfessionalLastName.String,
-			ChatID:    result.ProfessionalChatID.Int64,
 		},
+	}
+
+	// Handle optional fields
+	if result.ClientChatID.Valid {
+		response.Client.ChatID = result.ClientChatID.Int64
+	}
+	if result.ProfessionalChatID.Valid {
+		response.Professional.ChatID = result.ProfessionalChatID.Int64
 	}
 
 	c.JSON(http.StatusCreated, response)

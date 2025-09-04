@@ -135,64 +135,6 @@ func AllAppointmentTypeValues() []AppointmentType {
 	}
 }
 
-type UserType string
-
-const (
-	UserTypeClient       UserType = "client"
-	UserTypeProfessional UserType = "professional"
-)
-
-func (e *UserType) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = UserType(s)
-	case string:
-		*e = UserType(s)
-	default:
-		return fmt.Errorf("unsupported scan type for UserType: %T", src)
-	}
-	return nil
-}
-
-type NullUserType struct {
-	UserType UserType `json:"user_type"`
-	Valid    bool     `json:"valid"` // Valid is true if UserType is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullUserType) Scan(value interface{}) error {
-	if value == nil {
-		ns.UserType, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.UserType.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullUserType) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.UserType), nil
-}
-
-func (e UserType) Valid() bool {
-	switch e {
-	case UserTypeClient,
-		UserTypeProfessional:
-		return true
-	}
-	return false
-}
-
-func AllUserTypeValues() []UserType {
-	return []UserType{
-		UserTypeClient,
-		UserTypeProfessional,
-	}
-}
-
 type Appointment struct {
 	ID                 uuid.UUID             `json:"id"`
 	Type               AppointmentType       `json:"type"`
@@ -207,14 +149,24 @@ type Appointment struct {
 	UpdatedAt          time.Time             `json:"updated_at"`
 }
 
-type User struct {
+type Client struct {
+	ID          uuid.UUID      `json:"id"`
+	ChatID      sql.NullInt64  `json:"chat_id"`
+	FirstName   string         `json:"first_name"`
+	LastName    string         `json:"last_name"`
+	PhoneNumber sql.NullString `json:"phone_number"`
+	CreatedBy   uuid.NullUUID  `json:"created_by"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+}
+
+type Professional struct {
 	ID           uuid.UUID      `json:"id"`
 	ChatID       sql.NullInt64  `json:"chat_id"`
-	Username     string         `json:"username"`
 	FirstName    string         `json:"first_name"`
 	LastName     string         `json:"last_name"`
-	UserType     UserType       `json:"user_type"`
 	PhoneNumber  sql.NullString `json:"phone_number"`
+	Username     string         `json:"username"`
 	PasswordHash sql.NullString `json:"password_hash"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`

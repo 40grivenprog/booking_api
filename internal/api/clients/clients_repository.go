@@ -6,6 +6,5 @@ import (
 )
 
 type ClientsRepository interface {
-	CreateClient(ctx context.Context, arg *db.CreateClientParams) (*db.User, error)
-	GetUserByUsername(ctx context.Context, username string) (*db.User, error)
+	CreateClient(ctx context.Context, arg *db.CreateClientParams) (*db.Client, error)
 }

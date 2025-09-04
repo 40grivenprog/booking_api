@@ -2,7 +2,6 @@ package api
 
 // ClientRegisterRequest represents the request body for client registration
 type ClientRegisterRequest struct {
-	Username    string  `json:"username" binding:"required"`
 	FirstName   string  `json:"first_name" binding:"required"`
 	LastName    string  `json:"last_name" binding:"required"`
 	ChatID      int64   `json:"chat_id" binding:"required"`
@@ -11,7 +10,7 @@ type ClientRegisterRequest struct {
 
 // ClientRegisterResponse represents the response for client registration
 type ClientRegisterResponse struct {
-	User    User   `json:"user"`
+	User User `json:"user"`
 }
 
 // User represents a user in API responses (using SQLC generated model)
