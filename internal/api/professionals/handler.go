@@ -4,17 +4,14 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vention/booking_api/internal/config"
 )
 
 type ProfessionalsHandler struct {
-	cfg              *config.Config
 	professionalsRepo ProfessionalsRepository
 }
 
 type ProfessionalsHandlerParams struct {
 	Router            *gin.Engine
-	Cfg               *config.Config
 	ProfessionalsRepo ProfessionalsRepository
 }
 
@@ -28,7 +25,6 @@ func ProfessionalsRegister(p ProfessionalsHandlerParams) error {
 	}
 
 	h := &ProfessionalsHandler{
-		cfg:              p.Cfg,
 		professionalsRepo: p.ProfessionalsRepo,
 	}
 

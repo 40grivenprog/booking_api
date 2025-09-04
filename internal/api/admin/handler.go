@@ -87,8 +87,7 @@ func (h *AdminsHandler) CreateProfessional(c *gin.Context) {
 	}
 
 	response := CreateProfessionalResponse{
-		Message: "Professional created successfully",
-		User:    responseUser,
+		User: responseUser,
 	}
 
 	c.JSON(http.StatusCreated, response)

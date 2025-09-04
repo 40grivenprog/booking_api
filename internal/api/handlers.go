@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	adminAPI "github.com/vention/booking_api/internal/api/admin"
+	appointmentsAPI "github.com/vention/booking_api/internal/api/appointments"
 	clientsAPI "github.com/vention/booking_api/internal/api/clients"
 	professionalsAPI "github.com/vention/booking_api/internal/api/professionals"
 	"github.com/vention/booking_api/internal/config"
@@ -15,7 +16,6 @@ func Register(ctx context.Context, cfg *config.Config, router *gin.Engine, queri
 	// Register clients API
 	if err := clientsAPI.ClientsRegister(clientsAPI.ClientsHandlerParams{
 		Router:      router,
-		Cfg:         cfg,
 		ClientsRepo: queries,
 	}); err != nil {
 		return err
@@ -24,7 +24,6 @@ func Register(ctx context.Context, cfg *config.Config, router *gin.Engine, queri
 	// Register professionals API
 	if err := professionalsAPI.ProfessionalsRegister(professionalsAPI.ProfessionalsHandlerParams{
 		Router:            router,
-		Cfg:               cfg,
 		ProfessionalsRepo: queries,
 	}); err != nil {
 		return err
@@ -33,8 +32,15 @@ func Register(ctx context.Context, cfg *config.Config, router *gin.Engine, queri
 	// Register admin API
 	if err := adminAPI.AdminsRegister(adminAPI.AdminsHandlerParams{
 		Router:     router,
-		Cfg:        cfg,
 		AdminsRepo: queries,
+	}); err != nil {
+		return err
+	}
+
+	// Register appointments API
+	if err := appointmentsAPI.AppointmentsRegister(appointmentsAPI.AppointmentsHandlerParams{
+		Router:           router,
+		AppointmentsRepo: queries,
 	}); err != nil {
 		return err
 	}

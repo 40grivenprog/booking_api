@@ -11,7 +11,6 @@ type CreateProfessionalRequest struct {
 
 // CreateProfessionalResponse represents the response after creating a professional
 type CreateProfessionalResponse struct {
-	Message string `json:"message"`
 	User    User   `json:"user"`
 }
 

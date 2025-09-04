@@ -11,7 +11,6 @@ type ClientRegisterRequest struct {
 
 // ClientRegisterResponse represents the response for client registration
 type ClientRegisterResponse struct {
-	Message string `json:"message"`
 	User    User   `json:"user"`
 }
 

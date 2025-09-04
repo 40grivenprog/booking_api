@@ -8,9 +8,153 @@ package db
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
+
+const CreateAppointment = `-- name: CreateAppointment :one
+INSERT INTO appointments (type, client_id, professional_id, start_time, end_time, status)
+VALUES ('appointment', $1, $2, $3, $4, 'pending')
+RETURNING id, type, client_id, professional_id, start_time, end_time, status, cancellation_reason, cancelled_by, created_at, updated_at
+`
+
+type CreateAppointmentParams struct {
+	ClientID       uuid.NullUUID `json:"client_id"`
+	ProfessionalID uuid.UUID     `json:"professional_id"`
+	StartTime      time.Time     `json:"start_time"`
+	EndTime        time.Time     `json:"end_time"`
+}
+
+func (q *Queries) CreateAppointment(ctx context.Context, arg *CreateAppointmentParams) (*Appointment, error) {
+	row := q.db.QueryRowContext(ctx, CreateAppointment,
+		arg.ClientID,
+		arg.ProfessionalID,
+		arg.StartTime,
+		arg.EndTime,
+	)
+	var i Appointment
+	err := row.Scan(
+		&i.ID,
+		&i.Type,
+		&i.ClientID,
+		&i.ProfessionalID,
+		&i.StartTime,
+		&i.EndTime,
+		&i.Status,
+		&i.CancellationReason,
+		&i.CancelledBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return &i, err
+}
+
+const CreateAppointmentWithDetails = `-- name: CreateAppointmentWithDetails :one
+WITH new_appointment AS (
+    INSERT INTO appointments (type, client_id, professional_id, start_time, end_time, status)
+    VALUES ('appointment', $1, $2, $3, $4, 'pending')
+    RETURNING id, type, client_id, professional_id, start_time, end_time, status, cancellation_reason, cancelled_by, created_at, updated_at
+)
+SELECT 
+    na.id, na.type, na.client_id, na.professional_id, na.start_time, na.end_time, na.status, na.cancellation_reason, na.cancelled_by, na.created_at, na.updated_at,
+    c.id as client_id_full,
+    c.username as client_username,
+    c.first_name as client_first_name,
+    c.last_name as client_last_name,
+    c.phone_number as client_phone_number,
+    c.chat_id as client_chat_id,
+    c.created_at as client_created_at,
+    c.updated_at as client_updated_at,
+    p.id as professional_id_full,
+    p.username as professional_username,
+    p.first_name as professional_first_name,
+    p.last_name as professional_last_name,
+    p.phone_number as professional_phone_number,
+    p.chat_id as professional_chat_id,
+    p.created_at as professional_created_at,
+    p.updated_at as professional_updated_at
+FROM new_appointment na
+LEFT JOIN users c ON c.id = na.client_id
+LEFT JOIN users p ON p.id = na.professional_id
+`
+
+type CreateAppointmentWithDetailsParams struct {
+	ClientID       uuid.NullUUID `json:"client_id"`
+	ProfessionalID uuid.UUID     `json:"professional_id"`
+	StartTime      time.Time     `json:"start_time"`
+	EndTime        time.Time     `json:"end_time"`
+}
+
+type CreateAppointmentWithDetailsRow struct {
+	ID                      uuid.UUID             `json:"id"`
+	Type                    AppointmentType       `json:"type"`
+	ClientID                uuid.NullUUID         `json:"client_id"`
+	ProfessionalID          uuid.UUID             `json:"professional_id"`
+	StartTime               time.Time             `json:"start_time"`
+	EndTime                 time.Time             `json:"end_time"`
+	Status                  NullAppointmentStatus `json:"status"`
+	CancellationReason      sql.NullString        `json:"cancellation_reason"`
+	CancelledBy             uuid.NullUUID         `json:"cancelled_by"`
+	CreatedAt               time.Time             `json:"created_at"`
+	UpdatedAt               time.Time             `json:"updated_at"`
+	ClientIDFull            uuid.UUID             `json:"client_id_full"`
+	ClientUsername          sql.NullString        `json:"client_username"`
+	ClientFirstName         sql.NullString        `json:"client_first_name"`
+	ClientLastName          sql.NullString        `json:"client_last_name"`
+	ClientPhoneNumber       sql.NullString        `json:"client_phone_number"`
+	ClientChatID            sql.NullInt64         `json:"client_chat_id"`
+	ClientCreatedAt         time.Time             `json:"client_created_at"`
+	ClientUpdatedAt         time.Time             `json:"client_updated_at"`
+	ProfessionalIDFull      uuid.UUID             `json:"professional_id_full"`
+	ProfessionalUsername    sql.NullString        `json:"professional_username"`
+	ProfessionalFirstName   sql.NullString        `json:"professional_first_name"`
+	ProfessionalLastName    sql.NullString        `json:"professional_last_name"`
+	ProfessionalPhoneNumber sql.NullString        `json:"professional_phone_number"`
+	ProfessionalChatID      sql.NullInt64         `json:"professional_chat_id"`
+	ProfessionalCreatedAt   time.Time             `json:"professional_created_at"`
+	ProfessionalUpdatedAt   time.Time             `json:"professional_updated_at"`
+}
+
+func (q *Queries) CreateAppointmentWithDetails(ctx context.Context, arg *CreateAppointmentWithDetailsParams) (*CreateAppointmentWithDetailsRow, error) {
+	row := q.db.QueryRowContext(ctx, CreateAppointmentWithDetails,
+		arg.ClientID,
+		arg.ProfessionalID,
+		arg.StartTime,
+		arg.EndTime,
+	)
+	var i CreateAppointmentWithDetailsRow
+	err := row.Scan(
+		&i.ID,
+		&i.Type,
+		&i.ClientID,
+		&i.ProfessionalID,
+		&i.StartTime,
+		&i.EndTime,
+		&i.Status,
+		&i.CancellationReason,
+		&i.CancelledBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ClientIDFull,
+		&i.ClientUsername,
+		&i.ClientFirstName,
+		&i.ClientLastName,
+		&i.ClientPhoneNumber,
+		&i.ClientChatID,
+		&i.ClientCreatedAt,
+		&i.ClientUpdatedAt,
+		&i.ProfessionalIDFull,
+		&i.ProfessionalUsername,
+		&i.ProfessionalFirstName,
+		&i.ProfessionalLastName,
+		&i.ProfessionalPhoneNumber,
+		&i.ProfessionalChatID,
+		&i.ProfessionalCreatedAt,
+		&i.ProfessionalUpdatedAt,
+	)
+	return &i, err
+}
 
 const CreateClient = `-- name: CreateClient :one
 INSERT INTO users (username, first_name, last_name, user_type, phone_number, password_hash, chat_id)
@@ -92,7 +236,7 @@ func (q *Queries) CreateProfessional(ctx context.Context, arg *CreateProfessiona
 
 const GetProfessionals = `-- name: GetProfessionals :many
 SELECT id, chat_id, username, first_name, last_name, user_type, phone_number, password_hash, created_at, updated_at FROM users
-WHERE user_type = 'professional' AND chat_id IS NOT NULL
+WHERE user_type = 'professional'
 ORDER BY created_at DESC
 `
 

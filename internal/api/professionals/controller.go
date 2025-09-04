@@ -113,7 +113,6 @@ func (h *ProfessionalsHandler) SignInProfessional(c *gin.Context) {
 	}
 
 	response := ProfessionalSignInResponse{
-		Message: "Professional signed in successfully",
 		User:    responseUser,
 	}
 

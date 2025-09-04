@@ -9,7 +9,6 @@ type ProfessionalSignInRequest struct {
 
 // ProfessionalSignInResponse represents the response for professional sign in
 type ProfessionalSignInResponse struct {
-	Message string `json:"message"`
 	User    User   `json:"user"`
 }
 

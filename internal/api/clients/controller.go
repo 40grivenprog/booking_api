@@ -65,8 +65,7 @@ func (h *ClientsHandler) RegisterClient(c *gin.Context) {
 	}
 
 	response := ClientRegisterResponse{
-		Message: "Client registered successfully",
-		User:    responseUser,
+		User: responseUser,
 	}
 
 	c.JSON(http.StatusCreated, response)

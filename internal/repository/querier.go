@@ -12,6 +12,8 @@ import (
 )
 
 type Querier interface {
+	CreateAppointment(ctx context.Context, arg *CreateAppointmentParams) (*Appointment, error)
+	CreateAppointmentWithDetails(ctx context.Context, arg *CreateAppointmentWithDetailsParams) (*CreateAppointmentWithDetailsRow, error)
 	CreateClient(ctx context.Context, arg *CreateClientParams) (*User, error)
 	CreateProfessional(ctx context.Context, arg *CreateProfessionalParams) (*User, error)
 	GetProfessionals(ctx context.Context) ([]*User, error)
