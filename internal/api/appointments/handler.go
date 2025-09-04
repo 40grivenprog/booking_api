@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vention/booking_api/internal/config"
 )
 
 type AppointmentsHandler struct {
@@ -17,7 +16,6 @@ func NewAppointmentsHandler(appointmentsRepo AppointmentsRepository) *Appointmen
 
 type AppointmentsHandlerParams struct {
 	Router           *gin.Engine
-	Cfg              *config.Config
 	AppointmentsRepo AppointmentsRepository
 }
 
@@ -36,11 +34,10 @@ func AppointmentsRegister(p AppointmentsHandlerParams) error {
 
 	api := p.Router.Group("/api")
 	{
-		clients := api.Group("/appointments")
+		appointments := api.Group("/appointments")
 		{
-			clients.POST("/", h.CreateAppointment)
+			appointments.POST("/", h.CreateAppointment)
 		}
 	}
-
 	return nil
 }

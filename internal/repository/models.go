@@ -136,17 +136,18 @@ func AllAppointmentTypeValues() []AppointmentType {
 }
 
 type Appointment struct {
-	ID                 uuid.UUID             `json:"id"`
-	Type               AppointmentType       `json:"type"`
-	ClientID           uuid.NullUUID         `json:"client_id"`
-	ProfessionalID     uuid.UUID             `json:"professional_id"`
-	StartTime          time.Time             `json:"start_time"`
-	EndTime            time.Time             `json:"end_time"`
-	Status             NullAppointmentStatus `json:"status"`
-	CancellationReason sql.NullString        `json:"cancellation_reason"`
-	CancelledBy        uuid.NullUUID         `json:"cancelled_by"`
-	CreatedAt          time.Time             `json:"created_at"`
-	UpdatedAt          time.Time             `json:"updated_at"`
+	ID                        uuid.UUID             `json:"id"`
+	Type                      AppointmentType       `json:"type"`
+	ClientID                  uuid.NullUUID         `json:"client_id"`
+	ProfessionalID            uuid.UUID             `json:"professional_id"`
+	StartTime                 time.Time             `json:"start_time"`
+	EndTime                   time.Time             `json:"end_time"`
+	Status                    NullAppointmentStatus `json:"status"`
+	CancellationReason        sql.NullString        `json:"cancellation_reason"`
+	CancelledByProfessionalID uuid.NullUUID         `json:"cancelled_by_professional_id"`
+	CancelledByClientID       uuid.NullUUID         `json:"cancelled_by_client_id"`
+	CreatedAt                 time.Time             `json:"created_at"`
+	UpdatedAt                 time.Time             `json:"updated_at"`
 }
 
 type Client struct {

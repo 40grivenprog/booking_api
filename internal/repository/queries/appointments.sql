@@ -49,3 +49,45 @@ UPDATE appointments
 SET status = $2, updated_at = NOW()
 WHERE id = $1
 RETURNING *;
+
+
+-- name: ConfirmAppointmentWithDetails :one
+WITH updated_appointment AS (
+    UPDATE appointments
+    SET status = 'confirmed', updated_at = NOW()
+    WHERE appointments.id = $1 AND appointments.professional_id = $2
+    RETURNING *
+)
+SELECT 
+    ua.id,
+    ua.type,
+    ua.client_id,
+    ua.professional_id,
+    ua.start_time,
+    ua.end_time,
+    ua.status,
+    ua.created_at,
+    ua.updated_at,
+    c.id as client_id,
+    c.first_name as client_first_name,
+    c.last_name as client_last_name,
+    c.chat_id as client_chat_id
+FROM updated_appointment ua
+LEFT JOIN clients c ON c.id = ua.client_id;
+
+
+-- name: GetAppointmentsByProfessionalWithStatus :many
+SELECT 
+    a.*,
+    c.id AS client_id,
+    c.first_name AS client_first_name,
+    c.last_name AS client_last_name,
+    c.phone_number AS client_phone_number,
+    c.chat_id AS client_chat_id
+FROM appointments a
+LEFT JOIN clients c ON c.id = a.client_id
+WHERE a.professional_id = $1
+  AND a.status = $2
+  AND a.start_time > NOW()
+ORDER BY a.start_time DESC;
+

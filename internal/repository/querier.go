@@ -12,6 +12,7 @@ import (
 )
 
 type Querier interface {
+	ConfirmAppointmentWithDetails(ctx context.Context, arg *ConfirmAppointmentWithDetailsParams) (*ConfirmAppointmentWithDetailsRow, error)
 	CreateAppointment(ctx context.Context, arg *CreateAppointmentParams) (*Appointment, error)
 	CreateAppointmentWithDetails(ctx context.Context, arg *CreateAppointmentWithDetailsParams) (*CreateAppointmentWithDetailsRow, error)
 	CreateClient(ctx context.Context, arg *CreateClientParams) (*Client, error)
@@ -19,6 +20,7 @@ type Querier interface {
 	GetAppointmentByID(ctx context.Context, id uuid.UUID) (*Appointment, error)
 	GetAppointmentsByClient(ctx context.Context, clientID uuid.NullUUID) ([]*Appointment, error)
 	GetAppointmentsByProfessional(ctx context.Context, professionalID uuid.UUID) ([]*Appointment, error)
+	GetAppointmentsByProfessionalWithStatus(ctx context.Context, arg *GetAppointmentsByProfessionalWithStatusParams) ([]*GetAppointmentsByProfessionalWithStatusRow, error)
 	GetClientByChatID(ctx context.Context, chatID sql.NullInt64) (*Client, error)
 	GetClientByID(ctx context.Context, id uuid.UUID) (*Client, error)
 	GetClients(ctx context.Context) ([]*Client, error)

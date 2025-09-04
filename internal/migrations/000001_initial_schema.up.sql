@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS appointments (
     end_time TIMESTAMP WITH TIME ZONE NOT NULL, -- Required
     status appointment_status DEFAULT 'pending',
     cancellation_reason TEXT, -- Reason for cancellation (optional)
-    cancelled_by UUID REFERENCES professionals(id), -- Who cancelled (optional)
+    cancelled_by_professional_id UUID REFERENCES professionals(id), -- Who cancelled (optional)
+    cancelled_by_client_id UUID REFERENCES clients(id), -- Who cancelled (optional)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

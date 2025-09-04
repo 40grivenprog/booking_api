@@ -3,8 +3,10 @@ package api
 import (
 	"database/sql"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	common "github.com/vention/booking_api/internal/api/common"
 	db "github.com/vention/booking_api/internal/repository"
 	"golang.org/x/crypto/bcrypt"
@@ -108,6 +110,120 @@ func (h *ProfessionalsHandler) SignInProfessional(c *gin.Context) {
 
 	response := ProfessionalSignInResponse{
 		User: responseUser,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// ConfirmAppointment handles PATCH /api/professionals/{id}/appointments/{appointment_id}/confirm
+func (h *ProfessionalsHandler) ConfirmAppointment(c *gin.Context) {
+	professionalIDStr := c.Param("id")
+	appointmentIDStr := c.Param("appointment_id")
+
+	// Parse UUIDs
+	professionalID, err := uuid.Parse(professionalIDStr)
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid professional_id format", err)
+		return
+	}
+
+	appointmentID, err := uuid.Parse(appointmentIDStr)
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid appointment_id format", err)
+		return
+	}
+
+	// Confirm appointment with details
+	result, err := h.professionalsRepo.ConfirmAppointmentWithDetails(c.Request.Context(), &db.ConfirmAppointmentWithDetailsParams{
+		ID:             appointmentID,
+		ProfessionalID: professionalID,
+	})
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusInternalServerError, "database_error", "Failed to confirm appointment", err)
+		return
+	}
+
+	// Convert to response format
+	response := ConfirmAppointmentResponse{
+		Appointment: AppointmentConfirm{
+			ID:        result.ID.String(),
+			Status:    string(result.Status.AppointmentStatus),
+			CreatedAt: result.CreatedAt.Format(time.RFC3339),
+			UpdatedAt: result.UpdatedAt.Format(time.RFC3339),
+		},
+		Client: ClientConfirm{
+			ID:        result.ClientID.UUID.String(),
+			FirstName: result.ClientFirstName.String,
+			LastName:  result.ClientLastName.String,
+		},
+	}
+
+	// Handle optional ChatID field
+	if result.ClientChatID.Valid {
+		response.Client.ChatID = result.ClientChatID.Int64
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// GetProfessionalAppointments handles GET /api/professionals/{id}/appointments
+func (h *ProfessionalsHandler) GetProfessionalAppointments(c *gin.Context) {
+	professionalIDStr := c.Param("id")
+	statusFilter := c.Query("status")
+
+	// Parse professional ID
+	professionalID, err := uuid.Parse(professionalIDStr)
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid professional_id format", err)
+		return
+	}
+
+	// Validate status filter if provided
+	if statusFilter != "" && statusFilter != "pending" && statusFilter != "confirmed" && statusFilter != "cancelled" && statusFilter != "completed" {
+		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid status. Must be one of: pending, confirmed, cancelled, completed", nil)
+		return
+	}
+
+	// Prepare parameters for the query
+	var statusParam db.NullAppointmentStatus
+	if statusFilter != "" {
+		statusParam = db.NullAppointmentStatus{AppointmentStatus: db.AppointmentStatus(statusFilter), Valid: true}
+	}
+
+	// Get appointments with optional status filter
+	appointments, err := h.professionalsRepo.GetAppointmentsByProfessionalWithStatus(c.Request.Context(), &db.GetAppointmentsByProfessionalWithStatusParams{
+		ProfessionalID: professionalID,
+		Status:         statusParam,
+	})
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusInternalServerError, "database_error", "Failed to retrieve appointments", err)
+		return
+	}
+
+	// Convert to response format
+	var responseAppointments []ProfessionalAppointment
+	for _, appt := range appointments {
+		appointment := ProfessionalAppointment{
+			ID:        appt.ID.String(),
+			Type:      string(appt.Type),
+			StartTime: appt.StartTime.Format(time.RFC3339),
+			EndTime:   appt.EndTime.Format(time.RFC3339),
+			Status:    string(appt.Status.AppointmentStatus),
+			CreatedAt: appt.CreatedAt.Format(time.RFC3339),
+			UpdatedAt: appt.UpdatedAt.Format(time.RFC3339),
+		}
+		appointment.Client = &ProfessionalAppointmentClient{
+			ID:          appt.ClientID.UUID.String(),
+			FirstName:   appt.ClientFirstName.String,
+			LastName:    appt.ClientLastName.String,
+			PhoneNumber: &appt.ClientPhoneNumber.String,
+		}
+
+		responseAppointments = append(responseAppointments, appointment)
+	}
+
+	response := GetProfessionalAppointmentsResponse{
+		Appointments: responseAppointments,
 	}
 
 	c.JSON(http.StatusOK, response)
