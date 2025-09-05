@@ -7,4 +7,6 @@ import (
 
 type ClientsRepository interface {
 	CreateClient(ctx context.Context, arg *db.CreateClientParams) (*db.Client, error)
+	GetAppointmentsByClientWithStatus(ctx context.Context, arg *db.GetAppointmentsByClientWithStatusParams) ([]*db.GetAppointmentsByClientWithStatusRow, error)
+	CancelAppointmentByClientWithDetails(ctx context.Context, arg *db.CancelAppointmentByClientWithDetailsParams) (*db.CancelAppointmentByClientWithDetailsRow, error)
 }

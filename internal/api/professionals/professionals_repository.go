@@ -12,4 +12,7 @@ type ProfessionalsRepository interface {
 	UpdateProfessionalChatID(ctx context.Context, arg *db.UpdateProfessionalChatIDParams) (*db.Professional, error)
 	ConfirmAppointmentWithDetails(ctx context.Context, arg *db.ConfirmAppointmentWithDetailsParams) (*db.ConfirmAppointmentWithDetailsRow, error)
 	GetAppointmentsByProfessionalWithStatus(ctx context.Context, arg *db.GetAppointmentsByProfessionalWithStatusParams) ([]*db.GetAppointmentsByProfessionalWithStatusRow, error)
+	CancelAppointmentByProfessionalWithDetails(ctx context.Context, arg *db.CancelAppointmentByProfessionalWithDetailsParams) (*db.CancelAppointmentByProfessionalWithDetailsRow, error)
+	CreateUnavailableAppointment(ctx context.Context, arg *db.CreateUnavailableAppointmentParams) (*db.Appointment, error)
+	GetAppointmentsByProfessionalAndDate(ctx context.Context, arg *db.GetAppointmentsByProfessionalAndDateParams) ([]*db.Appointment, error)
 }

@@ -31,6 +31,12 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 		return
 	}
 
+	// Validate that start_time is in the future
+	if startTime.Before(time.Now()) {
+		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "start_time must be in the future", nil)
+		return
+	}
+
 	// Validate that end_time is after start_time
 	if endTime.Before(startTime) || endTime.Equal(startTime) {
 		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "end_time must be after start_time", nil)
@@ -74,16 +80,16 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 		},
 		Client: Client{
 			ID:          result.ClientIDFull.String(),
-			Username:    "", // Clients don't have username
 			FirstName:   result.ClientFirstName.String,
 			LastName:    result.ClientLastName.String,
 			PhoneNumber: result.ClientPhoneNumber.String,
 		},
 		Professional: Professional{
-			ID:        result.ProfessionalIDFull.String(),
-			Username:  result.ProfessionalUsername.String,
-			FirstName: result.ProfessionalFirstName.String,
-			LastName:  result.ProfessionalLastName.String,
+			ID:          result.ProfessionalIDFull.String(),
+			Username:    result.ProfessionalUsername.String,
+			FirstName:   result.ProfessionalFirstName.String,
+			LastName:    result.ProfessionalLastName.String,
+			PhoneNumber: result.ProfessionalPhoneNumber.String,
 		},
 	}
 
@@ -97,90 +103,3 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, response)
 }
-
-// // GetAppointmentsByUser handles GET /api/users/{id}/appointments?status={status}
-// func (h *AppointmentsHandler) GetAppointmentsByUser(c *gin.Context) {
-// 	userIDStr := c.Param("id")
-// 	status := c.Query("status")
-
-// 	// Validate status parameter
-// 	if status == "" {
-// 		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "status parameter is required", nil)
-// 		return
-// 	}
-
-// 	// Validate status value
-// 	validStatuses := []string{"pending", "confirmed", "cancelled", "completed"}
-// 	isValidStatus := false
-// 	for _, validStatus := range validStatuses {
-// 		if status == validStatus {
-// 			isValidStatus = true
-// 			break
-// 		}
-// 	}
-// 	if !isValidStatus {
-// 		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid status. Must be one of: pending, confirmed, cancelled, completed", nil)
-// 		return
-// 	}
-
-// 	// Parse UUID
-// 	userID, err := uuid.Parse(userIDStr)
-// 	if err != nil {
-// 		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid user_id format", err)
-// 		return
-// 	}
-
-// 	// Get appointments by user and status
-// 	appointments, err := h.appointmentsRepo.GetAppointmentsByUserAndStatus(c.Request.Context(), &db.GetAppointmentsByUserAndStatusParams{
-// 		ID:     userID,
-// 		Status: db.AppointmentStatus(status),
-// 	})
-// 	if err != nil {
-// 		common.HandleErrorResponse(c, http.StatusInternalServerError, "database_error", "Failed to get appointments", err)
-// 		return
-// 	}
-
-// 	// Convert to response format
-// 	response := GetAppointmentsResponse{
-// 		Appointments: make([]AppointmentWithDetails, len(appointments)),
-// 	}
-
-// 	for i, apt := range appointments {
-// 		appointment := AppointmentWithDetails{
-// 			ID:        apt.ID.String(),
-// 			Type:      string(apt.Type.AppointmentType),
-// 			StartTime: apt.StartTime.Format(time.RFC3339),
-// 			EndTime:   apt.EndTime.Format(time.RFC3339),
-// 			Status:    string(apt.Status.AppointmentStatus),
-// 			CreatedAt: apt.CreatedAt.Format(time.RFC3339),
-// 			UpdatedAt: apt.UpdatedAt.Format(time.RFC3339),
-// 			Professional: ProfessionalDetails{
-// 				ID:        apt.ProfessionalIDFull.String(),
-// 				Username:  apt.ProfessionalUsername.String,
-// 				FirstName: apt.ProfessionalFirstName.String,
-// 				LastName:  apt.ProfessionalLastName.String,
-// 			},
-// 		}
-
-// 		// Handle optional professional ChatID
-// 		if apt.ProfessionalChatID.Valid {
-// 			appointment.Professional.ChatID = apt.ProfessionalChatID.Int64
-// 		}
-
-// 		// Handle optional client details
-// 		if apt.ClientIDFull.Valid {
-// 			appointment.Client = &ClientDetails{
-// 				ID:        apt.ClientIDFull.UUID.String(),
-// 				FirstName: apt.ClientFirstName.String,
-// 				LastName:  apt.ClientLastName.String,
-// 			}
-// 			if apt.ClientChatID.Valid {
-// 				appointment.Client.ChatID = apt.ClientChatID.Int64
-// 			}
-// 		}
-
-// 		response.Appointments[i] = appointment
-// 	}
-
-// 	c.JSON(http.StatusOK, response)
-// }

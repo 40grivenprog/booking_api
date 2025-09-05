@@ -76,3 +76,74 @@ type ProfessionalAppointmentClient struct {
 	LastName    string  `json:"last_name"`
 	PhoneNumber *string `json:"phone_number,omitempty"`
 }
+
+// CancelAppointmentRequest represents the request to cancel an appointment
+type CancelAppointmentRequest struct {
+	CancellationReason string `json:"cancellation_reason" binding:"required"`
+}
+
+// CancelAppointmentResponse represents the response after cancelling an appointment
+type CancelAppointmentResponse struct {
+	Appointment  CancelledAppointment          `json:"appointment"`
+	Client       ProfessionalAppointmentClient `json:"client"`
+	Professional ProfessionalInfo              `json:"professional"`
+}
+
+// CancelledAppointment represents a cancelled appointment
+type CancelledAppointment struct {
+	ID                 string `json:"id"`
+	Type               string `json:"type"`
+	StartTime          string `json:"start_time"`
+	EndTime            string `json:"end_time"`
+	Status             string `json:"status"`
+	CancellationReason string `json:"cancellation_reason"`
+	CancelledBy        string `json:"cancelled_by"`
+	CreatedAt          string `json:"created_at"`
+	UpdatedAt          string `json:"updated_at"`
+}
+
+// ProfessionalInfo represents professional details in appointment context
+type ProfessionalInfo struct {
+	ID          string  `json:"id"`
+	Username    string  `json:"username"`
+	FirstName   string  `json:"first_name"`
+	LastName    string  `json:"last_name"`
+	PhoneNumber *string `json:"phone_number,omitempty"`
+	ChatID      *int64  `json:"chat_id,omitempty"`
+}
+
+// CreateUnavailableAppointmentRequest represents the request to create an unavailable appointment
+type CreateUnavailableAppointmentRequest struct {
+	StartAt string `json:"start_at" binding:"required"`
+	EndAt   string `json:"end_at" binding:"required"`
+}
+
+// CreateUnavailableAppointmentResponse represents the response after creating an unavailable appointment
+type CreateUnavailableAppointmentResponse struct {
+	Appointment UnavailableAppointment `json:"appointment"`
+}
+
+// UnavailableAppointment represents an unavailable appointment
+type UnavailableAppointment struct {
+	ID        string `json:"id"`
+	Type      string `json:"type"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+	Status    string `json:"status"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+// GetProfessionalAvailabilityResponse represents the response for professional availability
+type GetProfessionalAvailabilityResponse struct {
+	Date  string     `json:"date"`
+	Slots []TimeSlot `json:"slots"`
+}
+
+// TimeSlot represents a one-hour time slot
+type TimeSlot struct {
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+	Available bool   `json:"available"`
+	Type      string `json:"type,omitempty"` // "appointment", "unavailable", or empty if available
+}

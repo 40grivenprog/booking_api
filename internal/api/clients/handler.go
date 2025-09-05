@@ -33,6 +33,8 @@ func ClientsRegister(p ClientsHandlerParams) error {
 		clients := api.Group("/clients")
 		{
 			clients.POST("/register", h.RegisterClient)
+			clients.GET("/:id/appointments", h.GetClientAppointments)
+			clients.PATCH("/:id/appointments/:appointment_id/cancel", h.CancelClientAppointment)
 		}
 	}
 
