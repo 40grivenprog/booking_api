@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	common "github.com/vention/booking_api/internal/api/common"
 	db "github.com/vention/booking_api/internal/repository"
+	"github.com/vention/booking_api/internal/util"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -95,7 +97,7 @@ func (h *ProfessionalsHandler) SignInProfessional(c *gin.Context) {
 		Username:  updatedUser.Username,
 		FirstName: updatedUser.FirstName,
 		LastName:  updatedUser.LastName,
-		UserType:  "professional",
+		Role:      "professional",
 		CreatedAt: updatedUser.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt: updatedUser.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
@@ -133,6 +135,20 @@ func (h *ProfessionalsHandler) ConfirmAppointment(c *gin.Context) {
 		return
 	}
 
+	appointment, err := h.professionalsRepo.GetAppointmentByID(c.Request.Context(), appointmentID)
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusInternalServerError, "database_error", "Failed to get appointment", err)
+		return
+	}
+	if appointment.ProfessionalID != professionalID {
+		common.HandleErrorResponse(c, http.StatusForbidden, "forbidden", "You are not allowed to confirm this appointment", nil)
+		return
+	}
+	if appointment.Status.AppointmentStatus != db.AppointmentStatusPending {
+		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Appointment is not pending", nil)
+		return
+	}
+
 	// Confirm appointment with details
 	result, err := h.professionalsRepo.ConfirmAppointmentWithDetails(c.Request.Context(), &db.ConfirmAppointmentWithDetailsParams{
 		ID:             appointmentID,
@@ -148,6 +164,8 @@ func (h *ProfessionalsHandler) ConfirmAppointment(c *gin.Context) {
 		Appointment: AppointmentConfirm{
 			ID:        result.ID.String(),
 			Status:    string(result.Status.AppointmentStatus),
+			StartTime: result.StartTime.Format(time.RFC3339),
+			EndTime:   result.EndTime.Format(time.RFC3339),
 			CreatedAt: result.CreatedAt.Format(time.RFC3339),
 			UpdatedAt: result.UpdatedAt.Format(time.RFC3339),
 		},
@@ -155,12 +173,14 @@ func (h *ProfessionalsHandler) ConfirmAppointment(c *gin.Context) {
 			ID:        result.ClientID.UUID.String(),
 			FirstName: result.ClientFirstName.String,
 			LastName:  result.ClientLastName.String,
+			ChatID:    result.ClientChatID.Int64,
 		},
-	}
-
-	// Handle optional ChatID field
-	if result.ClientChatID.Valid {
-		response.Client.ChatID = result.ClientChatID.Int64
+		Professional: ProfessionalConfirm{
+			ID:        result.ProfessionalIDFull.String(),
+			Username:  result.ProfessionalUsername.String,
+			FirstName: result.ProfessionalFirstName.String,
+			LastName:  result.ProfessionalLastName.String,
+		},
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -254,6 +274,20 @@ func (h *ProfessionalsHandler) CancelAppointment(c *gin.Context) {
 		return
 	}
 
+	appointment, err := h.professionalsRepo.GetAppointmentByID(c.Request.Context(), appointmentID)
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusInternalServerError, "database_error", "Failed to get appointment", err)
+		return
+	}
+	if appointment.ProfessionalID != professionalID {
+		common.HandleErrorResponse(c, http.StatusForbidden, "forbidden", "You are not allowed to confirm this appointment", nil)
+		return
+	}
+	if appointment.Status.AppointmentStatus != db.AppointmentStatusPending && appointment.Status.AppointmentStatus != db.AppointmentStatusConfirmed {
+		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Appointment is not pending or confirmed. Please check the status of the appointment.", nil)
+		return
+	}
+
 	// Cancel appointment with details
 	result, err := h.professionalsRepo.CancelAppointmentByProfessionalWithDetails(c.Request.Context(), &db.CancelAppointmentByProfessionalWithDetailsParams{
 		ID:                        appointmentID,
@@ -282,6 +316,7 @@ func (h *ProfessionalsHandler) CancelAppointment(c *gin.Context) {
 			ID:        result.ClientIDFull.String(),
 			FirstName: result.ClientFirstName.String,
 			LastName:  result.ClientLastName.String,
+			ChatID:    &result.ClientChatID.Int64,
 		},
 		Professional: ProfessionalInfo{
 			ID:        result.ProfessionalIDFull.String(),
@@ -398,13 +433,39 @@ func (h *ProfessionalsHandler) GetProfessionalAvailability(c *gin.Context) {
 		return
 	}
 
-	// Generate time slots from 5:00 to 23:00 (18 slots)
+	// Generate time slots from current time to 23:00
 	slots := make([]TimeSlot, 0, 18)
-	baseDate := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	now := time.Now()
+	fmt.Println("now UTC", now)
 
-	for hour := 5; hour < 23; hour++ {
+	// Use centralized timezone
+	localNow := util.NowInAppTimezone()
+	fmt.Println("now local", localNow)
+
+	// Create base date in application timezone
+	baseDate := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, util.GetAppTimezone())
+
+	// Determine the starting hour based on current time
+	startHour := 5 // Default start hour
+	if date.Year() == localNow.Year() && date.Month() == localNow.Month() && date.Day() == localNow.Day() {
+		// If it's today, start from current hour (rounded up to next hour)
+		currentHour := localNow.Hour()
+		if localNow.Minute() > 0 {
+			currentHour++ // Round up to next hour if we're past the hour mark
+		}
+		if currentHour > 5 {
+			startHour = currentHour
+		}
+	}
+
+	for hour := startHour; hour < 23; hour++ {
 		startTime := baseDate.Add(time.Duration(hour) * time.Hour)
 		endTime := startTime.Add(time.Hour)
+
+		// Skip if the slot is in the past (additional safety check)
+		if startTime.Before(localNow) {
+			continue
+		}
 
 		slot := TimeSlot{
 			StartTime: startTime.Format(time.RFC3339),

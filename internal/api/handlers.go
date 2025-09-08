@@ -8,6 +8,7 @@ import (
 	appointmentsAPI "github.com/vention/booking_api/internal/api/appointments"
 	clientsAPI "github.com/vention/booking_api/internal/api/clients"
 	professionalsAPI "github.com/vention/booking_api/internal/api/professionals"
+	usersAPI "github.com/vention/booking_api/internal/api/users"
 	"github.com/vention/booking_api/internal/config"
 	db "github.com/vention/booking_api/internal/repository"
 )
@@ -41,6 +42,14 @@ func Register(ctx context.Context, cfg *config.Config, router *gin.Engine, queri
 	if err := appointmentsAPI.AppointmentsRegister(appointmentsAPI.AppointmentsHandlerParams{
 		Router:           router,
 		AppointmentsRepo: queries,
+	}); err != nil {
+		return err
+	}
+
+	// Register users API
+	if err := usersAPI.UsersRegister(usersAPI.UsersHandlerParams{
+		Router:    router,
+		UsersRepo: queries,
 	}); err != nil {
 		return err
 	}

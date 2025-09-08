@@ -50,10 +50,9 @@ func (h *ClientsHandler) RegisterClient(c *gin.Context) {
 	// Convert to response format
 	responseUser := User{
 		ID:        user.ID.String(),
-		Username:  "", // Clients don't have username
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
-		UserType:  "client",
+		Role:      "client",
 		CreatedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt: user.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
@@ -159,6 +158,20 @@ func (h *ClientsHandler) CancelClientAppointment(c *gin.Context) {
 	var req CancelClientAppointmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid request body", err)
+		return
+	}
+
+	appointment, err := h.clientsRepo.GetAppointmentByID(c.Request.Context(), appointmentID)
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusInternalServerError, "database_error", "Failed to get appointment", err)
+		return
+	}
+	if appointment.ClientID.UUID != clientID {
+		common.HandleErrorResponse(c, http.StatusForbidden, "forbidden", "You are not allowed to cancel this appointment", nil)
+		return
+	}
+	if appointment.Status.AppointmentStatus != db.AppointmentStatusPending && appointment.Status.AppointmentStatus != db.AppointmentStatusConfirmed {
+		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Appointment is not pending or confirmed. Please check the status of the appointment.", nil)
 		return
 	}
 

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	common "github.com/vention/booking_api/internal/api/common"
 	db "github.com/vention/booking_api/internal/repository"
+	"github.com/vention/booking_api/internal/util"
 )
 
 // CreateAppointment handles POST /api/appointments
@@ -32,7 +33,7 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 	}
 
 	// Validate that start_time is in the future
-	if startTime.Before(time.Now()) {
+	if startTime.Before(util.NowInAppTimezone()) {
 		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "start_time must be in the future", nil)
 		return
 	}

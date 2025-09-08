@@ -9,6 +9,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/vention/booking_api/internal/config"
+	"github.com/vention/booking_api/internal/util"
 	"github.com/vention/booking_api/pkg/server"
 )
 
@@ -27,6 +28,13 @@ func main() {
 
 	// Initialize logger
 	logger := log.With().Str("component", "api").Logger()
+
+	// Initialize timezone
+	if err := util.InitTimezone(); err != nil {
+		logger.Warn().Err(err).Msg("Failed to load timezone, falling back to UTC")
+	} else {
+		logger.Info().Str("timezone", util.GetAppTimezone().String()).Msg("Timezone initialized")
+	}
 
 	cfg, err := config.New(cfgPath)
 	if err != nil {

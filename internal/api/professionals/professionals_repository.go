@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 
+	"github.com/google/uuid"
 	db "github.com/vention/booking_api/internal/repository"
 )
 
@@ -15,4 +16,5 @@ type ProfessionalsRepository interface {
 	CancelAppointmentByProfessionalWithDetails(ctx context.Context, arg *db.CancelAppointmentByProfessionalWithDetailsParams) (*db.CancelAppointmentByProfessionalWithDetailsRow, error)
 	CreateUnavailableAppointment(ctx context.Context, arg *db.CreateUnavailableAppointmentParams) (*db.Appointment, error)
 	GetAppointmentsByProfessionalAndDate(ctx context.Context, arg *db.GetAppointmentsByProfessionalAndDateParams) ([]*db.Appointment, error)
+	GetAppointmentByID(ctx context.Context, id uuid.UUID) (*db.Appointment, error)
 }

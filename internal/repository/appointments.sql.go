@@ -243,9 +243,14 @@ SELECT
     c.id as client_id,
     c.first_name as client_first_name,
     c.last_name as client_last_name,
-    c.chat_id as client_chat_id
+    c.chat_id as client_chat_id,
+    p.id as professional_id_full,
+    p.username as professional_username,
+    p.first_name as professional_first_name,
+    p.last_name as professional_last_name
 FROM updated_appointment ua
 LEFT JOIN clients c ON c.id = ua.client_id
+LEFT JOIN professionals p ON p.id = ua.professional_id
 `
 
 type ConfirmAppointmentWithDetailsParams struct {
@@ -254,19 +259,23 @@ type ConfirmAppointmentWithDetailsParams struct {
 }
 
 type ConfirmAppointmentWithDetailsRow struct {
-	ID              uuid.UUID             `json:"id"`
-	Type            AppointmentType       `json:"type"`
-	ClientID        uuid.NullUUID         `json:"client_id"`
-	ProfessionalID  uuid.UUID             `json:"professional_id"`
-	StartTime       time.Time             `json:"start_time"`
-	EndTime         time.Time             `json:"end_time"`
-	Status          NullAppointmentStatus `json:"status"`
-	CreatedAt       time.Time             `json:"created_at"`
-	UpdatedAt       time.Time             `json:"updated_at"`
-	ClientID_2      uuid.UUID             `json:"client_id_2"`
-	ClientFirstName sql.NullString        `json:"client_first_name"`
-	ClientLastName  sql.NullString        `json:"client_last_name"`
-	ClientChatID    sql.NullInt64         `json:"client_chat_id"`
+	ID                    uuid.UUID             `json:"id"`
+	Type                  AppointmentType       `json:"type"`
+	ClientID              uuid.NullUUID         `json:"client_id"`
+	ProfessionalID        uuid.UUID             `json:"professional_id"`
+	StartTime             time.Time             `json:"start_time"`
+	EndTime               time.Time             `json:"end_time"`
+	Status                NullAppointmentStatus `json:"status"`
+	CreatedAt             time.Time             `json:"created_at"`
+	UpdatedAt             time.Time             `json:"updated_at"`
+	ClientID_2            uuid.UUID             `json:"client_id_2"`
+	ClientFirstName       sql.NullString        `json:"client_first_name"`
+	ClientLastName        sql.NullString        `json:"client_last_name"`
+	ClientChatID          sql.NullInt64         `json:"client_chat_id"`
+	ProfessionalIDFull    uuid.UUID             `json:"professional_id_full"`
+	ProfessionalUsername  sql.NullString        `json:"professional_username"`
+	ProfessionalFirstName sql.NullString        `json:"professional_first_name"`
+	ProfessionalLastName  sql.NullString        `json:"professional_last_name"`
 }
 
 func (q *Queries) ConfirmAppointmentWithDetails(ctx context.Context, arg *ConfirmAppointmentWithDetailsParams) (*ConfirmAppointmentWithDetailsRow, error) {
@@ -286,6 +295,10 @@ func (q *Queries) ConfirmAppointmentWithDetails(ctx context.Context, arg *Confir
 		&i.ClientFirstName,
 		&i.ClientLastName,
 		&i.ClientChatID,
+		&i.ProfessionalIDFull,
+		&i.ProfessionalUsername,
+		&i.ProfessionalFirstName,
+		&i.ProfessionalLastName,
 	)
 	return &i, err
 }
@@ -680,6 +693,7 @@ const GetAppointmentsByProfessionalAndDate = `-- name: GetAppointmentsByProfessi
 SELECT id, type, client_id, professional_id, start_time, end_time, status, cancellation_reason, cancelled_by_professional_id, cancelled_by_client_id, created_at, updated_at FROM appointments
 WHERE professional_id = $1
   AND DATE(start_time) = $2
+  AND status != 'cancelled'
 ORDER BY start_time ASC
 `
 

@@ -33,6 +33,7 @@ type Querier interface {
 	GetProfessionalByID(ctx context.Context, id uuid.UUID) (*Professional, error)
 	GetProfessionalByUsername(ctx context.Context, username string) (*Professional, error)
 	GetProfessionals(ctx context.Context) ([]*Professional, error)
+	GetUserByChatID(ctx context.Context, chatID sql.NullInt64) (*GetUserByChatIDRow, error)
 	UpdateAppointmentStatus(ctx context.Context, arg *UpdateAppointmentStatusParams) (*Appointment, error)
 	UpdateClientChatID(ctx context.Context, arg *UpdateClientChatIDParams) (*Client, error)
 	UpdateProfessionalChatID(ctx context.Context, arg *UpdateProfessionalChatIDParams) (*Professional, error)

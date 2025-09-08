@@ -71,9 +71,14 @@ SELECT
     c.id as client_id,
     c.first_name as client_first_name,
     c.last_name as client_last_name,
-    c.chat_id as client_chat_id
+    c.chat_id as client_chat_id,
+    p.id as professional_id_full,
+    p.username as professional_username,
+    p.first_name as professional_first_name,
+    p.last_name as professional_last_name
 FROM updated_appointment ua
-LEFT JOIN clients c ON c.id = ua.client_id;
+LEFT JOIN clients c ON c.id = ua.client_id
+LEFT JOIN professionals p ON p.id = ua.professional_id;
 
 
 -- name: GetAppointmentsByProfessionalWithStatus :many
@@ -207,4 +212,5 @@ RETURNING *;
 SELECT * FROM appointments
 WHERE professional_id = $1
   AND DATE(start_time) = $2
+  AND status != 'cancelled'
 ORDER BY start_time ASC;

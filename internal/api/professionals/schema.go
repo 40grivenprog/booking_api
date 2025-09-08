@@ -26,20 +26,24 @@ type User struct {
 	LastName    string  `json:"last_name"`
 	UserType    string  `json:"user_type"`
 	PhoneNumber *string `json:"phone_number,omitempty"`
+	Role        string  `json:"role"`
 	CreatedAt   string  `json:"created_at"`
 	UpdatedAt   string  `json:"updated_at"`
 }
 
 // ConfirmAppointmentResponse represents the response for confirming an appointment
 type ConfirmAppointmentResponse struct {
-	Appointment AppointmentConfirm `json:"appointment"`
-	Client      ClientConfirm      `json:"client"`
+	Appointment  AppointmentConfirm  `json:"appointment"`
+	Client       ClientConfirm       `json:"client"`
+	Professional ProfessionalConfirm `json:"professional"`
 }
 
 // AppointmentConfirm represents an appointment in the confirm response
 type AppointmentConfirm struct {
 	ID        string `json:"id"`
 	Status    string `json:"status"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
 }
@@ -48,6 +52,14 @@ type AppointmentConfirm struct {
 type ClientConfirm struct {
 	ID        string `json:"id"`
 	ChatID    int64  `json:"chat_id,omitempty"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
+
+// ProfessionalConfirm represents a professional in the confirm response
+type ProfessionalConfirm struct {
+	ID        string `json:"id"`
+	Username  string `json:"username"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 }
@@ -75,6 +87,7 @@ type ProfessionalAppointmentClient struct {
 	FirstName   string  `json:"first_name"`
 	LastName    string  `json:"last_name"`
 	PhoneNumber *string `json:"phone_number,omitempty"`
+	ChatID      *int64  `json:"chat_id,omitempty"`
 }
 
 // CancelAppointmentRequest represents the request to cancel an appointment

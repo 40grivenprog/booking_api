@@ -1,15 +1,16 @@
 # Booking API
 
-A RESTful API for managing bookings and appointments built with Go, PostgreSQL, and Docker. This project follows a modular architecture pattern with clean separation of concerns.
+A comprehensive RESTful API for managing appointments and bookings between clients and professionals. Built with Go, PostgreSQL, and Docker following clean architecture principles.
 
 ## Features
 
-- **User Management**: Client and professional user registration and authentication
-- **Appointment System**: Book and manage appointments between clients and professionals
+- **User Management**: Client and professional registration and authentication
+- **Appointment System**: Complete booking flow with status management
+- **Availability Management**: Professional availability checking and time slot management
+- **Cancellation System**: Both client and professional appointment cancellation
+- **Unavailable Periods**: Professional can mark themselves as unavailable
 - **Type-Safe Database Operations**: Using SQLC for generated, type-safe database queries
 - **PostgreSQL Database**: With migrations and proper schema management
-- **JWT Authentication**: Secure token-based authentication
-- **Structured Logging**: Comprehensive logging with Zerolog
 - **Docker Containerization**: Full containerization with Docker & Docker Compose
 - **Modular API Architecture**: Clean, maintainable API structure
 
@@ -20,50 +21,11 @@ A RESTful API for managing bookings and appointments built with Go, PostgreSQL, 
 - **Database**: PostgreSQL 15
 - **ORM**: SQLC (type-safe SQL code generation)
 - **Migrations**: golang-migrate
-- **Authentication**: JWT
-- **Logging**: Zerolog
 - **Containerization**: Docker & Docker Compose
 
-## Project Structure
-
-```
-booking_api/
-├── cmd/                           # Application entrypoints
-│   └── main.go                   # Main application
-├── internal/                      # Private application code
-│   ├── api/                      # API layer
-│   │   ├── handlers.go           # Main API registration
-│   │   ├── clients/              # Client API module
-│   │   │   ├── schema.go         # Request/Response schemas
-│   │   │   ├── clients_repository.go # Repository interface
-│   │   │   ├── handler.go        # Route registration
-│   │   │   └── controller.go     # Business logic
-│   │   ├── professionals/        # Professional API module
-│   │   │   ├── schema.go         # Request/Response schemas
-│   │   │   ├── professionals_repository.go # Repository interface
-│   │   │   ├── handler.go        # Route registration
-│   │   │   └── controller.go     # Business logic
-│   │   └── common/               # Shared utilities
-│   │       ├── logger.go         # Logger utilities
-│   │       └── error_response.go # Error handling
-│   ├── config/                   # Configuration management
-│   ├── database/                 # Database connection
-│   ├── migrations/               # Database migrations
-│   └── repository/               # Database queries (SQLC generated)
-├── pkg/                          # Public library code
-│   └── server/                   # HTTP server setup
-├── configs/                      # Configuration files
-├── scripts/                      # Database initialization scripts
-├── docker-compose.yml            # Docker services
-├── Dockerfile                    # Application container
-├── Makefile                      # Build and run commands
-└── sqlc.yaml                     # SQLC configuration
-```
-
-## Getting Started
+## Quick Start
 
 ### Prerequisites
-
 - Go 1.23+
 - Docker & Docker Compose
 - Make
@@ -91,14 +53,6 @@ This will start:
 - pgAdmin on port 8081
 - The API server on port 8080
 
-### Configuration
-
-Edit `configs/server-config.yaml` to customize:
-- Database connection settings
-- JWT secret key
-- Server port and timeouts
-- Logging configuration
-
 ## API Documentation
 
 ### Base URL
@@ -106,120 +60,282 @@ Edit `configs/server-config.yaml` to customize:
 http://localhost:8080
 ```
 
-### Endpoints
+## Client Endpoints
 
-#### Client Registration
+### 1. Client Registration
 **POST** `/api/clients/register`
 
-Creates a new client user account.
+Register a new client account.
 
 **Request Body:**
 ```json
 {
-  "username": "john_doe",
   "first_name": "John",
   "last_name": "Doe",
+  "chat_id": 123456789,
   "phone_number": "+1234567890"
 }
 ```
 
-**Response:**
-```json
-{
-  "message": "Client registered successfully",
-  "user": {
-    "id": "uuid",
-    "username": "john_doe",
+**cURL:**
+```bash
+curl -X POST "http://localhost:8080/api/clients/register" \
+  -H "Content-Type: application/json" \
+  -d '{
     "first_name": "John",
     "last_name": "Doe",
-    "user_type": "client",
-    "phone_number": "+1234567890",
-    "created_at": "2024-01-01T00:00:00Z",
-    "updated_at": "2024-01-01T00:00:00Z"
-  }
-}
+    "chat_id": 123456789,
+    "phone_number": "+1234567890"
+  }'
 ```
 
-#### Get Professionals
-**GET** `/api/professionals`
+### 2. Get Client Appointments
+**GET** `/api/clients/{id}/appointments`
 
-Retrieves all professional users.
+Get all future appointments for a client with optional status filtering.
 
-**Response:**
+**Query Parameters:**
+- `status` (optional): `pending`, `confirmed`, `cancelled`, `completed`
+
+**cURL:**
+```bash
+# Get all future appointments
+curl -X GET "http://localhost:8080/api/clients/28c31a08-f740-440e-a161-6c8136478e2b/appointments" \
+  -H "Content-Type: application/json"
+
+# Get only confirmed appointments
+curl -X GET "http://localhost:8080/api/clients/28c31a08-f740-440e-a161-6c8136478e2b/appointments?status=confirmed" \
+  -H "Content-Type: application/json"
+```
+
+### 3. Cancel Appointment (Client)
+**PATCH** `/api/clients/{id}/appointments/{appointment_id}/cancel`
+
+Cancel an appointment as a client.
+
+**Request Body:**
 ```json
 {
-  "professionals": [
-    {
-      "id": "uuid",
-      "username": "dr_smith",
-      "first_name": "Dr. Jane",
-      "last_name": "Smith",
-      "user_type": "professional",
-      "phone_number": "+1234567890",
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    }
-  ],
-  "count": 1
+  "cancellation_reason": "Need to reschedule"
 }
 ```
 
-#### Professional Sign In
+**cURL:**
+```bash
+curl -X PATCH "http://localhost:8080/api/clients/28c31a08-f740-440e-a161-6c8136478e2b/appointments/71a738d8-6695-4fa3-b68a-c58797801258/cancel" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cancellation_reason": "Need to reschedule"
+  }'
+```
+
+## Professional Endpoints
+
+### 1. Get All Professionals
+**GET** `/api/professionals`
+
+Get list of all professionals.
+
+**cURL:**
+```bash
+curl -X GET "http://localhost:8080/api/professionals" \
+  -H "Content-Type: application/json"
+```
+
+### 2. Professional Sign In
 **POST** `/api/professionals/sign_in`
 
-Authenticates a professional user.
+Authenticate a professional user.
 
 **Request Body:**
 ```json
 {
   "username": "dr_smith",
-  "password": "password123"
+  "password": "password123",
+  "chat_id": 123456789
 }
 ```
 
-**Response:**
-```json
-{
-  "message": "Professional signed in successfully",
-  "user": {
-    "id": "uuid",
+**cURL:**
+```bash
+curl -X POST "http://localhost:8080/api/professionals/sign_in" \
+  -H "Content-Type: application/json" \
+  -d '{
     "username": "dr_smith",
-    "first_name": "Dr. Jane",
-    "last_name": "Smith",
-    "user_type": "professional",
-    "phone_number": "+1234567890",
-    "created_at": "2024-01-01T00:00:00Z",
-    "updated_at": "2024-01-01T00:00:00Z"
-  }
+    "password": "password123",
+    "chat_id": 123456789
+  }'
+```
+
+### 3. Get Professional Appointments
+**GET** `/api/professionals/{id}/appointments`
+
+Get all future appointments for a professional with optional status filtering.
+
+**Query Parameters:**
+- `status` (optional): `pending`, `confirmed`, `cancelled`, `completed`
+
+**cURL:**
+```bash
+# Get all future appointments
+curl -X GET "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/appointments" \
+  -H "Content-Type: application/json"
+
+# Get only pending appointments
+curl -X GET "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/appointments?status=pending" \
+  -H "Content-Type: application/json"
+```
+
+### 4. Confirm Appointment
+**PATCH** `/api/professionals/{id}/appointments/{appointment_id}/confirm`
+
+Confirm a pending appointment.
+
+**cURL:**
+```bash
+curl -X PATCH "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/appointments/71a738d8-6695-4fa3-b68a-c58797801258/confirm" \
+  -H "Content-Type: application/json"
+```
+
+### 5. Cancel Appointment (Professional)
+**PATCH** `/api/professionals/{id}/appointments/{appointment_id}/cancel`
+
+Cancel an appointment as a professional.
+
+**Request Body:**
+```json
+{
+  "cancellation_reason": "Client requested to reschedule"
 }
 ```
 
-#### Health Check
-**GET** `/health`
+**cURL:**
+```bash
+curl -X PATCH "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/appointments/71a738d8-6695-4fa3-b68a-c58797801258/cancel" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cancellation_reason": "Client requested to reschedule"
+  }'
+```
 
-Check API health status.
+### 6. Create Unavailable Appointment
+**POST** `/api/professionals/{id}/unavailable_appointments`
+
+Mark a time period as unavailable.
+
+**Request Body:**
+```json
+{
+  "start_at": "2024-01-20T09:00:00Z",
+  "end_at": "2024-01-20T17:00:00Z"
+}
+```
+
+**cURL:**
+```bash
+curl -X POST "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/unavailable_appointments" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "start_at": "2024-01-20T09:00:00Z",
+    "end_at": "2024-01-20T17:00:00Z"
+  }'
+```
+
+### 7. Get Professional Availability
+**GET** `/api/professionals/{id}/availability`
+
+Get hourly availability slots for a specific date (5:00-23:00).
+
+**Query Parameters:**
+- `date` (required): Date in YYYY-MM-DD format
+
+**cURL:**
+```bash
+curl -X GET "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/availability?date=2024-01-15" \
+  -H "Content-Type: application/json"
+```
 
 **Response:**
 ```json
 {
-  "status": "healthy",
-  "timestamp": "2024-01-01T00:00:00Z"
+  "date": "2024-01-15",
+  "slots": [
+    {
+      "start_time": "2024-01-15T05:00:00Z",
+      "end_time": "2024-01-15T06:00:00Z",
+      "available": true
+    },
+    {
+      "start_time": "2024-01-15T10:00:00Z",
+      "end_time": "2024-01-15T11:00:00Z",
+      "available": false,
+      "type": "appointment"
+    },
+    {
+      "start_time": "2024-01-15T14:00:00Z",
+      "end_time": "2024-01-15T15:00:00Z",
+      "available": false,
+      "type": "unavailable"
+    }
+  ]
 }
+```
+
+## Appointment Management
+
+### 1. Create Appointment
+**POST** `/api/appointments`
+
+Create a new appointment between a client and professional.
+
+**Request Body:**
+```json
+{
+  "client_id": "28c31a08-f740-440e-a161-6c8136478e2b",
+  "professional_id": "7c065dd1-22b9-4bed-82e2-be973cb6ea47",
+  "start_time": "2024-01-15T10:00:00Z",
+  "end_time": "2024-01-15T11:00:00Z"
+}
+```
+
+**cURL:**
+```bash
+curl -X POST "http://localhost:8080/api/appointments" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_id": "28c31a08-f740-440e-a161-6c8136478e2b",
+    "professional_id": "7c065dd1-22b9-4bed-82e2-be973cb6ea47",
+    "start_time": "2024-01-15T10:00:00Z",
+    "end_time": "2024-01-15T11:00:00Z"
+  }'
 ```
 
 ## Database Schema
 
-### Users Table
+### Clients Table
 ```sql
-CREATE TABLE users (
+CREATE TABLE clients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    chat_id BIGINT UNIQUE,                    -- Telegram chat ID
-    username VARCHAR(255) NOT NULL,           -- Username (required)
-    first_name VARCHAR(255) NOT NULL,         -- First name (required)
-    last_name VARCHAR(255) NOT NULL,          -- Last name (required)
-    user_type user_type NOT NULL,             -- 'client' or 'professional'
-    phone_number VARCHAR(20),                 -- Optional phone number
-    password_hash VARCHAR(255),               -- For professionals only
+    chat_id BIGINT UNIQUE,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(20),
+    created_by UUID,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+### Professionals Table
+```sql
+CREATE TABLE professionals (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    chat_id BIGINT UNIQUE,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255),
+    phone_number VARCHAR(20),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -230,39 +346,26 @@ CREATE TABLE users (
 CREATE TABLE appointments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     type appointment_type NOT NULL,           -- 'appointment' or 'unavailable'
-    client_id UUID REFERENCES users(id),     -- Can be null for unavailable
-    professional_id UUID NOT NULL REFERENCES users(id),
+    client_id UUID REFERENCES clients(id),   -- Can be null for unavailable
+    professional_id UUID NOT NULL REFERENCES professionals(id),
     start_time TIMESTAMP WITH TIME ZONE NOT NULL,
     end_time TIMESTAMP WITH TIME ZONE NOT NULL,
     status appointment_status DEFAULT 'pending',
     cancellation_reason TEXT,
-    cancelled_by UUID REFERENCES users(id),
+    cancelled_by_professional_id UUID REFERENCES professionals(id),
+    cancelled_by_client_id UUID REFERENCES clients(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 ```
 
-## Usage
-
-### Database Management
-
-#### Run Migrations
-```bash
-make migrate-up
+### Enums
+```sql
+CREATE TYPE appointment_type AS ENUM ('appointment', 'unavailable');
+CREATE TYPE appointment_status AS ENUM ('pending', 'confirmed', 'cancelled', 'completed');
 ```
 
-#### Create New Migration
-```bash
-make migrate-create
-# Enter migration name when prompted
-```
-
-#### Generate SQLC Code
-```bash
-make sqlc-generate
-```
-
-### Development Commands
+## Development Commands
 
 ```bash
 # Start all services
@@ -297,7 +400,7 @@ make sqlc-generate  # Generate SQLC code
 make sqlc-validate  # Validate SQLC configuration
 ```
 
-### Accessing Services
+## Accessing Services
 
 - **API Server**: http://localhost:8080
 - **pgAdmin**: http://localhost:8081
@@ -308,85 +411,52 @@ make sqlc-validate  # Validate SQLC configuration
   - User: booking_user
   - Password: booking_pass
 
-## Development
+## Key Features
 
-### Adding New Features
+### Appointment Status Flow
+1. **Pending**: Newly created appointment (default)
+2. **Confirmed**: Professional has confirmed the appointment
+3. **Cancelled**: Either client or professional cancelled
+4. **Completed**: Appointment has been completed
 
-1. **Create Database Migrations**: Add new migration files in `internal/migrations/`
-2. **Add SQL Queries**: Create query files in `internal/repository/queries/`
-3. **Generate SQLC Code**: Run `make sqlc-generate`
-4. **Create API Module**: Follow the pattern in `internal/api/`
-   - Create schema.go for request/response types
-   - Create repository interface
-   - Create handler.go for route registration
-   - Create controller.go for business logic
-5. **Register Routes**: Add to `internal/api/handlers.go`
+### Availability System
+- **Hourly Slots**: 5:00 AM to 11:00 PM (18 slots per day)
+- **Conflict Detection**: Automatically detects overlapping appointments
+- **Type Detection**: Shows whether slot is blocked by appointment or unavailable period
 
-### API Module Structure
+### Cancellation System
+- **Client Cancellation**: Clients can cancel their own appointments
+- **Professional Cancellation**: Professionals can cancel any appointment
+- **Reason Required**: Both must provide cancellation reason
+- **Status Tracking**: Tracks who cancelled the appointment
 
-Each API module follows this pattern:
+## Error Handling
 
-```
-module_name/
-├── schema.go              # Request/Response schemas
-├── module_repository.go   # Repository interface
-├── handler.go             # Route registration
-└── controller.go          # Business logic
-```
+All endpoints return consistent error responses:
 
-### Testing the API
-
-```bash
-# Test client registration
-curl -X POST http://localhost:8080/api/clients/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "john_doe",
-    "first_name": "John",
-    "last_name": "Doe",
-    "phone_number": "+1234567890"
-  }'
-
-# Test get professionals
-curl http://localhost:8080/api/professionals
-
-# Test professional sign in
-curl -X POST http://localhost:8080/api/professionals/sign_in \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "dr_smith",
-    "password": "password123"
-  }'
-
-# Test health check
-curl http://localhost:8080/health
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Invalid request body",
+    "details": "Field 'first_name' is required"
+  }
+}
 ```
 
-## Architecture
-
-### Modular Design
-The API follows a modular architecture where each feature (clients, professionals, etc.) is self-contained with:
-- **Schemas**: Request/response type definitions
-- **Repository Interface**: Database operation contracts
-- **Handler**: Route registration and middleware
-- **Controller**: Business logic implementation
-
-### Database Layer
-- **SQLC**: Generates type-safe Go code from SQL queries
-- **Migrations**: Version-controlled database schema changes
-- **PostgreSQL**: Robust, ACID-compliant database
-
-### Error Handling
-- Centralized error response handling
-- Structured logging with request context
-- Proper HTTP status codes
+Common error codes:
+- `validation_error`: Invalid input data
+- `database_error`: Database operation failed
+- `not_found`: Resource not found
+- `unauthorized`: Authentication required
+- `conflict`: Resource already exists
 
 ## Security Considerations
 
-- **Password Hashing**: Currently using simple comparison (implement proper hashing for production)
-- **JWT Tokens**: Ready for token-based authentication
-- **Input Validation**: Request validation using Gin binding
-- **SQL Injection**: Prevented by SQLC's type-safe queries
+- **Password Hashing**: Using bcrypt for professional passwords
+- **Input Validation**: Comprehensive request validation
+- **SQL Injection Prevention**: Type-safe queries with SQLC
+- **UUID Usage**: All IDs are UUIDs for security
 
 ## Contributing
 

@@ -1,0 +1,38 @@
+package util
+
+import (
+	"time"
+)
+
+var (
+	// AppTimezone is the timezone used throughout the application
+	AppTimezone *time.Location
+)
+
+// InitTimezone initializes the application timezone
+func InitTimezone() error {
+	// Load specific timezone (UTC+2 for Europe/Berlin)
+	loc, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		// Fallback to UTC if timezone loading fails
+		AppTimezone = time.UTC
+		return err
+	}
+
+	AppTimezone = loc
+	return nil
+}
+
+// GetAppTimezone returns the application timezone
+func GetAppTimezone() *time.Location {
+	if AppTimezone == nil {
+		// Initialize if not already done
+		InitTimezone()
+	}
+	return AppTimezone
+}
+
+// NowInAppTimezone returns current time in application timezone
+func NowInAppTimezone() time.Time {
+	return time.Now().In(GetAppTimezone())
+}
