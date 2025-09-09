@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -51,48 +52,83 @@ func (q *Queries) CreateProfessional(ctx context.Context, arg *CreateProfessiona
 	return &i, err
 }
 
-const GetProfessionalByChatID = `-- name: GetProfessionalByChatID :one
-SELECT id, chat_id, first_name, last_name, phone_number, username, password_hash, created_at, updated_at FROM professionals
-WHERE chat_id = $1
+const GetAppointmentsByProfessionalWithStatusAndDate = `-- name: GetAppointmentsByProfessionalWithStatusAndDate :many
+SELECT 
+    a.id,
+    a.type,
+    a.start_time,
+    a.end_time,
+    a.description,
+    a.status,
+    a.created_at,
+    a.updated_at,
+    a.client_id,
+    c.first_name as client_first_name,
+    c.last_name as client_last_name,
+    c.phone_number as client_phone_number
+FROM appointments a
+LEFT JOIN clients c ON a.client_id = c.id
+WHERE a.professional_id = $1
+    AND ($2 = '' OR a.status = $2::appointment_status)
+    AND ($3 = '' OR DATE(a.start_time) = $3::date)
+ORDER BY a.start_time ASC
 `
 
-func (q *Queries) GetProfessionalByChatID(ctx context.Context, chatID sql.NullInt64) (*Professional, error) {
-	row := q.db.QueryRowContext(ctx, GetProfessionalByChatID, chatID)
-	var i Professional
-	err := row.Scan(
-		&i.ID,
-		&i.ChatID,
-		&i.FirstName,
-		&i.LastName,
-		&i.PhoneNumber,
-		&i.Username,
-		&i.PasswordHash,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return &i, err
+type GetAppointmentsByProfessionalWithStatusAndDateParams struct {
+	ProfessionalID uuid.UUID   `json:"professional_id"`
+	Column2        interface{} `json:"column_2"`
+	Column3        interface{} `json:"column_3"`
 }
 
-const GetProfessionalByID = `-- name: GetProfessionalByID :one
-SELECT id, chat_id, first_name, last_name, phone_number, username, password_hash, created_at, updated_at FROM professionals
-WHERE id = $1
-`
+type GetAppointmentsByProfessionalWithStatusAndDateRow struct {
+	ID                uuid.UUID             `json:"id"`
+	Type              AppointmentType       `json:"type"`
+	StartTime         time.Time             `json:"start_time"`
+	EndTime           time.Time             `json:"end_time"`
+	Description       sql.NullString        `json:"description"`
+	Status            NullAppointmentStatus `json:"status"`
+	CreatedAt         time.Time             `json:"created_at"`
+	UpdatedAt         time.Time             `json:"updated_at"`
+	ClientID          uuid.NullUUID         `json:"client_id"`
+	ClientFirstName   sql.NullString        `json:"client_first_name"`
+	ClientLastName    sql.NullString        `json:"client_last_name"`
+	ClientPhoneNumber sql.NullString        `json:"client_phone_number"`
+}
 
-func (q *Queries) GetProfessionalByID(ctx context.Context, id uuid.UUID) (*Professional, error) {
-	row := q.db.QueryRowContext(ctx, GetProfessionalByID, id)
-	var i Professional
-	err := row.Scan(
-		&i.ID,
-		&i.ChatID,
-		&i.FirstName,
-		&i.LastName,
-		&i.PhoneNumber,
-		&i.Username,
-		&i.PasswordHash,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return &i, err
+func (q *Queries) GetAppointmentsByProfessionalWithStatusAndDate(ctx context.Context, arg *GetAppointmentsByProfessionalWithStatusAndDateParams) ([]*GetAppointmentsByProfessionalWithStatusAndDateRow, error) {
+	rows, err := q.db.QueryContext(ctx, GetAppointmentsByProfessionalWithStatusAndDate, arg.ProfessionalID, arg.Column2, arg.Column3)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetAppointmentsByProfessionalWithStatusAndDateRow{}
+	for rows.Next() {
+		var i GetAppointmentsByProfessionalWithStatusAndDateRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Type,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Description,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ClientID,
+			&i.ClientFirstName,
+			&i.ClientLastName,
+			&i.ClientPhoneNumber,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const GetProfessionalByUsername = `-- name: GetProfessionalByUsername :one
@@ -170,33 +206,6 @@ type UpdateProfessionalChatIDParams struct {
 
 func (q *Queries) UpdateProfessionalChatID(ctx context.Context, arg *UpdateProfessionalChatIDParams) (*Professional, error) {
 	row := q.db.QueryRowContext(ctx, UpdateProfessionalChatID, arg.ID, arg.ChatID)
-	var i Professional
-	err := row.Scan(
-		&i.ID,
-		&i.ChatID,
-		&i.FirstName,
-		&i.LastName,
-		&i.PhoneNumber,
-		&i.Username,
-		&i.PasswordHash,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return &i, err
-}
-
-const VerifyProfessionalCredentials = `-- name: VerifyProfessionalCredentials :one
-SELECT id, chat_id, first_name, last_name, phone_number, username, password_hash, created_at, updated_at FROM professionals
-WHERE username = $1 AND password_hash = $2
-`
-
-type VerifyProfessionalCredentialsParams struct {
-	Username     string         `json:"username"`
-	PasswordHash sql.NullString `json:"password_hash"`
-}
-
-func (q *Queries) VerifyProfessionalCredentials(ctx context.Context, arg *VerifyProfessionalCredentialsParams) (*Professional, error) {
-	row := q.db.QueryRowContext(ctx, VerifyProfessionalCredentials, arg.Username, arg.PasswordHash)
 	var i Professional
 	err := row.Scan(
 		&i.ID,

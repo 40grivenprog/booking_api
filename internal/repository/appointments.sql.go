@@ -303,47 +303,6 @@ func (q *Queries) ConfirmAppointmentWithDetails(ctx context.Context, arg *Confir
 	return &i, err
 }
 
-const CreateAppointment = `-- name: CreateAppointment :one
-INSERT INTO appointments (type, client_id, professional_id, start_time, end_time, status, description)
-VALUES ('appointment', $1, $2, $3, $4, 'pending', $5)
-RETURNING id, type, client_id, professional_id, start_time, end_time, status, cancellation_reason, cancelled_by_professional_id, cancelled_by_client_id, created_at, updated_at, description
-`
-
-type CreateAppointmentParams struct {
-	ClientID       uuid.NullUUID  `json:"client_id"`
-	ProfessionalID uuid.UUID      `json:"professional_id"`
-	StartTime      time.Time      `json:"start_time"`
-	EndTime        time.Time      `json:"end_time"`
-	Description    sql.NullString `json:"description"`
-}
-
-func (q *Queries) CreateAppointment(ctx context.Context, arg *CreateAppointmentParams) (*Appointment, error) {
-	row := q.db.QueryRowContext(ctx, CreateAppointment,
-		arg.ClientID,
-		arg.ProfessionalID,
-		arg.StartTime,
-		arg.EndTime,
-		arg.Description,
-	)
-	var i Appointment
-	err := row.Scan(
-		&i.ID,
-		&i.Type,
-		&i.ClientID,
-		&i.ProfessionalID,
-		&i.StartTime,
-		&i.EndTime,
-		&i.Status,
-		&i.CancellationReason,
-		&i.CancelledByProfessionalID,
-		&i.CancelledByClientID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Description,
-	)
-	return &i, err
-}
-
 const CreateAppointmentWithDetails = `-- name: CreateAppointmentWithDetails :one
 WITH new_appointment AS (
     INSERT INTO appointments (type, client_id, professional_id, start_time, end_time, status, description)
@@ -518,49 +477,6 @@ func (q *Queries) GetAppointmentByID(ctx context.Context, id uuid.UUID) (*Appoin
 	return &i, err
 }
 
-const GetAppointmentsByClient = `-- name: GetAppointmentsByClient :many
-SELECT id, type, client_id, professional_id, start_time, end_time, status, cancellation_reason, cancelled_by_professional_id, cancelled_by_client_id, created_at, updated_at, description FROM appointments
-WHERE client_id = $1
-ORDER BY start_time DESC
-`
-
-func (q *Queries) GetAppointmentsByClient(ctx context.Context, clientID uuid.NullUUID) ([]*Appointment, error) {
-	rows, err := q.db.QueryContext(ctx, GetAppointmentsByClient, clientID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []*Appointment{}
-	for rows.Next() {
-		var i Appointment
-		if err := rows.Scan(
-			&i.ID,
-			&i.Type,
-			&i.ClientID,
-			&i.ProfessionalID,
-			&i.StartTime,
-			&i.EndTime,
-			&i.Status,
-			&i.CancellationReason,
-			&i.CancelledByProfessionalID,
-			&i.CancelledByClientID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.Description,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, &i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const GetAppointmentsByClientWithStatus = `-- name: GetAppointmentsByClientWithStatus :many
 SELECT 
     a.id, a.type, a.client_id, a.professional_id, a.start_time, a.end_time, a.status, a.cancellation_reason, a.cancelled_by_professional_id, a.cancelled_by_client_id, a.created_at, a.updated_at, a.description,
@@ -651,49 +567,6 @@ func (q *Queries) GetAppointmentsByClientWithStatus(ctx context.Context, arg *Ge
 			&i.ProfessionalLastName,
 			&i.ProfessionalPhoneNumber,
 			&i.ProfessionalChatID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, &i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const GetAppointmentsByProfessional = `-- name: GetAppointmentsByProfessional :many
-SELECT id, type, client_id, professional_id, start_time, end_time, status, cancellation_reason, cancelled_by_professional_id, cancelled_by_client_id, created_at, updated_at, description FROM appointments
-WHERE professional_id = $1
-ORDER BY start_time DESC
-`
-
-func (q *Queries) GetAppointmentsByProfessional(ctx context.Context, professionalID uuid.UUID) ([]*Appointment, error) {
-	rows, err := q.db.QueryContext(ctx, GetAppointmentsByProfessional, professionalID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []*Appointment{}
-	for rows.Next() {
-		var i Appointment
-		if err := rows.Scan(
-			&i.ID,
-			&i.Type,
-			&i.ClientID,
-			&i.ProfessionalID,
-			&i.StartTime,
-			&i.EndTime,
-			&i.Status,
-			&i.CancellationReason,
-			&i.CancelledByProfessionalID,
-			&i.CancelledByClientID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.Description,
 		); err != nil {
 			return nil, err
 		}
@@ -842,37 +715,4 @@ func (q *Queries) GetAppointmentsByProfessionalWithStatus(ctx context.Context, a
 		return nil, err
 	}
 	return items, nil
-}
-
-const UpdateAppointmentStatus = `-- name: UpdateAppointmentStatus :one
-UPDATE appointments
-SET status = $2, updated_at = NOW()
-WHERE appointments.id = $1
-RETURNING id, type, client_id, professional_id, start_time, end_time, status, cancellation_reason, cancelled_by_professional_id, cancelled_by_client_id, created_at, updated_at, description
-`
-
-type UpdateAppointmentStatusParams struct {
-	ID     uuid.UUID             `json:"id"`
-	Status NullAppointmentStatus `json:"status"`
-}
-
-func (q *Queries) UpdateAppointmentStatus(ctx context.Context, arg *UpdateAppointmentStatusParams) (*Appointment, error) {
-	row := q.db.QueryRowContext(ctx, UpdateAppointmentStatus, arg.ID, arg.Status)
-	var i Appointment
-	err := row.Scan(
-		&i.ID,
-		&i.Type,
-		&i.ClientID,
-		&i.ProfessionalID,
-		&i.StartTime,
-		&i.EndTime,
-		&i.Status,
-		&i.CancellationReason,
-		&i.CancelledByProfessionalID,
-		&i.CancelledByClientID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Description,
-	)
-	return &i, err
 }

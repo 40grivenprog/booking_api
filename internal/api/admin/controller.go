@@ -14,14 +14,14 @@ import (
 func (h *AdminsHandler) CreateProfessional(c *gin.Context) {
 	var req CreateProfessionalRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid request body", err)
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidRequestBody, err)
 		return
 	}
 
 	// Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		common.HandleErrorResponse(c, http.StatusInternalServerError, "password_hash_error", "Failed to hash password", err)
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeInternal, common.ErrorMsgInternalServerError, err)
 		return
 	}
 
@@ -47,10 +47,10 @@ func (h *AdminsHandler) CreateProfessional(c *gin.Context) {
 	if err != nil {
 		// Check if it's a unique constraint violation
 		if common.IsUniqueConstraintError(err) {
-			common.HandleErrorResponse(c, http.StatusConflict, "username_taken", "The provided username is already taken", nil)
+			common.HandleErrorResponse(c, http.StatusConflict, common.ErrorTypeConflict, common.ErrorMsgUsernameAlreadyExists, nil)
 			return
 		}
-		common.HandleErrorResponse(c, http.StatusInternalServerError, "database_error", "Failed to create professional", err)
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToCreateProfessional, err)
 		return
 	}
 

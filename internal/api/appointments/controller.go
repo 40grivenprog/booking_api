@@ -2,7 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -17,53 +16,49 @@ import (
 func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 	var req CreateAppointmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid request body", err)
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidRequestBody, err)
 		return
 	}
-	fmt.Println("req.StartTime", req.StartTime)
-	fmt.Println("req.EndTime", req.EndTime)
 
 	// Parse time strings and convert to application timezone
 	startTime, err := time.Parse(time.RFC3339, req.StartTime)
 	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid start_time format. Use RFC3339 format (e.g., 2024-01-01T10:00:00Z)", err)
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidTime, err)
 		return
 	}
 
 	endTime, err := time.Parse(time.RFC3339, req.EndTime)
 	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid end_time format. Use RFC3339 format (e.g., 2024-01-01T11:00:00Z)", err)
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidTime, err)
 		return
 	}
 
 	// Store times in application timezone (Europe/Berlin)
 	startTime = util.ConvertToAppTimezone(startTime)
 	endTime = util.ConvertToAppTimezone(endTime)
-	fmt.Println("startTime", startTime)
-	fmt.Println("endTime", endTime)
 
 	// Validate that start_time is in the future
 	if startTime.Before(util.NowInAppTimezone()) {
-		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "start_time must be in the future", nil)
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgFutureTimeRequired, nil)
 		return
 	}
 
 	// Validate that end_time is after start_time
 	if endTime.Before(startTime) || endTime.Equal(startTime) {
-		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "end_time must be after start_time", nil)
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidTime, nil)
 		return
 	}
 
 	// Parse UUIDs
 	clientID, err := uuid.Parse(req.ClientID)
 	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid client_id format", err)
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidClientID, err)
 		return
 	}
 
 	professionalID, err := uuid.Parse(req.ProfessionalID)
 	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid professional_id format", err)
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidProfessionalID, err)
 		return
 	}
 
@@ -76,7 +71,7 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 		Description:    sql.NullString{String: "Personal training", Valid: true},
 	})
 	if err != nil {
-		common.HandleErrorResponse(c, http.StatusInternalServerError, "database_error", "Failed to create appointment", err)
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToCreateAppointment, err)
 		return
 	}
 

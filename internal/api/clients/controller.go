@@ -2,7 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -16,7 +15,7 @@ import (
 func (h *ClientsHandler) RegisterClient(c *gin.Context) {
 	var req ClientRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid request body", err)
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidRequestBody, err)
 		return
 	}
 
@@ -41,10 +40,10 @@ func (h *ClientsHandler) RegisterClient(c *gin.Context) {
 	if err != nil {
 		// Check if it's a unique constraint violation
 		if common.IsUniqueConstraintError(err) {
-			common.HandleErrorResponse(c, http.StatusConflict, "username_taken", "The provided username is already taken", nil)
+			common.HandleErrorResponse(c, http.StatusConflict, common.ErrorTypeConflict, common.ErrorMsgUsernameAlreadyExists, nil)
 			return
 		}
-		common.HandleErrorResponse(c, http.StatusInternalServerError, "database_error", "Failed to create client", err)
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToCreateClient, err)
 		return
 	}
 
@@ -81,13 +80,13 @@ func (h *ClientsHandler) GetClientAppointments(c *gin.Context) {
 	// Parse client ID
 	clientID, err := uuid.Parse(clientIDStr)
 	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid client_id format", err)
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidClientID, err)
 		return
 	}
 
 	// Validate status filter if provided
 	if statusFilter != "" && statusFilter != "pending" && statusFilter != "confirmed" && statusFilter != "cancelled" && statusFilter != "completed" {
-		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid status. Must be one of: pending, confirmed, cancelled, completed", nil)
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidStatus, nil)
 		return
 	}
 
@@ -103,15 +102,13 @@ func (h *ClientsHandler) GetClientAppointments(c *gin.Context) {
 		Status:   statusParam,
 	})
 	if err != nil {
-		common.HandleErrorResponse(c, http.StatusInternalServerError, "database_error", "Failed to retrieve appointments", err)
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToRetrieveAppointments, err)
 		return
 	}
 
 	// Convert to response format
 	var responseAppointments []ClientAppointment
 	for _, appt := range appointments {
-		fmt.Println("appt.StartTime", appt.StartTime)
-		fmt.Println("appt.EndTime", appt.EndTime)
 		appointment := ClientAppointment{
 			ID:          appt.ID.String(),
 			Type:        string(appt.Type),
@@ -148,34 +145,34 @@ func (h *ClientsHandler) CancelClientAppointment(c *gin.Context) {
 	// Parse UUIDs
 	clientID, err := uuid.Parse(clientIDStr)
 	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid client_id format", err)
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidClientID, err)
 		return
 	}
 
 	appointmentID, err := uuid.Parse(appointmentIDStr)
 	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid appointment_id format", err)
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidAppointmentID, err)
 		return
 	}
 
 	// Parse request body
 	var req CancelClientAppointmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid request body", err)
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidRequestBody, err)
 		return
 	}
 
 	appointment, err := h.clientsRepo.GetAppointmentByID(c.Request.Context(), appointmentID)
 	if err != nil {
-		common.HandleErrorResponse(c, http.StatusInternalServerError, "database_error", "Failed to get appointment", err)
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToGetAppointment, err)
 		return
 	}
 	if appointment.ClientID.UUID != clientID {
-		common.HandleErrorResponse(c, http.StatusForbidden, "forbidden", "You are not allowed to cancel this appointment", nil)
+		common.HandleErrorResponse(c, http.StatusForbidden, common.ErrorTypeForbidden, common.ErrorMsgNotAllowedToCancelAppointment, nil)
 		return
 	}
 	if appointment.Status.AppointmentStatus != db.AppointmentStatusPending && appointment.Status.AppointmentStatus != db.AppointmentStatusConfirmed {
-		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Appointment is not pending or confirmed. Please check the status of the appointment.", nil)
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgAppointmentNotPendingOrConfirmed, nil)
 		return
 	}
 
@@ -186,7 +183,7 @@ func (h *ClientsHandler) CancelClientAppointment(c *gin.Context) {
 		CancellationReason:  sql.NullString{String: req.CancellationReason, Valid: true},
 	})
 	if err != nil {
-		common.HandleErrorResponse(c, http.StatusInternalServerError, "database_error", "Failed to cancel appointment", err)
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToUpdateAppointment, err)
 		return
 	}
 

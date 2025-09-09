@@ -1,7 +1,6 @@
--- name: CreateAppointment :one
-INSERT INTO appointments (type, client_id, professional_id, start_time, end_time, status, description)
-VALUES ('appointment', $1, $2, $3, $4, 'pending', $5)
-RETURNING *;
+-- name: GetAppointmentByID :one
+SELECT * FROM appointments
+WHERE appointments.id = $1;
 
 -- name: CreateAppointmentWithDetails :one
 WITH new_appointment AS (
@@ -29,27 +28,6 @@ SELECT
 FROM new_appointment na
 LEFT JOIN clients c ON c.id = na.client_id
 LEFT JOIN professionals p ON p.id = na.professional_id;
-
--- name: GetAppointmentByID :one
-SELECT * FROM appointments
-WHERE appointments.id = $1;
-
--- name: GetAppointmentsByClient :many
-SELECT * FROM appointments
-WHERE client_id = $1
-ORDER BY start_time DESC;
-
--- name: GetAppointmentsByProfessional :many
-SELECT * FROM appointments
-WHERE professional_id = $1
-ORDER BY start_time DESC;
-
--- name: UpdateAppointmentStatus :one
-UPDATE appointments
-SET status = $2, updated_at = NOW()
-WHERE appointments.id = $1
-RETURNING *;
-
 
 -- name: ConfirmAppointmentWithDetails :one
 WITH updated_appointment AS (

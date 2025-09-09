@@ -27,14 +27,14 @@ func (c *UsersController) GetUserByChatID(ctx *gin.Context) {
 	chatIDStr := ctx.Param("chat_id")
 	chatID, err := strconv.ParseInt(chatIDStr, 10, 64)
 	if err != nil {
-		common.HandleErrorResponse(ctx, http.StatusBadRequest, "validation_error", "Invalid chat_id format", err)
+		common.HandleErrorResponse(ctx, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidClientID, err)
 		return
 	}
 
 	// Get user from repository
 	user, err := c.usersRepo.GetUserByChatID(ctx.Request.Context(), sql.NullInt64{Int64: chatID, Valid: true})
 	if err != nil {
-		common.HandleErrorResponse(ctx, http.StatusNotFound, "not_found", "User not found", err)
+		common.HandleErrorResponse(ctx, http.StatusNotFound, common.ErrorTypeNotFound, common.ErrorMsgUserNotFound, err)
 		return
 	}
 
