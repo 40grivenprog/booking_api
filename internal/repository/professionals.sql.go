@@ -119,6 +119,7 @@ func (q *Queries) GetProfessionalByUsername(ctx context.Context, username string
 
 const GetProfessionals = `-- name: GetProfessionals :many
 SELECT id, chat_id, first_name, last_name, phone_number, username, password_hash, created_at, updated_at FROM professionals
+WHERE chat_id is not null
 ORDER BY created_at DESC
 `
 

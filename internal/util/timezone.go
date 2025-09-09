@@ -36,3 +36,8 @@ func GetAppTimezone() *time.Location {
 func NowInAppTimezone() time.Time {
 	return time.Now().In(GetAppTimezone())
 }
+
+// ConvertToAppTimezone converts a time to application timezone for storage
+func ConvertToAppTimezone(t time.Time) time.Time {
+	return t.In(GetAppTimezone())
+}

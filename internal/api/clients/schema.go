@@ -37,6 +37,7 @@ type ClientAppointment struct {
 	StartTime    string                         `json:"start_time"`
 	EndTime      string                         `json:"end_time"`
 	Status       string                         `json:"status"`
+	Description  string                         `json:"description,omitempty"`
 	CreatedAt    string                         `json:"created_at"`
 	UpdatedAt    string                         `json:"updated_at"`
 	Professional *ClientAppointmentProfessional `json:"professional,omitempty"`
@@ -80,6 +81,7 @@ type CancelledAppointment struct {
 	StartTime          string `json:"start_time"`
 	EndTime            string `json:"end_time"`
 	Status             string `json:"status"`
+	Description        string `json:"description,omitempty"`
 	CancellationReason string `json:"cancellation_reason"`
 	CancelledBy        string `json:"cancelled_by"`
 	CreatedAt          string `json:"created_at"`

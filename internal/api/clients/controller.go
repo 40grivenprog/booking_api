@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -109,14 +110,17 @@ func (h *ClientsHandler) GetClientAppointments(c *gin.Context) {
 	// Convert to response format
 	var responseAppointments []ClientAppointment
 	for _, appt := range appointments {
+		fmt.Println("appt.StartTime", appt.StartTime)
+		fmt.Println("appt.EndTime", appt.EndTime)
 		appointment := ClientAppointment{
-			ID:        appt.ID.String(),
-			Type:      string(appt.Type),
-			StartTime: appt.StartTime.Format(time.RFC3339),
-			EndTime:   appt.EndTime.Format(time.RFC3339),
-			Status:    string(appt.Status.AppointmentStatus),
-			CreatedAt: appt.CreatedAt.Format(time.RFC3339),
-			UpdatedAt: appt.UpdatedAt.Format(time.RFC3339),
+			ID:          appt.ID.String(),
+			Type:        string(appt.Type),
+			StartTime:   appt.StartTime.Format(time.RFC3339),
+			EndTime:     appt.EndTime.Format(time.RFC3339),
+			Description: appt.Description.String,
+			Status:      string(appt.Status.AppointmentStatus),
+			CreatedAt:   appt.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:   appt.UpdatedAt.Format(time.RFC3339),
 		}
 		professional := &ClientAppointmentProfessional{
 			ID:        appt.ProfessionalIDFull.String(),

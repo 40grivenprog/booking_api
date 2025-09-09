@@ -1,12 +1,12 @@
 -- name: CreateAppointment :one
-INSERT INTO appointments (type, client_id, professional_id, start_time, end_time, status)
-VALUES ('appointment', $1, $2, $3, $4, 'pending')
+INSERT INTO appointments (type, client_id, professional_id, start_time, end_time, status, description)
+VALUES ('appointment', $1, $2, $3, $4, 'pending', $5)
 RETURNING *;
 
 -- name: CreateAppointmentWithDetails :one
 WITH new_appointment AS (
-    INSERT INTO appointments (type, client_id, professional_id, start_time, end_time, status)
-    VALUES ('appointment', $1, $2, $3, $4, 'pending')
+    INSERT INTO appointments (type, client_id, professional_id, start_time, end_time, status, description)
+    VALUES ('appointment', $1, $2, $3, $4, 'pending', $5)
     RETURNING *
 )
 SELECT 
@@ -204,13 +204,14 @@ LEFT JOIN clients c ON c.id = ua.client_id
 LEFT JOIN professionals p ON p.id = ua.professional_id;
 
 -- name: CreateUnavailableAppointment :one
-INSERT INTO appointments (type, professional_id, start_time, end_time, status)
-VALUES ('unavailable', $1, $2, $3, 'confirmed')
+INSERT INTO appointments (type, professional_id, start_time, end_time, status, description)
+VALUES ('unavailable', $1, $2, $3, 'confirmed', $4)
 RETURNING *;
 
 -- name: GetAppointmentsByProfessionalAndDate :many
 SELECT * FROM appointments
 WHERE professional_id = $1
   AND DATE(start_time) = $2
-  AND status != 'cancelled'
+  AND type = 'appointment'
+  AND status not in ('cancelled', 'pending')
 ORDER BY start_time ASC;

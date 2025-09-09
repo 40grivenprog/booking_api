@@ -148,6 +148,7 @@ type Appointment struct {
 	CancelledByClientID       uuid.NullUUID         `json:"cancelled_by_client_id"`
 	CreatedAt                 time.Time             `json:"created_at"`
 	UpdatedAt                 time.Time             `json:"updated_at"`
+	Description               sql.NullString        `json:"description"`
 }
 
 type Client struct {

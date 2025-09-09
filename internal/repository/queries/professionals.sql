@@ -17,6 +17,7 @@ WHERE chat_id = $1;
 
 -- name: GetProfessionals :many
 SELECT * FROM professionals
+WHERE chat_id is not null
 ORDER BY created_at DESC;
 
 -- name: UpdateProfessionalChatID :one

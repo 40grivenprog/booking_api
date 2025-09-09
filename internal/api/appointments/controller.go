@@ -1,6 +1,8 @@
 package api
 
 import (
+	"database/sql"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -18,8 +20,10 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid request body", err)
 		return
 	}
+	fmt.Println("req.StartTime", req.StartTime)
+	fmt.Println("req.EndTime", req.EndTime)
 
-	// Parse time strings
+	// Parse time strings and convert to application timezone
 	startTime, err := time.Parse(time.RFC3339, req.StartTime)
 	if err != nil {
 		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid start_time format. Use RFC3339 format (e.g., 2024-01-01T10:00:00Z)", err)
@@ -31,6 +35,12 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 		common.HandleErrorResponse(c, http.StatusBadRequest, "validation_error", "Invalid end_time format. Use RFC3339 format (e.g., 2024-01-01T11:00:00Z)", err)
 		return
 	}
+
+	// Store times in application timezone (Europe/Berlin)
+	startTime = util.ConvertToAppTimezone(startTime)
+	endTime = util.ConvertToAppTimezone(endTime)
+	fmt.Println("startTime", startTime)
+	fmt.Println("endTime", endTime)
 
 	// Validate that start_time is in the future
 	if startTime.Before(util.NowInAppTimezone()) {
@@ -63,6 +73,7 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 		ProfessionalID: professionalID,
 		StartTime:      startTime,
 		EndTime:        endTime,
+		Description:    sql.NullString{String: "Personal training", Valid: true},
 	})
 	if err != nil {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, "database_error", "Failed to create appointment", err)
@@ -72,12 +83,13 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 	// Convert to response format
 	response := CreateAppointmentResponse{
 		Appointment: Appointment{
-			ID:        result.ID.String(),
-			StartTime: result.StartTime.Format(time.RFC3339),
-			EndTime:   result.EndTime.Format(time.RFC3339),
-			Status:    string(result.Status.AppointmentStatus),
-			CreatedAt: result.CreatedAt.Format(time.RFC3339),
-			UpdatedAt: result.UpdatedAt.Format(time.RFC3339),
+			ID:          result.ID.String(),
+			StartTime:   result.StartTime.Format(time.RFC3339),
+			EndTime:     result.EndTime.Format(time.RFC3339),
+			Status:      string(result.Status.AppointmentStatus),
+			Description: result.Description.String,
+			CreatedAt:   result.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:   result.UpdatedAt.Format(time.RFC3339),
 		},
 		Client: Client{
 			ID:          result.ClientIDFull.String(),

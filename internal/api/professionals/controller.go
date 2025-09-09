@@ -2,7 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -224,13 +223,14 @@ func (h *ProfessionalsHandler) GetProfessionalAppointments(c *gin.Context) {
 	var responseAppointments []ProfessionalAppointment
 	for _, appt := range appointments {
 		appointment := ProfessionalAppointment{
-			ID:        appt.ID.String(),
-			Type:      string(appt.Type),
-			StartTime: appt.StartTime.Format(time.RFC3339),
-			EndTime:   appt.EndTime.Format(time.RFC3339),
-			Status:    string(appt.Status.AppointmentStatus),
-			CreatedAt: appt.CreatedAt.Format(time.RFC3339),
-			UpdatedAt: appt.UpdatedAt.Format(time.RFC3339),
+			ID:          appt.ID.String(),
+			Type:        string(appt.Type),
+			StartTime:   appt.StartTime.Format(time.RFC3339),
+			EndTime:     appt.EndTime.Format(time.RFC3339),
+			Description: appt.Description.String,
+			Status:      string(appt.Status.AppointmentStatus),
+			CreatedAt:   appt.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:   appt.UpdatedAt.Format(time.RFC3339),
 		}
 		appointment.Client = &ProfessionalAppointmentClient{
 			ID:          appt.ClientID.UUID.String(),
@@ -375,6 +375,7 @@ func (h *ProfessionalsHandler) CreateUnavailableAppointment(c *gin.Context) {
 	// Create unavailable appointment
 	appointment, err := h.professionalsRepo.CreateUnavailableAppointment(c.Request.Context(), &db.CreateUnavailableAppointmentParams{
 		ProfessionalID: professionalID,
+		Description:    sql.NullString{String: req.Description, Valid: true},
 		StartTime:      startTime,
 		EndTime:        endTime,
 	})
@@ -424,9 +425,12 @@ func (h *ProfessionalsHandler) GetProfessionalAvailability(c *gin.Context) {
 	}
 
 	// Get appointments for the specific date
+	// Convert the date to application timezone
+	dateApp := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, util.GetAppTimezone())
+
 	appointments, err := h.professionalsRepo.GetAppointmentsByProfessionalAndDate(c.Request.Context(), &db.GetAppointmentsByProfessionalAndDateParams{
 		ProfessionalID: professionalID,
-		StartTime:      date,
+		StartTime:      dateApp,
 	})
 	if err != nil {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, "database_error", "Failed to retrieve appointments", err)
@@ -435,12 +439,9 @@ func (h *ProfessionalsHandler) GetProfessionalAvailability(c *gin.Context) {
 
 	// Generate time slots from current time to 23:00
 	slots := make([]TimeSlot, 0, 18)
-	now := time.Now()
-	fmt.Println("now UTC", now)
 
 	// Use centralized timezone
 	localNow := util.NowInAppTimezone()
-	fmt.Println("now local", localNow)
 
 	// Create base date in application timezone
 	baseDate := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, util.GetAppTimezone())
@@ -478,8 +479,12 @@ func (h *ProfessionalsHandler) GetProfessionalAvailability(c *gin.Context) {
 			apptStart := appointment.StartTime
 			apptEnd := appointment.EndTime
 
-			// Check if the slot overlaps with the appointment
-			if startTime.Before(apptEnd) && endTime.After(apptStart) {
+			// Convert appointment times to application timezone for comparison
+			apptStartLocal := apptStart.In(util.GetAppTimezone())
+			apptEndLocal := apptEnd.In(util.GetAppTimezone())
+
+			// Check if the slot overlaps with the appointment (both in application timezone)
+			if startTime.Before(apptEndLocal) && endTime.After(apptStartLocal) {
 				slot.Available = false
 				slot.Type = string(appointment.Type)
 				break

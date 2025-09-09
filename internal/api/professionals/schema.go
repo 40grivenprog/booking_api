@@ -40,12 +40,13 @@ type ConfirmAppointmentResponse struct {
 
 // AppointmentConfirm represents an appointment in the confirm response
 type AppointmentConfirm struct {
-	ID        string `json:"id"`
-	Status    string `json:"status"`
-	StartTime string `json:"start_time"`
-	EndTime   string `json:"end_time"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	ID          string `json:"id"`
+	Status      string `json:"status"`
+	StartTime   string `json:"start_time"`
+	EndTime     string `json:"end_time"`
+	Description string `json:"description,omitempty"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
 }
 
 // ClientConfirm represents a client in the confirm response
@@ -71,14 +72,15 @@ type GetProfessionalAppointmentsResponse struct {
 
 // ProfessionalAppointment represents an appointment with client details in professional context
 type ProfessionalAppointment struct {
-	ID        string                         `json:"id"`
-	Type      string                         `json:"type"`
-	StartTime string                         `json:"start_time"`
-	EndTime   string                         `json:"end_time"`
-	Status    string                         `json:"status"`
-	CreatedAt string                         `json:"created_at"`
-	UpdatedAt string                         `json:"updated_at"`
-	Client    *ProfessionalAppointmentClient `json:"client,omitempty"`
+	ID          string                         `json:"id"`
+	Type        string                         `json:"type"`
+	StartTime   string                         `json:"start_time"`
+	EndTime     string                         `json:"end_time"`
+	Status      string                         `json:"status"`
+	Description string                         `json:"description,omitempty"`
+	CreatedAt   string                         `json:"created_at"`
+	UpdatedAt   string                         `json:"updated_at"`
+	Client      *ProfessionalAppointmentClient `json:"client,omitempty"`
 }
 
 // ProfessionalAppointmentClient represents client details in appointment context
@@ -109,6 +111,7 @@ type CancelledAppointment struct {
 	StartTime          string `json:"start_time"`
 	EndTime            string `json:"end_time"`
 	Status             string `json:"status"`
+	Description        string `json:"description,omitempty"`
 	CancellationReason string `json:"cancellation_reason"`
 	CancelledBy        string `json:"cancelled_by"`
 	CreatedAt          string `json:"created_at"`
@@ -127,8 +130,9 @@ type ProfessionalInfo struct {
 
 // CreateUnavailableAppointmentRequest represents the request to create an unavailable appointment
 type CreateUnavailableAppointmentRequest struct {
-	StartAt string `json:"start_at" binding:"required"`
-	EndAt   string `json:"end_at" binding:"required"`
+	Description string `json:"description,omitempty" binding:"required"`
+	StartAt     string `json:"start_at" binding:"required"`
+	EndAt       string `json:"end_at" binding:"required"`
 }
 
 // CreateUnavailableAppointmentResponse represents the response after creating an unavailable appointment
