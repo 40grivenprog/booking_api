@@ -190,6 +190,28 @@ RETURNING *;
 SELECT * FROM appointments
 WHERE professional_id = $1
   AND DATE(start_time) = $2
-  AND type = 'appointment'
+  AND type = 'appointment' or type = 'unavailable'
   AND status not in ('cancelled', 'pending')
 ORDER BY start_time ASC;
+
+-- name: GetAppointmentsByProfessionalAndDateWithClient :many
+SELECT 
+    a.id,
+    a.professional_id,
+    a.client_id,
+    a.start_time,
+    a.end_time,
+    a.description,
+    a.type,
+    a.status,
+    a.created_at,
+    a.updated_at,
+    c.first_name as client_first_name,
+    c.last_name as client_last_name
+FROM appointments a
+LEFT JOIN clients c ON a.client_id = c.id
+WHERE a.professional_id = $1
+  AND DATE(a.start_time) = $2
+  AND (a.type = 'appointment' OR a.type = 'unavailable')
+  AND a.status NOT IN ('cancelled', 'pending')
+ORDER BY a.start_time ASC;

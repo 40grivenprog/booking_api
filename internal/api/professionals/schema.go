@@ -142,13 +142,14 @@ type CreateUnavailableAppointmentResponse struct {
 
 // UnavailableAppointment represents an unavailable appointment
 type UnavailableAppointment struct {
-	ID        string `json:"id"`
-	Type      string `json:"type"`
-	StartTime string `json:"start_time"`
-	EndTime   string `json:"end_time"`
-	Status    string `json:"status"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	ID          string `json:"id"`
+	Type        string `json:"type"`
+	StartTime   string `json:"start_time"`
+	EndTime     string `json:"end_time"`
+	Status      string `json:"status"`
+	Description string `json:"description,omitempty"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
 }
 
 // GetProfessionalAvailabilityResponse represents the response for professional availability
@@ -159,8 +160,9 @@ type GetProfessionalAvailabilityResponse struct {
 
 // TimeSlot represents a one-hour time slot
 type TimeSlot struct {
-	StartTime string `json:"start_time"`
-	EndTime   string `json:"end_time"`
-	Available bool   `json:"available"`
-	Type      string `json:"type,omitempty"` // "appointment", "unavailable", or empty if available
+	StartTime   string `json:"start_time"`
+	EndTime     string `json:"end_time"`
+	Available   bool   `json:"available"`
+	Type        string `json:"type,omitempty"`        // "appointment", "unavailable", or empty if available
+	Description string `json:"description,omitempty"` // Description with client info if available
 }

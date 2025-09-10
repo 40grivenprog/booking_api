@@ -37,4 +37,6 @@ LEFT JOIN clients c ON a.client_id = c.id
 WHERE a.professional_id = $1
     AND ($2 = '' OR a.status = $2::appointment_status)
     AND ($3 = '' OR DATE(a.start_time) = $3::date)
+    AND a.start_time > NOW()
+    AND a.type = 'appointment'
 ORDER BY a.start_time ASC;

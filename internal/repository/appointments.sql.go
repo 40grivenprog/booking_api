@@ -585,7 +585,7 @@ const GetAppointmentsByProfessionalAndDate = `-- name: GetAppointmentsByProfessi
 SELECT id, type, client_id, professional_id, start_time, end_time, status, cancellation_reason, cancelled_by_professional_id, cancelled_by_client_id, created_at, updated_at, description FROM appointments
 WHERE professional_id = $1
   AND DATE(start_time) = $2
-  AND type = 'appointment'
+  AND type = 'appointment' or type = 'unavailable'
   AND status not in ('cancelled', 'pending')
 ORDER BY start_time ASC
 `
@@ -618,6 +618,85 @@ func (q *Queries) GetAppointmentsByProfessionalAndDate(ctx context.Context, arg 
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const GetAppointmentsByProfessionalAndDateWithClient = `-- name: GetAppointmentsByProfessionalAndDateWithClient :many
+SELECT 
+    a.id,
+    a.professional_id,
+    a.client_id,
+    a.start_time,
+    a.end_time,
+    a.description,
+    a.type,
+    a.status,
+    a.created_at,
+    a.updated_at,
+    c.first_name as client_first_name,
+    c.last_name as client_last_name
+FROM appointments a
+LEFT JOIN clients c ON a.client_id = c.id
+WHERE a.professional_id = $1
+  AND DATE(a.start_time) = $2
+  AND (a.type = 'appointment' OR a.type = 'unavailable')
+  AND a.status NOT IN ('cancelled', 'pending')
+ORDER BY a.start_time ASC
+`
+
+type GetAppointmentsByProfessionalAndDateWithClientParams struct {
+	ProfessionalID uuid.UUID `json:"professional_id"`
+	StartTime      time.Time `json:"start_time"`
+}
+
+type GetAppointmentsByProfessionalAndDateWithClientRow struct {
+	ID              uuid.UUID             `json:"id"`
+	ProfessionalID  uuid.UUID             `json:"professional_id"`
+	ClientID        uuid.NullUUID         `json:"client_id"`
+	StartTime       time.Time             `json:"start_time"`
+	EndTime         time.Time             `json:"end_time"`
+	Description     sql.NullString        `json:"description"`
+	Type            AppointmentType       `json:"type"`
+	Status          NullAppointmentStatus `json:"status"`
+	CreatedAt       time.Time             `json:"created_at"`
+	UpdatedAt       time.Time             `json:"updated_at"`
+	ClientFirstName sql.NullString        `json:"client_first_name"`
+	ClientLastName  sql.NullString        `json:"client_last_name"`
+}
+
+func (q *Queries) GetAppointmentsByProfessionalAndDateWithClient(ctx context.Context, arg *GetAppointmentsByProfessionalAndDateWithClientParams) ([]*GetAppointmentsByProfessionalAndDateWithClientRow, error) {
+	rows, err := q.db.QueryContext(ctx, GetAppointmentsByProfessionalAndDateWithClient, arg.ProfessionalID, arg.StartTime)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetAppointmentsByProfessionalAndDateWithClientRow{}
+	for rows.Next() {
+		var i GetAppointmentsByProfessionalAndDateWithClientRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProfessionalID,
+			&i.ClientID,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Description,
+			&i.Type,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ClientFirstName,
+			&i.ClientLastName,
 		); err != nil {
 			return nil, err
 		}

@@ -22,6 +22,7 @@ type Querier interface {
 	GetAppointmentByID(ctx context.Context, id uuid.UUID) (*Appointment, error)
 	GetAppointmentsByClientWithStatus(ctx context.Context, arg *GetAppointmentsByClientWithStatusParams) ([]*GetAppointmentsByClientWithStatusRow, error)
 	GetAppointmentsByProfessionalAndDate(ctx context.Context, arg *GetAppointmentsByProfessionalAndDateParams) ([]*Appointment, error)
+	GetAppointmentsByProfessionalAndDateWithClient(ctx context.Context, arg *GetAppointmentsByProfessionalAndDateWithClientParams) ([]*GetAppointmentsByProfessionalAndDateWithClientRow, error)
 	GetAppointmentsByProfessionalWithStatus(ctx context.Context, arg *GetAppointmentsByProfessionalWithStatusParams) ([]*GetAppointmentsByProfessionalWithStatusRow, error)
 	GetAppointmentsByProfessionalWithStatusAndDate(ctx context.Context, arg *GetAppointmentsByProfessionalWithStatusAndDateParams) ([]*GetAppointmentsByProfessionalWithStatusAndDateRow, error)
 	GetProfessionalByUsername(ctx context.Context, username string) (*Professional, error)
