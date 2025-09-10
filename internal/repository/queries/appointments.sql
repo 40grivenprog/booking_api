@@ -215,3 +215,13 @@ WHERE a.professional_id = $1
   AND (a.type = 'appointment' OR a.type = 'unavailable')
   AND a.status NOT IN ('cancelled', 'pending')
 ORDER BY a.start_time ASC;
+
+-- name: GetProfessionalAppointmentDates :many
+SELECT DISTINCT DATE(start_time) AS appointment_date
+FROM appointments
+WHERE professional_id = $1
+  AND type = 'appointment'
+  AND status = 'confirmed'
+  AND start_time >= $2
+  AND start_time < $3
+ORDER BY appointment_date ASC;

@@ -166,3 +166,9 @@ type TimeSlot struct {
 	Type        string `json:"type,omitempty"`        // "appointment", "unavailable", or empty if available
 	Description string `json:"description,omitempty"` // Description with client info if available
 }
+
+// GetProfessionalAppointmentDatesResponse represents the response for getting appointment dates
+type GetProfessionalAppointmentDatesResponse struct {
+	Month string   `json:"month"`
+	Dates []string `json:"dates"`
+}

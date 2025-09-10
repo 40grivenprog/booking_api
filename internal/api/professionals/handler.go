@@ -35,6 +35,7 @@ func ProfessionalsRegister(p ProfessionalsHandlerParams) error {
 			professionals.GET("", h.GetProfessionals)
 			professionals.POST("/sign_in", h.SignInProfessional)
 			professionals.GET("/:id/appointments", h.GetProfessionalAppointments)
+			professionals.GET("/:id/appointment_dates", h.GetProfessionalAppointmentDates)
 			professionals.PATCH("/:id/appointments/:appointment_id/confirm", h.ConfirmAppointment)
 			professionals.PATCH("/:id/appointments/:appointment_id/cancel", h.CancelAppointment)
 			professionals.POST("/:id/unavailable_appointments", h.CreateUnavailableAppointment)

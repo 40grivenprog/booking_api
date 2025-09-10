@@ -7,6 +7,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -25,6 +26,7 @@ type Querier interface {
 	GetAppointmentsByProfessionalAndDateWithClient(ctx context.Context, arg *GetAppointmentsByProfessionalAndDateWithClientParams) ([]*GetAppointmentsByProfessionalAndDateWithClientRow, error)
 	GetAppointmentsByProfessionalWithStatus(ctx context.Context, arg *GetAppointmentsByProfessionalWithStatusParams) ([]*GetAppointmentsByProfessionalWithStatusRow, error)
 	GetAppointmentsByProfessionalWithStatusAndDate(ctx context.Context, arg *GetAppointmentsByProfessionalWithStatusAndDateParams) ([]*GetAppointmentsByProfessionalWithStatusAndDateRow, error)
+	GetProfessionalAppointmentDates(ctx context.Context, arg *GetProfessionalAppointmentDatesParams) ([]time.Time, error)
 	GetProfessionalByUsername(ctx context.Context, username string) (*Professional, error)
 	GetProfessionals(ctx context.Context) ([]*Professional, error)
 	GetUserByChatID(ctx context.Context, chatID sql.NullInt64) (*GetUserByChatIDRow, error)

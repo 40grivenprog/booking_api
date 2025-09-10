@@ -795,3 +795,43 @@ func (q *Queries) GetAppointmentsByProfessionalWithStatus(ctx context.Context, a
 	}
 	return items, nil
 }
+
+const GetProfessionalAppointmentDates = `-- name: GetProfessionalAppointmentDates :many
+SELECT DISTINCT DATE(start_time) AS appointment_date
+FROM appointments
+WHERE professional_id = $1
+  AND type = 'appointment'
+  AND status = 'confirmed'
+  AND start_time >= $2
+  AND start_time < $3
+ORDER BY appointment_date ASC
+`
+
+type GetProfessionalAppointmentDatesParams struct {
+	ProfessionalID uuid.UUID `json:"professional_id"`
+	StartTime      time.Time `json:"start_time"`
+	StartTime_2    time.Time `json:"start_time_2"`
+}
+
+func (q *Queries) GetProfessionalAppointmentDates(ctx context.Context, arg *GetProfessionalAppointmentDatesParams) ([]time.Time, error) {
+	rows, err := q.db.QueryContext(ctx, GetProfessionalAppointmentDates, arg.ProfessionalID, arg.StartTime, arg.StartTime_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []time.Time{}
+	for rows.Next() {
+		var appointment_date time.Time
+		if err := rows.Scan(&appointment_date); err != nil {
+			return nil, err
+		}
+		items = append(items, appointment_date)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

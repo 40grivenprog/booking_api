@@ -257,6 +257,59 @@ func (h *ProfessionalsHandler) GetProfessionalAppointments(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetProfessionalAppointmentDates handles GET /api/professionals/{id}/appointment-dates
+func (h *ProfessionalsHandler) GetProfessionalAppointmentDates(c *gin.Context) {
+	professionalIDStr := c.Param("id")
+	monthStr := c.Query("month") // Format: "2025-09"
+
+	// Parse professional ID
+	professionalID, err := uuid.Parse(professionalIDStr)
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidProfessionalID, err)
+		return
+	}
+
+	// Parse month parameter
+	var targetMonth time.Time
+	if monthStr == "" {
+		targetMonth = time.Now()
+	} else {
+		targetMonth, err = time.Parse("2006-01", monthStr)
+		if err != nil {
+			common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, "Invalid month format. Use YYYY-MM", err)
+			return
+		}
+	}
+
+	// Get start and end of month
+	startOfMonth := time.Date(targetMonth.Year(), targetMonth.Month(), 1, 0, 0, 0, 0, util.GetAppTimezone())
+	endOfMonth := startOfMonth.AddDate(0, 1, 0) // First day of next month
+
+	// Get distinct dates with confirmed appointments for the month using optimized query
+	appointmentDates, err := h.professionalsRepo.GetProfessionalAppointmentDates(c.Request.Context(), &db.GetProfessionalAppointmentDatesParams{
+		ProfessionalID: professionalID,
+		StartTime:      startOfMonth,
+		StartTime_2:    endOfMonth,
+	})
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToRetrieveAppointments, err)
+		return
+	}
+
+	// Convert to string slice
+	var dates []string
+	for _, appointmentDate := range appointmentDates {
+		dates = append(dates, appointmentDate.Format("2006-01-02"))
+	}
+
+	response := GetProfessionalAppointmentDatesResponse{
+		Month: monthStr,
+		Dates: dates,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
 // CancelAppointment handles PATCH /api/professionals/{id}/appointments/{appointment_id}/cancel
 func (h *ProfessionalsHandler) CancelAppointment(c *gin.Context) {
 	professionalIDStr := c.Param("id")
