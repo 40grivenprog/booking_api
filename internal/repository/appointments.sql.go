@@ -835,3 +835,63 @@ func (q *Queries) GetProfessionalAppointmentDates(ctx context.Context, arg *GetP
 	}
 	return items, nil
 }
+
+const GetProfessionalTimetable = `-- name: GetProfessionalTimetable :many
+SELECT 
+    a.id,
+    a.start_time,
+    a.end_time,
+    a.description,
+    c.first_name,
+    c.last_name
+FROM appointments a
+LEFT JOIN clients c ON a.client_id = c.id
+WHERE a.professional_id = $1
+  AND a.status = 'confirmed'
+  AND DATE(a.start_time) = $2
+ORDER BY a.start_time ASC
+`
+
+type GetProfessionalTimetableParams struct {
+	ProfessionalID uuid.UUID `json:"professional_id"`
+	StartTime      time.Time `json:"start_time"`
+}
+
+type GetProfessionalTimetableRow struct {
+	ID          uuid.UUID      `json:"id"`
+	StartTime   time.Time      `json:"start_time"`
+	EndTime     time.Time      `json:"end_time"`
+	Description sql.NullString `json:"description"`
+	FirstName   sql.NullString `json:"first_name"`
+	LastName    sql.NullString `json:"last_name"`
+}
+
+func (q *Queries) GetProfessionalTimetable(ctx context.Context, arg *GetProfessionalTimetableParams) ([]*GetProfessionalTimetableRow, error) {
+	rows, err := q.db.QueryContext(ctx, GetProfessionalTimetable, arg.ProfessionalID, arg.StartTime)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetProfessionalTimetableRow{}
+	for rows.Next() {
+		var i GetProfessionalTimetableRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Description,
+			&i.FirstName,
+			&i.LastName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

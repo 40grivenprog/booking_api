@@ -225,3 +225,18 @@ WHERE professional_id = $1
   AND start_time >= $2
   AND start_time < $3
 ORDER BY appointment_date ASC;
+
+-- name: GetProfessionalTimetable :many
+SELECT 
+    a.id,
+    a.start_time,
+    a.end_time,
+    a.description,
+    c.first_name,
+    c.last_name
+FROM appointments a
+LEFT JOIN clients c ON a.client_id = c.id
+WHERE a.professional_id = $1
+  AND a.status = 'confirmed'
+  AND DATE(a.start_time) = $2
+ORDER BY a.start_time ASC;

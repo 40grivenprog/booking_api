@@ -28,6 +28,7 @@ type Querier interface {
 	GetAppointmentsByProfessionalWithStatusAndDate(ctx context.Context, arg *GetAppointmentsByProfessionalWithStatusAndDateParams) ([]*GetAppointmentsByProfessionalWithStatusAndDateRow, error)
 	GetProfessionalAppointmentDates(ctx context.Context, arg *GetProfessionalAppointmentDatesParams) ([]time.Time, error)
 	GetProfessionalByUsername(ctx context.Context, username string) (*Professional, error)
+	GetProfessionalTimetable(ctx context.Context, arg *GetProfessionalTimetableParams) ([]*GetProfessionalTimetableRow, error)
 	GetProfessionals(ctx context.Context) ([]*Professional, error)
 	GetUserByChatID(ctx context.Context, chatID sql.NullInt64) (*GetUserByChatIDRow, error)
 	UpdateProfessionalChatID(ctx context.Context, arg *UpdateProfessionalChatIDParams) (*Professional, error)

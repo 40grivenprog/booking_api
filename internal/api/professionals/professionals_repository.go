@@ -21,4 +21,5 @@ type ProfessionalsRepository interface {
 	GetAppointmentsByProfessionalWithStatusAndDate(ctx context.Context, arg *db.GetAppointmentsByProfessionalWithStatusAndDateParams) ([]*db.GetAppointmentsByProfessionalWithStatusAndDateRow, error)
 	GetAppointmentsByProfessionalAndDateWithClient(ctx context.Context, arg *db.GetAppointmentsByProfessionalAndDateWithClientParams) ([]*db.GetAppointmentsByProfessionalAndDateWithClientRow, error)
 	GetProfessionalAppointmentDates(ctx context.Context, arg *db.GetProfessionalAppointmentDatesParams) ([]time.Time, error)
+	GetProfessionalTimetable(ctx context.Context, arg *db.GetProfessionalTimetableParams) ([]*db.GetProfessionalTimetableRow, error)
 }

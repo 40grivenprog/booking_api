@@ -444,7 +444,7 @@ func (h *ProfessionalsHandler) CreateUnavailableAppointment(c *gin.Context) {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToCreateAppointment, err)
 		return
 	}
-	fmt.Println("appointment_description", appointment.Description.String)
+
 	// Convert to response format
 	response := CreateUnavailableAppointmentResponse{
 		Appointment: UnavailableAppointment{
@@ -573,6 +573,68 @@ func (h *ProfessionalsHandler) GetProfessionalAvailability(c *gin.Context) {
 	response := GetProfessionalAvailabilityResponse{
 		Date:  dateStr,
 		Slots: slots,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// GetProfessionalTimetable handles GET /api/professionals/:id/timetable
+func (h *ProfessionalsHandler) GetProfessionalTimetable(c *gin.Context) {
+	professionalIDStr := c.Param("id")
+	dateStr := c.Query("date")
+
+	// Parse professional ID
+	professionalID, err := uuid.Parse(professionalIDStr)
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidProfessionalID, err)
+		return
+	}
+
+	if dateStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "date parameter is required"})
+		return
+	}
+
+	// Parse date
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format. Use YYYY-MM-DD"})
+		return
+	}
+
+	// Get appointments for the day
+	appointments, err := h.professionalsRepo.GetProfessionalTimetable(c.Request.Context(), &db.GetProfessionalTimetableParams{
+		ProfessionalID: professionalID,
+		StartTime:      date,
+	})
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, "Failed to get professional timetable", err)
+		return
+	}
+
+	// Convert to response format
+	var timetableAppointments []TimetableAppointment
+	for _, apt := range appointments {
+		// Format description with client name if available
+		description := apt.Description.String
+		if apt.FirstName.Valid && apt.LastName.Valid {
+			description = fmt.Sprintf("%s %s - %s",
+				apt.FirstName.String,
+				apt.LastName.String,
+				apt.Description.String)
+		}
+
+		timetableAppointments = append(timetableAppointments, TimetableAppointment{
+			ID:          apt.ID.String(),
+			StartTime:   apt.StartTime.Format(time.RFC3339),
+			EndTime:     apt.EndTime.Format(time.RFC3339),
+			Description: description,
+		})
+	}
+
+	response := GetProfessionalTimetableResponse{
+		Date:         dateStr,
+		Appointments: timetableAppointments,
 	}
 
 	c.JSON(http.StatusOK, response)

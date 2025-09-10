@@ -172,3 +172,17 @@ type GetProfessionalAppointmentDatesResponse struct {
 	Month string   `json:"month"`
 	Dates []string `json:"dates"`
 }
+
+// TimetableAppointment represents an appointment in the timetable
+type TimetableAppointment struct {
+	ID          string `json:"id"`
+	StartTime   string `json:"start_time"`
+	EndTime     string `json:"end_time"`
+	Description string `json:"description"`
+}
+
+// GetProfessionalTimetableResponse represents the response for getting professional timetable
+type GetProfessionalTimetableResponse struct {
+	Date         string                 `json:"date"`
+	Appointments []TimetableAppointment `json:"appointments"`
+}
