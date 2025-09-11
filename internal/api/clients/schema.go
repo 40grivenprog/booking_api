@@ -10,11 +10,6 @@ type ClientRegisterRequest struct {
 
 // ClientRegisterResponse represents the response for client registration
 type ClientRegisterResponse struct {
-	User User `json:"user"`
-}
-
-// User represents a user in API responses (using SQLC generated model)
-type User struct {
 	ID          string  `json:"id"`
 	ChatID      *int64  `json:"chat_id,omitempty"`
 	FirstName   string  `json:"first_name"`

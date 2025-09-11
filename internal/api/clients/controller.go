@@ -46,9 +46,7 @@ func (h *ClientsHandler) RegisterClient(c *gin.Context) {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToCreateClient, err)
 		return
 	}
-
-	// Convert to response format
-	responseUser := User{
+	response := ClientRegisterResponse{
 		ID:        user.ID.String(),
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
@@ -59,14 +57,10 @@ func (h *ClientsHandler) RegisterClient(c *gin.Context) {
 
 	// Handle optional fields
 	if user.ChatID.Valid {
-		responseUser.ChatID = &user.ChatID.Int64
+		response.ChatID = &user.ChatID.Int64
 	}
 	if user.PhoneNumber.Valid {
-		responseUser.PhoneNumber = &user.PhoneNumber.String
-	}
-
-	response := ClientRegisterResponse{
-		User: responseUser,
+		response.PhoneNumber = &user.PhoneNumber.String
 	}
 
 	c.JSON(http.StatusCreated, response)
