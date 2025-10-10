@@ -4,29 +4,38 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vention/booking_api/internal/services/admin"
 )
 
+// AdminsHandler handles HTTP requests for admin operations
 type AdminsHandler struct {
-	adminsRepo AdminRepository
+	adminService admin.Service
 }
 
+// NewAdminsHandler creates a new handler with dependency injection
+func NewAdminsHandler(service admin.Service) *AdminsHandler {
+	return &AdminsHandler{
+		adminService: service,
+	}
+}
+
+// AdminsHandlerParams defines the parameters for the AdminsHandler
 type AdminsHandlerParams struct {
-	Router     *gin.Engine
-	AdminsRepo AdminRepository
+	Router       *gin.Engine
+	AdminService admin.Service
 }
 
+// AdminsRegister registers the AdminsHandler with the router
 func AdminsRegister(p AdminsHandlerParams) error {
 	if p.Router == nil {
 		return errors.New("missing router")
 	}
 
-	if p.AdminsRepo == nil {
-		return errors.New("missing admin repository")
+	if p.AdminService == nil {
+		return errors.New("missing admin service")
 	}
 
-	h := &AdminsHandler{
-		adminsRepo: p.AdminsRepo,
-	}
+	h := NewAdminsHandler(p.AdminService)
 
 	api := p.Router.Group("/api")
 	{

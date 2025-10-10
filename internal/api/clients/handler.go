@@ -4,29 +4,38 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vention/booking_api/internal/services/clients"
 )
 
+// ClientsHandler handles HTTP requests for clients
 type ClientsHandler struct {
-	clientsRepo ClientsRepository
+	clientsService clients.Service
 }
 
+// NewClientsHandler creates a new handler with dependency injection
+func NewClientsHandler(service clients.Service) *ClientsHandler {
+	return &ClientsHandler{
+		clientsService: service,
+	}
+}
+
+// ClientsHandlerParams defines the parameters for the ClientsHandler
 type ClientsHandlerParams struct {
-	Router      *gin.Engine
-	ClientsRepo ClientsRepository
+	Router         *gin.Engine
+	ClientsService clients.Service
 }
 
+// ClientsRegister registers the ClientsHandler with the router
 func ClientsRegister(p ClientsHandlerParams) error {
 	if p.Router == nil {
 		return errors.New("missing router")
 	}
 
-	if p.ClientsRepo == nil {
-		return errors.New("missing clients repository")
+	if p.ClientsService == nil {
+		return errors.New("missing clients service")
 	}
 
-	h := &ClientsHandler{
-		clientsRepo: p.ClientsRepo,
-	}
+	h := NewClientsHandler(p.ClientsService)
 
 	api := p.Router.Group("/api")
 	{

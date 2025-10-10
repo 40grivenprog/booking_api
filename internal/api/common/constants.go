@@ -2,14 +2,12 @@ package common
 
 // Error types
 const (
-	ErrorTypeValidation   = "validation_error"
-	ErrorTypeDatabase     = "database_error"
-	ErrorTypeNotFound     = "not_found"
-	ErrorTypeForbidden    = "forbidden"
-	ErrorTypeUnauthorized = "unauthorized"
-	ErrorTypeConflict     = "conflict"
-	ErrorTypeInternal     = "internal_error"
-	ErrorTypeBadRequest   = "bad_request"
+	ErrorTypeValidation = "validation_error"
+	ErrorTypeDatabase   = "database_error"
+	ErrorTypeNotFound   = "not_found"
+	ErrorTypeForbidden  = "forbidden"
+	ErrorTypeConflict   = "conflict"
+	ErrorTypeInternal   = "internal_error"
 )
 
 // Error messages
@@ -24,8 +22,6 @@ const (
 	ErrorMsgInvalidTime                      = "Invalid time format"
 	ErrorMsgInvalidCredentials               = "Invalid username or password"
 	ErrorMsgMissingRequiredField             = "Missing required field"
-	ErrorMsgInvalidEmail                     = "Invalid email format"
-	ErrorMsgInvalidPhone                     = "Invalid phone number format"
 	ErrorMsgFutureTimeRequired               = "Appointment time must be in the future"
 	ErrorMsgAppointmentNotPending            = "Appointment is not pending"
 	ErrorMsgAppointmentNotPendingOrConfirmed = "Appointment is not pending or confirmed. Please check the status of the appointment."
@@ -34,42 +30,61 @@ const (
 	ErrorMsgFailedToCreateAppointment     = "Failed to create appointment"
 	ErrorMsgFailedToGetAppointment        = "Failed to get appointment"
 	ErrorMsgFailedToUpdateAppointment     = "Failed to update appointment"
-	ErrorMsgFailedToDeleteAppointment     = "Failed to delete appointment"
 	ErrorMsgFailedToCreateClient          = "Failed to create client"
-	ErrorMsgFailedToGetClient             = "Failed to get client"
-	ErrorMsgFailedToUpdateClient          = "Failed to update client"
 	ErrorMsgFailedToCreateProfessional    = "Failed to create professional"
-	ErrorMsgFailedToGetProfessional       = "Failed to get professional"
 	ErrorMsgFailedToUpdateProfessional    = "Failed to update professional"
 	ErrorMsgFailedToRetrieveAppointments  = "Failed to retrieve appointments"
 	ErrorMsgFailedToRetrieveProfessionals = "Failed to retrieve professionals"
-	ErrorMsgFailedToRetrieveClients       = "Failed to retrieve clients"
+	ErrorMsgFailedToGetTimetable          = "Failed to get professional timetable"
 
 	// Not found errors
-	ErrorMsgAppointmentNotFound  = "Appointment not found"
-	ErrorMsgClientNotFound       = "Client not found"
-	ErrorMsgProfessionalNotFound = "Professional not found"
-	ErrorMsgUserNotFound         = "User not found"
+	ErrorMsgUserNotFound = "User not found"
 
 	// Forbidden errors
 	ErrorMsgNotAllowedToConfirmAppointment = "You are not allowed to confirm this appointment"
 	ErrorMsgNotAllowedToCancelAppointment  = "You are not allowed to cancel this appointment"
 	ErrorMsgNotAllowedToAccessResource     = "You are not allowed to access this resource"
 
-	// Unauthorized errors
-	ErrorMsgInvalidToken   = "Invalid or expired token"
-	ErrorMsgTokenRequired  = "Authentication token required"
-	ErrorMsgInvalidSession = "Invalid session"
-
 	// Conflict errors
-	ErrorMsgAppointmentConflict   = "Appointment time conflicts with existing appointment"
 	ErrorMsgUsernameAlreadyExists = "Username already exists"
-	ErrorMsgEmailAlreadyExists    = "Email already exists"
-	ErrorMsgPhoneAlreadyExists    = "Phone number already exists"
-	ErrorMsgChatIDAlreadyExists   = "Chat ID already exists"
 
 	// Internal errors
 	ErrorMsgInternalServerError = "Internal server error"
-	ErrorMsgServiceUnavailable  = "Service temporarily unavailable"
-	ErrorMsgTimeout             = "Request timeout"
+)
+
+// User roles
+const (
+	RoleProfessional = "professional"
+	RoleClient       = "client"
+	RoleAdmin        = "admin"
+)
+
+// User types (same as roles but used in different contexts)
+const (
+	UserTypeProfessional = "professional"
+	UserTypeClient       = "client"
+)
+
+// Cancellation sources
+const (
+	CancelledByProfessional = "professional"
+	CancelledByClient       = "client"
+)
+
+// Working hours configuration
+const (
+	WorkingHoursStart = 5  // 5:00 AM
+	WorkingHoursEnd   = 23 // 11:00 PM (exclusive, so last slot is 22:00-23:00)
+)
+
+// Time slot configuration
+const (
+	SlotDurationMinutes = 60 // 1 hour slots
+	SlotsPerDay         = WorkingHoursEnd - WorkingHoursStart
+)
+
+// Appointment type strings (for responses)
+const (
+	AppointmentTypeBooking     = "appointment"
+	AppointmentTypeUnavailable = "unavailable"
 )

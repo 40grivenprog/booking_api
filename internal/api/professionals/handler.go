@@ -4,15 +4,22 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vention/booking_api/internal/services/professionals"
 )
 
 type ProfessionalsHandler struct {
-	professionalsRepo ProfessionalsRepository
+	professionalsService professionals.Service
+}
+
+func NewProfessionalsHandler(service professionals.Service) *ProfessionalsHandler {
+	return &ProfessionalsHandler{
+		professionalsService: service,
+	}
 }
 
 type ProfessionalsHandlerParams struct {
-	Router            *gin.Engine
-	ProfessionalsRepo ProfessionalsRepository
+	Router               *gin.Engine
+	ProfessionalsService professionals.Service
 }
 
 func ProfessionalsRegister(p ProfessionalsHandlerParams) error {
@@ -20,13 +27,11 @@ func ProfessionalsRegister(p ProfessionalsHandlerParams) error {
 		return errors.New("missing router")
 	}
 
-	if p.ProfessionalsRepo == nil {
-		return errors.New("missing professionals repository")
+	if p.ProfessionalsService == nil {
+		return errors.New("missing professionals service")
 	}
 
-	h := &ProfessionalsHandler{
-		professionalsRepo: p.ProfessionalsRepo,
-	}
+	h := NewProfessionalsHandler(p.ProfessionalsService)
 
 	api := p.Router.Group("/api")
 	{

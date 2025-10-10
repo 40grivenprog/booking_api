@@ -4,19 +4,24 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vention/booking_api/internal/services/appointments"
 )
 
+// AppointmentsHandler handles HTTP requests for appointments
 type AppointmentsHandler struct {
-	appointmentsRepo AppointmentsRepository
+	appointmentsService appointments.Service
 }
 
-func NewAppointmentsHandler(appointmentsRepo AppointmentsRepository) *AppointmentsHandler {
-	return &AppointmentsHandler{appointmentsRepo: appointmentsRepo}
+// NewAppointmentsHandler creates a new handler with dependency injection
+func NewAppointmentsHandler(service appointments.Service) *AppointmentsHandler {
+	return &AppointmentsHandler{
+		appointmentsService: service,
+	}
 }
 
 type AppointmentsHandlerParams struct {
-	Router           *gin.Engine
-	AppointmentsRepo AppointmentsRepository
+	Router              *gin.Engine
+	AppointmentsService appointments.Service
 }
 
 func AppointmentsRegister(p AppointmentsHandlerParams) error {
@@ -24,13 +29,11 @@ func AppointmentsRegister(p AppointmentsHandlerParams) error {
 		return errors.New("missing router")
 	}
 
-	if p.AppointmentsRepo == nil {
-		return errors.New("missing clients repository")
+	if p.AppointmentsService == nil {
+		return errors.New("missing appointments service")
 	}
 
-	h := &AppointmentsHandler{
-		appointmentsRepo: p.AppointmentsRepo,
-	}
+	h := NewAppointmentsHandler(p.AppointmentsService)
 
 	api := p.Router.Group("/api")
 	{
