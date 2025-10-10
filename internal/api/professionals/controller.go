@@ -1,13 +1,11 @@
 package api
 
 import (
-	"database/sql"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	common "github.com/vention/booking_api/internal/api/common"
 	db "github.com/vention/booking_api/internal/repository"
 	"github.com/vention/booking_api/internal/util"
@@ -22,42 +20,15 @@ func (h *ProfessionalsHandler) GetProfessionals(c *gin.Context) {
 		return
 	}
 
-	// Convert to response format
-	var responseUsers []User
-	for _, prof := range professionals {
-		user := User{
-			ID:        prof.ID.String(),
-			Username:  prof.Username,
-			FirstName: prof.FirstName,
-			LastName:  prof.LastName,
-			UserType:  "professional",
-			CreatedAt: prof.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-			UpdatedAt: prof.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		}
-
-		// Handle optional fields
-		if prof.ChatID.Valid {
-			user.ChatID = &prof.ChatID.Int64
-		}
-		if prof.PhoneNumber.Valid {
-			user.PhoneNumber = &prof.PhoneNumber.String
-		}
-
-		responseUsers = append(responseUsers, user)
-	}
-
-	response := GetProfessionalsResponse{
-		Professionals: responseUsers,
-	}
+	response := mapProfessionalsToGetProfessionalsResponse(professionals)
 
 	c.JSON(http.StatusOK, response)
 }
 
 // SignInProfessional handles POST /api/professionals/sign_in
 func (h *ProfessionalsHandler) SignInProfessional(c *gin.Context) {
-	var req ProfessionalSignInRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidRequestBody, err)
+	req, ok := common.BindAndValidate[ProfessionalSignInRequest](c)
+	if !ok {
 		return
 	}
 
@@ -68,15 +39,13 @@ func (h *ProfessionalsHandler) SignInProfessional(c *gin.Context) {
 		return
 	}
 
-	// Check if password hash exists
+	// Check if password hash exists and verify password
 	if !user.PasswordHash.Valid {
 		common.HandleErrorResponse(c, http.StatusUnauthorized, common.ErrorTypeValidation, common.ErrorMsgInvalidCredentials, nil)
 		return
 	}
 
-	// Verify password using bcrypt
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash.String), []byte(req.Password))
-	if err != nil {
+	if err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash.String), []byte(req.Password)); err != nil {
 		common.HandleErrorResponse(c, http.StatusUnauthorized, common.ErrorTypeValidation, common.ErrorMsgInvalidCredentials, nil)
 		return
 	}
@@ -84,68 +53,42 @@ func (h *ProfessionalsHandler) SignInProfessional(c *gin.Context) {
 	// Update user's chat_id after successful authentication
 	updatedUser, err := h.professionalsRepo.UpdateProfessionalChatID(c.Request.Context(), &db.UpdateProfessionalChatIDParams{
 		ID:     user.ID,
-		ChatID: sql.NullInt64{Int64: req.ChatID, Valid: true},
+		ChatID: common.ToNullInt64Value(req.ChatID),
 	})
 	if err != nil {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToUpdateProfessional, err)
 		return
 	}
 
-	// Convert to response format
-	responseUser := User{
-		ID:        updatedUser.ID.String(),
-		Username:  updatedUser.Username,
-		FirstName: updatedUser.FirstName,
-		LastName:  updatedUser.LastName,
-		Role:      "professional",
-		CreatedAt: updatedUser.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt: updatedUser.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
-	}
-
-	// Handle optional fields
-	if updatedUser.ChatID.Valid {
-		responseUser.ChatID = &updatedUser.ChatID.Int64
-	}
-	if updatedUser.PhoneNumber.Valid {
-		responseUser.PhoneNumber = &updatedUser.PhoneNumber.String
-	}
-
-	response := ProfessionalSignInResponse{
-		User: responseUser,
-	}
-
+	response := mapProfessionalToProfessionalSignInResponse(updatedUser)
 	c.JSON(http.StatusOK, response)
 }
 
 // ConfirmAppointment handles PATCH /api/professionals/{id}/appointments/{appointment_id}/confirm
 func (h *ProfessionalsHandler) ConfirmAppointment(c *gin.Context) {
-	professionalIDStr := c.Param("id")
-	appointmentIDStr := c.Param("appointment_id")
-
 	// Parse UUIDs
-	professionalID, err := uuid.Parse(professionalIDStr)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidProfessionalID, err)
+	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	if !ok {
 		return
 	}
 
-	appointmentID, err := uuid.Parse(appointmentIDStr)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidAppointmentID, err)
+	appointmentID, ok := common.ParseAppointmentID(c, c.Param("appointment_id"))
+	if !ok {
 		return
 	}
 
+	// Get and validate appointment
 	appointment, err := h.professionalsRepo.GetAppointmentByID(c.Request.Context(), appointmentID)
 	if err != nil {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToGetAppointment, err)
 		return
 	}
-	if appointment.ProfessionalID != professionalID {
-		common.HandleErrorResponse(c, http.StatusForbidden, common.ErrorTypeForbidden, common.ErrorMsgNotAllowedToConfirmAppointment, nil)
+
+	// Validate ownership and status
+	if !common.ValidateAppointmentOwnership(c, appointment, professionalID, common.UserTypeProfessional) {
 		return
 	}
-	if appointment.Status.AppointmentStatus != db.AppointmentStatusPending {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgAppointmentNotPending, nil)
+	if !common.ValidateAppointmentStatusIs(c, appointment, db.AppointmentStatusPending) {
 		return
 	}
 
@@ -159,58 +102,30 @@ func (h *ProfessionalsHandler) ConfirmAppointment(c *gin.Context) {
 		return
 	}
 
-	// Convert to response format
-	response := ConfirmAppointmentResponse{
-		Appointment: AppointmentConfirm{
-			ID:        result.ID.String(),
-			Status:    string(result.Status.AppointmentStatus),
-			StartTime: result.StartTime.Format(time.RFC3339),
-			EndTime:   result.EndTime.Format(time.RFC3339),
-			CreatedAt: result.CreatedAt.Format(time.RFC3339),
-			UpdatedAt: result.UpdatedAt.Format(time.RFC3339),
-		},
-		Client: ClientConfirm{
-			ID:        result.ClientID.UUID.String(),
-			FirstName: result.ClientFirstName.String,
-			LastName:  result.ClientLastName.String,
-			ChatID:    result.ClientChatID.Int64,
-		},
-		Professional: ProfessionalConfirm{
-			ID:        result.ProfessionalIDFull.String(),
-			Username:  result.ProfessionalUsername.String,
-			FirstName: result.ProfessionalFirstName.String,
-			LastName:  result.ProfessionalLastName.String,
-		},
-	}
+	response := mapAppointmentToConfirmAppointmentResponse(result)
 
 	c.JSON(http.StatusOK, response)
 }
 
 // GetProfessionalAppointments handles GET /api/professionals/{id}/appointments
 func (h *ProfessionalsHandler) GetProfessionalAppointments(c *gin.Context) {
-	professionalIDStr := c.Param("id")
-	statusFilter := c.Query("status")
-	dateFilter := c.Query("date")
-
 	// Parse professional ID
-	professionalID, err := uuid.Parse(professionalIDStr)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidProfessionalID, err)
+	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	if !ok {
 		return
 	}
 
 	// Validate status filter if provided
-	if statusFilter != "" && statusFilter != "pending" && statusFilter != "confirmed" && statusFilter != "cancelled" && statusFilter != "completed" {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidStatus, nil)
+	statusFilter := c.Query("status")
+	if !common.ValidateAppointmentStatus(c, statusFilter) {
 		return
 	}
 
 	// Validate date filter if provided
+	dateFilter := c.Query("date")
 	var dateParam string
 	if dateFilter != "" {
-		_, err := time.Parse("2006-01-02", dateFilter)
-		if err != nil {
-			common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidDate, err)
+		if _, ok := common.ParseDate(c, dateFilter, common.ErrorMsgInvalidDate); !ok {
 			return
 		}
 		dateParam = dateFilter
@@ -228,55 +143,28 @@ func (h *ProfessionalsHandler) GetProfessionalAppointments(c *gin.Context) {
 	}
 
 	// Convert to response format
-	var responseAppointments []ProfessionalAppointment
-	for _, appt := range appointments {
-		appointment := ProfessionalAppointment{
-			ID:          appt.ID.String(),
-			Type:        string(appt.Type),
-			StartTime:   appt.StartTime.Format(time.RFC3339),
-			EndTime:     appt.EndTime.Format(time.RFC3339),
-			Description: appt.Description.String,
-			Status:      string(appt.Status.AppointmentStatus),
-			CreatedAt:   appt.CreatedAt.Format(time.RFC3339),
-			UpdatedAt:   appt.UpdatedAt.Format(time.RFC3339),
-		}
-		appointment.Client = &ProfessionalAppointmentClient{
-			ID:          appt.ClientID.UUID.String(),
-			FirstName:   appt.ClientFirstName.String,
-			LastName:    appt.ClientLastName.String,
-			PhoneNumber: &appt.ClientPhoneNumber.String,
-		}
-
-		responseAppointments = append(responseAppointments, appointment)
-	}
-
-	response := GetProfessionalAppointmentsResponse{
-		Appointments: responseAppointments,
-	}
+	response := mapAppointmentsToGetProfessionalAppointmentsResponse(appointments)
 
 	c.JSON(http.StatusOK, response)
 }
 
 // GetProfessionalAppointmentDates handles GET /api/professionals/{id}/appointment-dates
 func (h *ProfessionalsHandler) GetProfessionalAppointmentDates(c *gin.Context) {
-	professionalIDStr := c.Param("id")
-	monthStr := c.Query("month") // Format: "2025-09"
-
 	// Parse professional ID
-	professionalID, err := uuid.Parse(professionalIDStr)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidProfessionalID, err)
+	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	if !ok {
 		return
 	}
 
 	// Parse month parameter
+	monthStr := c.Query("month") // Format: "2025-09"
 	var targetMonth time.Time
 	if monthStr == "" {
 		targetMonth = time.Now()
 	} else {
-		targetMonth, err = time.Parse("2006-01", monthStr)
-		if err != nil {
-			common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, "Invalid month format. Use YYYY-MM", err)
+		var ok bool
+		targetMonth, ok = common.ParseMonth(c, monthStr)
+		if !ok {
 			return
 		}
 	}
@@ -285,7 +173,7 @@ func (h *ProfessionalsHandler) GetProfessionalAppointmentDates(c *gin.Context) {
 	startOfMonth := time.Date(targetMonth.Year(), targetMonth.Month(), 1, 0, 0, 0, 0, util.GetAppTimezone())
 	endOfMonth := startOfMonth.AddDate(0, 1, 0) // First day of next month
 
-	// Get distinct dates with confirmed appointments for the month using optimized query
+	// Get distinct dates with confirmed appointments for the month
 	appointmentDates, err := h.professionalsRepo.GetProfessionalAppointmentDates(c.Request.Context(), &db.GetProfessionalAppointmentDatesParams{
 		ProfessionalID: professionalID,
 		StartTime:      startOfMonth,
@@ -299,7 +187,7 @@ func (h *ProfessionalsHandler) GetProfessionalAppointmentDates(c *gin.Context) {
 	// Convert to string slice
 	var dates []string
 	for _, appointmentDate := range appointmentDates {
-		dates = append(dates, appointmentDate.Format("2006-01-02"))
+		dates = append(dates, common.FormatDate(appointmentDate))
 	}
 
 	response := GetProfessionalAppointmentDatesResponse{
@@ -312,26 +200,20 @@ func (h *ProfessionalsHandler) GetProfessionalAppointmentDates(c *gin.Context) {
 
 // CancelAppointment handles PATCH /api/professionals/{id}/appointments/{appointment_id}/cancel
 func (h *ProfessionalsHandler) CancelAppointment(c *gin.Context) {
-	professionalIDStr := c.Param("id")
-	appointmentIDStr := c.Param("appointment_id")
-
-	// Parse UUIDs
-	professionalID, err := uuid.Parse(professionalIDStr)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidProfessionalID, err)
+	// Parse and validate IDs
+	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	if !ok {
 		return
 	}
 
-	appointmentID, err := uuid.Parse(appointmentIDStr)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidAppointmentID, err)
+	appointmentID, ok := common.ParseAppointmentID(c, c.Param("appointment_id"))
+	if !ok {
 		return
 	}
 
 	// Parse request body
-	var req CancelAppointmentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidRequestBody, err)
+	req, ok := common.BindAndValidate[CancelAppointmentRequest](c)
+	if !ok {
 		return
 	}
 
@@ -352,8 +234,8 @@ func (h *ProfessionalsHandler) CancelAppointment(c *gin.Context) {
 	// Cancel appointment with details
 	result, err := h.professionalsRepo.CancelAppointmentByProfessionalWithDetails(c.Request.Context(), &db.CancelAppointmentByProfessionalWithDetailsParams{
 		ID:                        appointmentID,
-		CancelledByProfessionalID: uuid.NullUUID{UUID: professionalID, Valid: true},
-		CancellationReason:        sql.NullString{String: req.CancellationReason, Valid: true},
+		CancelledByProfessionalID: common.ToNullUUID(professionalID),
+		CancellationReason:        common.ToNullStringValue(req.CancellationReason),
 	})
 	if err != nil {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToUpdateAppointment, err)
@@ -361,50 +243,22 @@ func (h *ProfessionalsHandler) CancelAppointment(c *gin.Context) {
 	}
 
 	// Convert to response format
-	response := CancelAppointmentResponse{
-		Appointment: CancelledAppointment{
-			ID:                 result.ID.String(),
-			Type:               string(result.Type),
-			StartTime:          result.StartTime.Format(time.RFC3339),
-			EndTime:            result.EndTime.Format(time.RFC3339),
-			Status:             string(result.Status.AppointmentStatus),
-			CancellationReason: result.CancellationReason.String,
-			CancelledBy:        "professional",
-			CreatedAt:          result.CreatedAt.Format(time.RFC3339),
-			UpdatedAt:          result.UpdatedAt.Format(time.RFC3339),
-		},
-		Client: ProfessionalAppointmentClient{
-			ID:        result.ClientIDFull.String(),
-			FirstName: result.ClientFirstName.String,
-			LastName:  result.ClientLastName.String,
-			ChatID:    &result.ClientChatID.Int64,
-		},
-		Professional: ProfessionalInfo{
-			ID:        result.ProfessionalIDFull.String(),
-			Username:  result.ProfessionalUsername.String,
-			FirstName: result.ProfessionalFirstName.String,
-			LastName:  result.ProfessionalLastName.String,
-		},
-	}
+	response := mapAppointmentToCancelAppointmentResponse(result)
 
 	c.JSON(http.StatusOK, response)
 }
 
 // CreateUnavailableAppointment handles POST /api/professionals/{id}/unavailable_appointments
 func (h *ProfessionalsHandler) CreateUnavailableAppointment(c *gin.Context) {
-	professionalIDStr := c.Param("id")
-
-	// Parse professional ID
-	professionalID, err := uuid.Parse(professionalIDStr)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidProfessionalID, err)
+	// Parse and validate professional ID
+	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	if !ok {
 		return
 	}
 
 	// Parse request body
-	var req CreateUnavailableAppointmentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidRequestBody, err)
+	req, ok := common.BindAndValidate[CreateUnavailableAppointmentRequest](c)
+	if !ok {
 		return
 	}
 
@@ -436,7 +290,7 @@ func (h *ProfessionalsHandler) CreateUnavailableAppointment(c *gin.Context) {
 	// Create unavailable appointment
 	appointment, err := h.professionalsRepo.CreateUnavailableAppointment(c.Request.Context(), &db.CreateUnavailableAppointmentParams{
 		ProfessionalID: professionalID,
-		Description:    sql.NullString{String: req.Description, Valid: true},
+		Description:    common.ToNullStringValue(req.Description),
 		StartTime:      startTime,
 		EndTime:        endTime,
 	})
@@ -446,43 +300,28 @@ func (h *ProfessionalsHandler) CreateUnavailableAppointment(c *gin.Context) {
 	}
 
 	// Convert to response format
-	response := CreateUnavailableAppointmentResponse{
-		Appointment: UnavailableAppointment{
-			ID:          appointment.ID.String(),
-			Type:        string(appointment.Type),
-			StartTime:   appointment.StartTime.Format(time.RFC3339),
-			EndTime:     appointment.EndTime.Format(time.RFC3339),
-			Status:      string(appointment.Status.AppointmentStatus),
-			Description: appointment.Description.String,
-			CreatedAt:   appointment.CreatedAt.Format(time.RFC3339),
-			UpdatedAt:   appointment.UpdatedAt.Format(time.RFC3339),
-		},
-	}
+	response := mapAppointmentToCreateUnavailableAppointmentResponse(appointment)
 
 	c.JSON(http.StatusCreated, response)
 }
 
 // GetProfessionalAvailability handles GET /api/professionals/{id}/availability
 func (h *ProfessionalsHandler) GetProfessionalAvailability(c *gin.Context) {
-	professionalIDStr := c.Param("id")
-	dateStr := c.Query("date")
-
-	// Parse professional ID
-	professionalID, err := uuid.Parse(professionalIDStr)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidProfessionalID, err)
+	// Parse and validate professional ID
+	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	if !ok {
 		return
 	}
 
-	// Validate and parse date
-	if dateStr == "" {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgMissingRequiredField, nil)
+	// Get and validate date parameter
+	dateStr, ok := common.RequireQueryParam(c, "date")
+	if !ok {
 		return
 	}
 
-	date, err := time.Parse("2006-01-02", dateStr)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidDate, err)
+	// Parse date
+	date, ok := common.ParseDate(c, dateStr, common.ErrorMsgInvalidDate)
+	if !ok {
 		return
 	}
 
@@ -509,19 +348,19 @@ func (h *ProfessionalsHandler) GetProfessionalAvailability(c *gin.Context) {
 	baseDate := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, util.GetAppTimezone())
 
 	// Determine the starting hour based on current time
-	startHour := 5 // Default start hour
+	startHour := common.WorkingHoursStart // Default start hour
 	if date.Year() == localNow.Year() && date.Month() == localNow.Month() && date.Day() == localNow.Day() {
 		// If it's today, start from current hour (rounded up to next hour)
 		currentHour := localNow.Hour()
 		if localNow.Minute() > 0 {
 			currentHour++ // Round up to next hour if we're past the hour mark
 		}
-		if currentHour > 5 {
+		if currentHour > common.WorkingHoursStart {
 			startHour = currentHour
 		}
 	}
 
-	for hour := startHour; hour < 23; hour++ {
+	for hour := startHour; hour < common.WorkingHoursEnd; hour++ {
 		startTime := baseDate.Add(time.Duration(hour) * time.Hour)
 		endTime := startTime.Add(time.Hour)
 
@@ -531,8 +370,8 @@ func (h *ProfessionalsHandler) GetProfessionalAvailability(c *gin.Context) {
 		}
 
 		slot := TimeSlot{
-			StartTime: startTime.Format(time.RFC3339),
-			EndTime:   endTime.Format(time.RFC3339),
+			StartTime: common.FormatTimeRFC3339(startTime),
+			EndTime:   common.FormatTimeRFC3339(endTime),
 			Available: true,
 		}
 
@@ -580,25 +419,21 @@ func (h *ProfessionalsHandler) GetProfessionalAvailability(c *gin.Context) {
 
 // GetProfessionalTimetable handles GET /api/professionals/:id/timetable
 func (h *ProfessionalsHandler) GetProfessionalTimetable(c *gin.Context) {
-	professionalIDStr := c.Param("id")
-	dateStr := c.Query("date")
-
-	// Parse professional ID
-	professionalID, err := uuid.Parse(professionalIDStr)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidProfessionalID, err)
+	// Parse and validate professional ID
+	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	if !ok {
 		return
 	}
 
-	if dateStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "date parameter is required"})
+	// Get and validate date parameter
+	dateStr, ok := common.RequireQueryParam(c, "date")
+	if !ok {
 		return
 	}
 
 	// Parse date
-	date, err := time.Parse("2006-01-02", dateStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format. Use YYYY-MM-DD"})
+	date, ok := common.ParseDate(c, dateStr, common.ErrorMsgInvalidDate)
+	if !ok {
 		return
 	}
 
@@ -608,34 +443,12 @@ func (h *ProfessionalsHandler) GetProfessionalTimetable(c *gin.Context) {
 		StartTime:      date,
 	})
 	if err != nil {
-		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, "Failed to get professional timetable", err)
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToGetTimetable, err)
 		return
 	}
 
 	// Convert to response format
-	var timetableAppointments []TimetableAppointment
-	for _, apt := range appointments {
-		// Format description with client name if available
-		description := apt.Description.String
-		if apt.FirstName.Valid && apt.LastName.Valid {
-			description = fmt.Sprintf("%s %s - %s",
-				apt.FirstName.String,
-				apt.LastName.String,
-				apt.Description.String)
-		}
-
-		timetableAppointments = append(timetableAppointments, TimetableAppointment{
-			ID:          apt.ID.String(),
-			StartTime:   apt.StartTime.Format(time.RFC3339),
-			EndTime:     apt.EndTime.Format(time.RFC3339),
-			Description: description,
-		})
-	}
-
-	response := GetProfessionalTimetableResponse{
-		Date:         dateStr,
-		Appointments: timetableAppointments,
-	}
+	response := mapTimetableAppointmentsToGetProfessionalTimetableResponse(appointments, dateStr)
 
 	c.JSON(http.StatusOK, response)
 }

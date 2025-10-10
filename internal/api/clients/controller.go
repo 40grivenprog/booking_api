@@ -1,9 +1,7 @@
 package api
 
 import (
-	"database/sql"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -13,28 +11,17 @@ import (
 
 // RegisterClient handles POST /api/clients/register
 func (h *ClientsHandler) RegisterClient(c *gin.Context) {
-	var req ClientRegisterRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidRequestBody, err)
+	req, ok := common.BindAndValidate[ClientRegisterRequest](c)
+	if !ok {
 		return
 	}
-
-	// Convert phone number to sql.NullString
-	var phoneNumber sql.NullString
-	if req.PhoneNumber != nil {
-		phoneNumber = sql.NullString{String: *req.PhoneNumber, Valid: true}
-	}
-
-	// Convert chat_id to sql.NullInt64
-	var chatID sql.NullInt64
-	chatID = sql.NullInt64{Int64: req.ChatID, Valid: true}
 
 	// Create new client
 	user, err := h.clientsRepo.CreateClient(c.Request.Context(), &db.CreateClientParams{
 		FirstName:   req.FirstName,
 		LastName:    req.LastName,
-		PhoneNumber: phoneNumber,
-		ChatID:      chatID,
+		PhoneNumber: common.ToNullString(req.PhoneNumber),
+		ChatID:      common.ToNullInt64Value(req.ChatID),
 		CreatedBy:   uuid.NullUUID{}, // NULL for now
 	})
 	if err != nil {
@@ -46,41 +33,22 @@ func (h *ClientsHandler) RegisterClient(c *gin.Context) {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToCreateClient, err)
 		return
 	}
-	response := ClientRegisterResponse{
-		ID:        user.ID.String(),
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		Role:      "client",
-		CreatedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt: user.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
-	}
 
-	// Handle optional fields
-	if user.ChatID.Valid {
-		response.ChatID = &user.ChatID.Int64
-	}
-	if user.PhoneNumber.Valid {
-		response.PhoneNumber = &user.PhoneNumber.String
-	}
-
+	response := mapClientToClientRegisterResponse(user)
 	c.JSON(http.StatusCreated, response)
 }
 
 // GetClientAppointments handles GET /api/clients/{id}/appointments
 func (h *ClientsHandler) GetClientAppointments(c *gin.Context) {
-	clientIDStr := c.Param("id")
-	statusFilter := c.Query("status")
-
-	// Parse client ID
-	clientID, err := uuid.Parse(clientIDStr)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidClientID, err)
+	// Parse and validate client ID
+	clientID, ok := common.ParseClientID(c, c.Param("id"))
+	if !ok {
 		return
 	}
 
 	// Validate status filter if provided
-	if statusFilter != "" && statusFilter != "pending" && statusFilter != "confirmed" && statusFilter != "cancelled" && statusFilter != "completed" {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidStatus, nil)
+	statusFilter := c.Query("status")
+	if !common.ValidateAppointmentStatus(c, statusFilter) {
 		return
 	}
 
@@ -92,7 +60,7 @@ func (h *ClientsHandler) GetClientAppointments(c *gin.Context) {
 
 	// Get appointments with optional status filter
 	appointments, err := h.clientsRepo.GetAppointmentsByClientWithStatus(c.Request.Context(), &db.GetAppointmentsByClientWithStatusParams{
-		ClientID: uuid.NullUUID{UUID: clientID, Valid: true},
+		ClientID: common.ToNullUUID(clientID),
 		Status:   statusParam,
 	})
 	if err != nil {
@@ -101,125 +69,56 @@ func (h *ClientsHandler) GetClientAppointments(c *gin.Context) {
 	}
 
 	// Convert to response format
-	var responseAppointments []ClientAppointment
-	for _, appt := range appointments {
-		appointment := ClientAppointment{
-			ID:          appt.ID.String(),
-			Type:        string(appt.Type),
-			StartTime:   appt.StartTime.Format(time.RFC3339),
-			EndTime:     appt.EndTime.Format(time.RFC3339),
-			Description: appt.Description.String,
-			Status:      string(appt.Status.AppointmentStatus),
-			CreatedAt:   appt.CreatedAt.Format(time.RFC3339),
-			UpdatedAt:   appt.UpdatedAt.Format(time.RFC3339),
-		}
-		professional := &ClientAppointmentProfessional{
-			ID:        appt.ProfessionalIDFull.String(),
-			Username:  appt.ProfessionalUsername.String,
-			FirstName: appt.ProfessionalFirstName.String,
-			LastName:  appt.ProfessionalLastName.String,
-		}
-		appointment.Professional = professional
-
-		responseAppointments = append(responseAppointments, appointment)
-	}
-
-	response := GetClientAppointmentsResponse{
-		Appointments: responseAppointments,
-	}
+	response := mapAppointmentToGetClientAppointmentsResponse(appointments)
 
 	c.JSON(http.StatusOK, response)
 }
 
 // CancelClientAppointment handles PATCH /api/clients/{id}/appointments/{appointment_id}/cancel
 func (h *ClientsHandler) CancelClientAppointment(c *gin.Context) {
-	clientIDStr := c.Param("id")
-	appointmentIDStr := c.Param("appointment_id")
-
 	// Parse UUIDs
-	clientID, err := uuid.Parse(clientIDStr)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidClientID, err)
+	clientID, ok := common.ParseClientID(c, c.Param("id"))
+	if !ok {
 		return
 	}
 
-	appointmentID, err := uuid.Parse(appointmentIDStr)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidAppointmentID, err)
+	appointmentID, ok := common.ParseAppointmentID(c, c.Param("appointment_id"))
+	if !ok {
 		return
 	}
 
 	// Parse request body
-	var req CancelClientAppointmentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidRequestBody, err)
+	req, ok := common.BindAndValidate[CancelClientAppointmentRequest](c)
+	if !ok {
 		return
 	}
 
+	// Get and validate appointment
 	appointment, err := h.clientsRepo.GetAppointmentByID(c.Request.Context(), appointmentID)
 	if err != nil {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToGetAppointment, err)
 		return
 	}
-	if appointment.ClientID.UUID != clientID {
-		common.HandleErrorResponse(c, http.StatusForbidden, common.ErrorTypeForbidden, common.ErrorMsgNotAllowedToCancelAppointment, nil)
+
+	// Validate ownership and status
+	if !common.ValidateAppointmentOwnership(c, appointment, clientID, common.UserTypeClient) {
 		return
 	}
-	if appointment.Status.AppointmentStatus != db.AppointmentStatusPending && appointment.Status.AppointmentStatus != db.AppointmentStatusConfirmed {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgAppointmentNotPendingOrConfirmed, nil)
+	if !common.ValidateAppointmentStatusIs(c, appointment, db.AppointmentStatusPending, db.AppointmentStatusConfirmed) {
 		return
 	}
 
 	// Cancel appointment with details
 	result, err := h.clientsRepo.CancelAppointmentByClientWithDetails(c.Request.Context(), &db.CancelAppointmentByClientWithDetailsParams{
 		ID:                  appointmentID,
-		CancelledByClientID: uuid.NullUUID{UUID: clientID, Valid: true},
-		CancellationReason:  sql.NullString{String: req.CancellationReason, Valid: true},
+		CancelledByClientID: common.ToNullUUID(clientID),
+		CancellationReason:  common.ToNullStringValue(req.CancellationReason),
 	})
 	if err != nil {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToUpdateAppointment, err)
 		return
 	}
 
-	// Convert to response format
-	response := CancelClientAppointmentResponse{
-		Appointment: CancelledAppointment{
-			ID:                 result.ID.String(),
-			Type:               string(result.Type),
-			StartTime:          result.StartTime.Format(time.RFC3339),
-			EndTime:            result.EndTime.Format(time.RFC3339),
-			Status:             string(result.Status.AppointmentStatus),
-			CancellationReason: result.CancellationReason.String,
-			CancelledBy:        "client",
-			CreatedAt:          result.CreatedAt.Format(time.RFC3339),
-			UpdatedAt:          result.UpdatedAt.Format(time.RFC3339),
-		},
-		Client: ClientAppointmentClient{
-			ID:        result.ClientIDFull.String(),
-			FirstName: result.ClientFirstName.String,
-			LastName:  result.ClientLastName.String,
-		},
-		Professional: ClientAppointmentProfessional{
-			ID:        result.ProfessionalIDFull.String(),
-			Username:  result.ProfessionalUsername.String,
-			FirstName: result.ProfessionalFirstName.String,
-			LastName:  result.ProfessionalLastName.String,
-		},
-	}
-
-	// Handle optional fields
-	if result.ClientPhoneNumber.Valid {
-		response.Client.PhoneNumber = &result.ClientPhoneNumber.String
-	}
-	if result.ClientChatID.Valid {
-		response.Client.ChatID = &result.ClientChatID.Int64
-	}
-	if result.ProfessionalPhoneNumber.Valid {
-		response.Professional.PhoneNumber = &result.ProfessionalPhoneNumber.String
-	}
-	if result.ProfessionalChatID.Valid {
-		response.Professional.ChatID = &result.ProfessionalChatID.Int64
-	}
-
+	response := mapAppointmentToCancelClientAppointmentResponse(result)
 	c.JSON(http.StatusOK, response)
 }

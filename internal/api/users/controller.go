@@ -42,13 +42,13 @@ func (c *UsersController) GetUserByChatID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, GetUserByChatIDResponse{
 		User: User{
 			ID:          user.ID.String(),
-			ChatID:      &user.ChatID.Int64,
+			ChatID:      common.FromNullInt64(user.ChatID),
 			FirstName:   user.FirstName,
 			LastName:    user.LastName,
 			Role:        user.Role,
-			CreatedAt:   user.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-			UpdatedAt:   user.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
-			PhoneNumber: &user.PhoneNumber.String,
+			PhoneNumber: common.FromNullString(user.PhoneNumber),
+			CreatedAt:   common.FormatTimeWithTimezone(user.CreatedAt),
+			UpdatedAt:   common.FormatTimeWithTimezone(user.UpdatedAt),
 		},
 	})
 }

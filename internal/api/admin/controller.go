@@ -12,9 +12,8 @@ import (
 
 // CreateProfessional handles POST /api/admin/professionals
 func (h *AdminsHandler) CreateProfessional(c *gin.Context) {
-	var req CreateProfessionalRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidRequestBody, err)
+	req, ok := common.BindAndValidate[CreateProfessionalRequest](c)
+	if !ok {
 		return
 	}
 
@@ -55,24 +54,7 @@ func (h *AdminsHandler) CreateProfessional(c *gin.Context) {
 	}
 
 	// Convert to response format
-	responseUser := User{
-		ID:        user.ID.String(),
-		Username:  user.Username,
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		UserType:  "professional",
-		CreatedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt: user.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
-	}
-
-	// Handle optional fields
-	if user.PhoneNumber.Valid {
-		responseUser.PhoneNumber = &user.PhoneNumber.String
-	}
-
-	response := CreateProfessionalResponse{
-		User: responseUser,
-	}
+	response := mapProfessionalToCreateProfessionalResponse(user)
 
 	c.JSON(http.StatusCreated, response)
 }
