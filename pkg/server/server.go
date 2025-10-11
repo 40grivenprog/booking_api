@@ -14,6 +14,7 @@ import (
 	"github.com/vention/booking_api/internal/config"
 	"github.com/vention/booking_api/internal/database"
 	db "github.com/vention/booking_api/internal/repository"
+	"github.com/vention/booking_api/internal/token"
 )
 
 func Start(ctx context.Context, cfg *config.Config, logger zerolog.Logger) error {
@@ -29,13 +30,13 @@ func Start(ctx context.Context, cfg *config.Config, logger zerolog.Logger) error
 
 	// Add middleware
 	r.Use(gin.Recovery())
-	
+
 	// Set base logger in context first
 	r.Use(func(c *gin.Context) {
 		c.Set("logger", logger)
 		c.Next()
 	})
-	
+
 	r.Use(middleware.RequestID()) // Use our custom middleware
 	r.Use(middleware.Logger())    // Use our combined logger middleware
 	r.Use(cors.New(cors.Config{
@@ -50,8 +51,18 @@ func Start(ctx context.Context, cfg *config.Config, logger zerolog.Logger) error
 	// Initialize repository
 	queries := db.New(database.DB)
 
-	// Register API routes
-	if err := api.Register(ctx, cfg, r, queries); err != nil {
+	// Initialize JWT token maker
+	tokenMaker, err := token.NewJWTMaker(cfg.JWT.Secret)
+	if err != nil {
+		return fmt.Errorf("failed to create token maker: %w", err)
+	}
+
+	// Apply JWT authentication to all /api routes
+	apiGroup := r.Group("/api")
+	apiGroup.Use(middleware.AuthMiddleware(tokenMaker))
+
+	// Register API routes with JWT protection
+	if err := api.Register(ctx, cfg, apiGroup, queries); err != nil {
 		return fmt.Errorf("failed to register API routes: %w", err)
 	}
 

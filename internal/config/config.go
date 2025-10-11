@@ -34,8 +34,7 @@ type DatabaseConfig struct {
 }
 
 type JWTConfig struct {
-	Secret    string        `mapstructure:"secret"`
-	ExpiresIn time.Duration `mapstructure:"expires_in"`
+	Secret string `mapstructure:"secret"`
 }
 
 type LogConfig struct {
@@ -64,7 +63,6 @@ func New(cfgPath string) (*Config, error) {
 	viper.SetDefault("database.conn_max_lifetime", "5m")
 
 	viper.SetDefault("jwt.secret", "default-secret-key")
-	viper.SetDefault("jwt.expires_in", "24h")
 
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.format", "json")

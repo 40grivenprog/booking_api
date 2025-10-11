@@ -21,7 +21,7 @@ func NewClientsHandler(service clients.Service) *ClientsHandler {
 
 // ClientsHandlerParams defines the parameters for the ClientsHandler
 type ClientsHandlerParams struct {
-	Router         *gin.Engine
+	Router         *gin.RouterGroup
 	ClientsService clients.Service
 }
 
@@ -37,14 +37,11 @@ func ClientsRegister(p ClientsHandlerParams) error {
 
 	h := NewClientsHandler(p.ClientsService)
 
-	api := p.Router.Group("/api")
+	clients := p.Router.Group("/clients")
 	{
-		clients := api.Group("/clients")
-		{
-			clients.POST("/register", h.RegisterClient)
-			clients.GET("/:id/appointments", h.GetClientAppointments)
-			clients.PATCH("/:id/appointments/:appointment_id/cancel", h.CancelClientAppointment)
-		}
+		clients.POST("/register", h.RegisterClient)
+		clients.GET("/:id/appointments", h.GetClientAppointments)
+		clients.PATCH("/:id/appointments/:appointment_id/cancel", h.CancelClientAppointment)
 	}
 
 	return nil

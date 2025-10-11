@@ -8,6 +8,7 @@ const (
 	ErrorTypeForbidden  = "forbidden"
 	ErrorTypeConflict   = "conflict"
 	ErrorTypeInternal   = "internal_error"
+	ErrorTypeAuth       = "authentication_error"
 )
 
 // Error messages
@@ -25,6 +26,12 @@ const (
 	ErrorMsgFutureTimeRequired               = "Appointment time must be in the future"
 	ErrorMsgAppointmentNotPending            = "Appointment is not pending"
 	ErrorMsgAppointmentNotPendingOrConfirmed = "Appointment is not pending or confirmed. Please check the status of the appointment."
+
+	// Authentication errors
+	ErrorMsgMissingAuthToken    = "Authorization header is required"
+	ErrorMsgInvalidAuthHeader   = "Invalid authorization header format"
+	ErrorMsgUnsupportedAuthType = "Unsupported authorization type"
+	ErrorMsgInvalidToken        = "Invalid or expired token"
 
 	// Database errors
 	ErrorMsgFailedToCreateAppointment     = "Failed to create appointment"

@@ -16,8 +16,7 @@ database:
   conn_max_lifetime: 5m
 
 jwt:
-  secret: "your-secret-key-here"
-  expires_in: "24h"
+  secret: "your-secret-key-here-at-least-32-chars-long"
 
 log:
   level: "info"

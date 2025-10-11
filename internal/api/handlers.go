@@ -17,7 +17,7 @@ import (
 	professionalsService "github.com/vention/booking_api/internal/services/professionals"
 )
 
-func Register(ctx context.Context, cfg *config.Config, router *gin.Engine, queries *db.Queries) error {
+func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, queries *db.Queries) error {
 	// Register clients API
 	if err := clientsAPI.ClientsRegister(clientsAPI.ClientsHandlerParams{
 		Router:         router,

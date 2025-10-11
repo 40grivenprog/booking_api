@@ -20,7 +20,7 @@ func NewAppointmentsHandler(service appointments.Service) *AppointmentsHandler {
 }
 
 type AppointmentsHandlerParams struct {
-	Router              *gin.Engine
+	Router              *gin.RouterGroup
 	AppointmentsService appointments.Service
 }
 
@@ -35,12 +35,9 @@ func AppointmentsRegister(p AppointmentsHandlerParams) error {
 
 	h := NewAppointmentsHandler(p.AppointmentsService)
 
-	api := p.Router.Group("/api")
+	appointments := p.Router.Group("/appointments")
 	{
-		appointments := api.Group("/appointments")
-		{
-			appointments.POST("/", h.CreateAppointment)
-		}
+		appointments.POST("/", h.CreateAppointment)
 	}
 	return nil
 }

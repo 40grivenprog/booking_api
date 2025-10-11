@@ -21,7 +21,7 @@ func NewAdminsHandler(service admin.Service) *AdminsHandler {
 
 // AdminsHandlerParams defines the parameters for the AdminsHandler
 type AdminsHandlerParams struct {
-	Router       *gin.Engine
+	Router       *gin.RouterGroup
 	AdminService admin.Service
 }
 
@@ -37,12 +37,9 @@ func AdminsRegister(p AdminsHandlerParams) error {
 
 	h := NewAdminsHandler(p.AdminService)
 
-	api := p.Router.Group("/api")
+	admin := p.Router.Group("/admins")
 	{
-		admin := api.Group("/admins")
-		{
-			admin.POST("/professionals", h.CreateProfessional)
-		}
+		admin.POST("/professionals", h.CreateProfessional)
 	}
 
 	return nil
