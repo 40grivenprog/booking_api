@@ -41,9 +41,7 @@ const (
 	ErrorMsgUserNotFound = "User not found"
 
 	// Forbidden errors
-	ErrorMsgNotAllowedToConfirmAppointment = "You are not allowed to confirm this appointment"
-	ErrorMsgNotAllowedToCancelAppointment  = "You are not allowed to cancel this appointment"
-	ErrorMsgNotAllowedToAccessResource     = "You are not allowed to access this resource"
+	ErrorMsgNotAllowedToAccessResource = "You are not allowed to access this resource"
 
 	// Conflict errors
 	ErrorMsgUsernameAlreadyExists = "Username already exists"

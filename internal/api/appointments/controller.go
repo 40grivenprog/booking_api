@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 	common "github.com/vention/booking_api/internal/api/common"
 	"github.com/vention/booking_api/internal/services/appointments"
-	"github.com/vention/booking_api/internal/util"
 )
 
 // CreateAppointment handles POST /api/appointments
@@ -16,7 +15,6 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 		return
 	}
 
-	// Parse time strings
 	startTime, ok := common.ParseTime(c, req.StartTime, common.ErrorMsgInvalidTime)
 	if !ok {
 		return
@@ -27,11 +25,6 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 		return
 	}
 
-	// Convert to application timezone
-	startTime = util.ConvertToAppTimezone(startTime)
-	endTime = util.ConvertToAppTimezone(endTime)
-
-	// Parse UUIDs
 	clientID, ok := common.ParseClientID(c, req.ClientID)
 	if !ok {
 		return
@@ -55,6 +48,5 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 	}
 
 	response := mapAppointmentToCreateAppointmentResponse(result)
-
 	c.JSON(http.StatusCreated, response)
 }

@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	db "github.com/vention/booking_api/internal/repository"
 )
 
 // ParseUUID parses UUID from string and handles error response automatically
@@ -84,63 +83,6 @@ func ValidateAppointmentStatus(c *gin.Context, status string) bool {
 		return false
 	}
 	return true
-}
-
-// ValidateTimeRange validates that end time is after start time and both are valid
-func ValidateTimeRange(c *gin.Context, startTime, endTime time.Time) bool {
-	if endTime.Before(startTime) || endTime.Equal(startTime) {
-		HandleErrorResponse(c, http.StatusBadRequest, ErrorTypeValidation, ErrorMsgInvalidTime, nil)
-		return false
-	}
-	return true
-}
-
-// ValidateFutureTime validates that time is in the future
-func ValidateFutureTime(c *gin.Context, t time.Time, now time.Time) bool {
-	if t.Before(now) {
-		HandleErrorResponse(c, http.StatusBadRequest, ErrorTypeValidation, ErrorMsgFutureTimeRequired, nil)
-		return false
-	}
-	return true
-}
-
-// ValidateAppointmentOwnership validates that appointment belongs to the given user
-func ValidateAppointmentOwnership(c *gin.Context, appointment *db.Appointment, userID uuid.UUID, userType string) bool {
-	switch userType {
-	case UserTypeClient:
-		if appointment.ClientID.UUID != userID {
-			HandleErrorResponse(c, http.StatusForbidden, ErrorTypeForbidden, ErrorMsgNotAllowedToCancelAppointment, nil)
-			return false
-		}
-	case UserTypeProfessional:
-		if appointment.ProfessionalID != userID {
-			HandleErrorResponse(c, http.StatusForbidden, ErrorTypeForbidden, ErrorMsgNotAllowedToConfirmAppointment, nil)
-			return false
-		}
-	default:
-		HandleErrorResponse(c, http.StatusForbidden, ErrorTypeForbidden, ErrorMsgNotAllowedToAccessResource, nil)
-		return false
-	}
-	return true
-}
-
-// ValidateAppointmentStatus validates that appointment has one of the allowed statuses
-func ValidateAppointmentStatusIs(c *gin.Context, appointment *db.Appointment, allowedStatuses ...db.AppointmentStatus) bool {
-	currentStatus := appointment.Status.AppointmentStatus
-
-	for _, status := range allowedStatuses {
-		if currentStatus == status {
-			return true
-		}
-	}
-
-	// Build error message based on allowed statuses
-	if len(allowedStatuses) == 1 && allowedStatuses[0] == db.AppointmentStatusPending {
-		HandleErrorResponse(c, http.StatusBadRequest, ErrorTypeValidation, ErrorMsgAppointmentNotPending, nil)
-	} else {
-		HandleErrorResponse(c, http.StatusBadRequest, ErrorTypeValidation, ErrorMsgAppointmentNotPendingOrConfirmed, nil)
-	}
-	return false
 }
 
 // RequireQueryParam validates that a required query parameter is present

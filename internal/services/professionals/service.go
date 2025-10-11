@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	db "github.com/vention/booking_api/internal/repository"
+	"github.com/vention/booking_api/internal/util"
 )
 
 // Service defines the business logic operations for professionals
@@ -108,8 +109,8 @@ func (s *service) GetAppointments(ctx context.Context, professionalID uuid.UUID,
 
 // GetAppointmentDates retrieves distinct dates with appointments for a month
 func (s *service) GetAppointmentDates(ctx context.Context, professionalID uuid.UUID, month time.Time) ([]time.Time, error) {
-	// Calculate start and end of month
-	startOfMonth := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, month.Location())
+	// Normalize to start of month in application timezone (business rule)
+	startOfMonth := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, util.GetAppTimezone())
 	endOfMonth := startOfMonth.AddDate(0, 1, 0)
 
 	return s.repo.GetProfessionalAppointmentDates(ctx, &db.GetProfessionalAppointmentDatesParams{

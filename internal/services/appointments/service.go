@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	db "github.com/vention/booking_api/internal/repository"
+	"github.com/vention/booking_api/internal/util"
 )
 
 // Service defines the business logic operations for appointments
@@ -26,7 +27,12 @@ func NewService(repo AppointmentsRepository) Service {
 
 // CreateAppointment creates a new appointment with business logic validation
 func (s *service) CreateAppointment(ctx context.Context, input CreateAppointmentInput) (*db.CreateAppointmentWithDetailsRow, error) {
-	if err := s.validateAppointmentTime(input.StartTime, input.EndTime); err != nil {
+	// Convert times to application timezone (business rule)
+	startTime := util.ConvertToAppTimezone(input.StartTime)
+	endTime := util.ConvertToAppTimezone(input.EndTime)
+
+	// Validate appointment time
+	if err := s.validateAppointmentTime(startTime, endTime); err != nil {
 		return nil, err
 	}
 
@@ -34,8 +40,8 @@ func (s *service) CreateAppointment(ctx context.Context, input CreateAppointment
 	result, err := s.repo.CreateAppointmentWithDetails(ctx, &db.CreateAppointmentWithDetailsParams{
 		ClientID:       uuid.NullUUID{UUID: input.ClientID, Valid: true},
 		ProfessionalID: input.ProfessionalID,
-		StartTime:      input.StartTime,
-		EndTime:        input.EndTime,
+		StartTime:      startTime,
+		EndTime:        endTime,
 		Description:    sql.NullString{String: input.Description, Valid: input.Description != ""},
 	})
 	if err != nil {

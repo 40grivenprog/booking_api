@@ -116,8 +116,6 @@ func (h *ProfessionalsHandler) GetProfessionalAppointmentDates(c *gin.Context) {
 		}
 	}
 
-	targetMonth = time.Date(targetMonth.Year(), targetMonth.Month(), 1, 0, 0, 0, 0, util.GetAppTimezone())
-
 	appointmentDates, err := h.professionalsService.GetAppointmentDates(c.Request.Context(), professionalID, targetMonth)
 	if err != nil {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToRetrieveAppointments, err)
@@ -179,15 +177,13 @@ func (h *ProfessionalsHandler) CreateUnavailableAppointment(c *gin.Context) {
 		return
 	}
 
-	startTime, err := time.Parse(time.RFC3339, req.StartAt)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidTime, err)
+	startTime, ok := common.ParseTime(c, req.StartAt, common.ErrorMsgInvalidTime)
+	if !ok {
 		return
 	}
 
-	endTime, err := time.Parse(time.RFC3339, req.EndAt)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusBadRequest, common.ErrorTypeValidation, common.ErrorMsgInvalidTime, err)
+	endTime, ok := common.ParseTime(c, req.EndAt, common.ErrorMsgInvalidTime)
+	if !ok {
 		return
 	}
 
