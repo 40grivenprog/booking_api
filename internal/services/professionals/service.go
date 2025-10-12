@@ -109,13 +109,26 @@ func (s *service) GetAppointments(ctx context.Context, professionalID uuid.UUID,
 
 // GetAppointmentDates retrieves distinct dates with appointments for a month
 func (s *service) GetAppointmentDates(ctx context.Context, professionalID uuid.UUID, month time.Time) ([]time.Time, error) {
-	// Normalize to start of month in application timezone (business rule)
-	startOfMonth := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, util.GetAppTimezone())
+	appTimezone := util.GetAppTimezone()
+	now := time.Now().In(appTimezone)
+
+	// Normalize to start of month in application timezone
+	startOfMonth := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, appTimezone)
 	endOfMonth := startOfMonth.AddDate(0, 1, 0)
+
+	// If target month is current month, start from today (don't show past dates)
+	var startTime time.Time
+	if month.Year() == now.Year() && month.Month() == now.Month() {
+		// Start from today at 00:00:00
+		startTime = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, appTimezone)
+	} else {
+		// Start from beginning of the month
+		startTime = startOfMonth
+	}
 
 	return s.repo.GetProfessionalAppointmentDates(ctx, &db.GetProfessionalAppointmentDatesParams{
 		ProfessionalID: professionalID,
-		StartTime:      startOfMonth,
+		StartTime:      startTime,
 		StartTime_2:    endOfMonth,
 	})
 }

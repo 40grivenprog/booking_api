@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS professionals (
     last_name VARCHAR(255) NOT NULL, -- Last name (required)
     phone_number VARCHAR(20), -- Optional
     username VARCHAR(255) NOT NULL UNIQUE, -- Username (required)
-    password_hash VARCHAR(255), -- For professionals only required if user_type is 'professional'
+    password_hash VARCHAR(255), -- Required
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

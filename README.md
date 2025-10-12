@@ -1,86 +1,173 @@
-# Booking API
+# 🏥 Booking API
 
-A comprehensive RESTful API for managing appointments and bookings between clients and professionals. Built with Go, PostgreSQL, and Docker following clean architecture principles.
+A production-ready RESTful API for managing appointments and bookings between clients and professionals. Built with Go, PostgreSQL, following clean architecture and DDD principles.
 
-## Features
+---
 
-- **User Management**: Client and professional registration and authentication
-- **Appointment System**: Complete booking flow with status management
-- **Availability Management**: Professional availability checking and time slot management
-- **Cancellation System**: Both client and professional appointment cancellation
-- **Unavailable Periods**: Professional can mark themselves as unavailable
-- **Type-Safe Database Operations**: Using SQLC for generated, type-safe database queries
-- **PostgreSQL Database**: With migrations and proper schema management
-- **Docker Containerization**: Full containerization with Docker & Docker Compose
-- **Modular API Architecture**: Clean, maintainable API structure
+## ✨ Features
 
-## Tech Stack
+### Core Features
+- 🔐 **JWT Authentication** - Secure service-to-service authentication
+- 👥 **User Management** - Client and professional registration with role-based access
+- 📅 **Appointment System** - Complete booking lifecycle (create, confirm, cancel, complete)
+- 🕒 **Availability Management** - Real-time availability checking with hourly time slots
+- 🚫 **Unavailable Periods** - Professionals can mark themselves as unavailable
+- 📊 **Status Management** - Comprehensive appointment status tracking
+- 🔍 **Smart Filtering** - Filter appointments by status, date, and user type
 
-- **Language**: Go 1.23+
-- **Framework**: Gin
-- **Database**: PostgreSQL 15
-- **ORM**: SQLC (type-safe SQL code generation)
-- **Migrations**: golang-migrate
-- **Containerization**: Docker & Docker Compose
+### Architecture & Code Quality
+- 🏗️ **Clean Architecture** - Separation of concerns (Handlers → Services → Repository)
+- 📦 **Service Layer** - Business logic isolated from HTTP layer
+- 🗄️ **Type-Safe Database** - SQLC for compile-time safe SQL queries
+- 🔄 **Database Migrations** - Version-controlled schema changes with golang-migrate
+- ⚡ **Performance Optimized** - Connection pooling, efficient queries
+- 🛡️ **Input Validation** - Comprehensive request validation
+- 📝 **Structured Logging** - zerolog with request IDs
+- 🐳 **Containerized** - Docker & Docker Compose ready
 
-## Quick Start
+### Production Ready
+- 🔒 **Security** - JWT, bcrypt passwords, SQL injection prevention
+- 📊 **Observability** - Health checks, structured logs
+- ⚙️ **Configuration** - YAML-based config with environment override
+- 🚀 **Deployment** - Kubernetes ready with Helm charts
+- 📚 **Well Documented** - Comprehensive API documentation
+
+---
+
+## 🛠️ Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| **Language** | Go 1.23+ |
+| **Web Framework** | Gin |
+| **Database** | PostgreSQL 16 |
+| **Query Builder** | SQLC (type-safe code generation) |
+| **Migrations** | golang-migrate |
+| **Authentication** | JWT (golang-jwt/jwt/v5) |
+| **Password Hashing** | bcrypt |
+| **Configuration** | Viper |
+| **Logging** | zerolog |
+| **Containerization** | Docker & Docker Compose |
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
 - Go 1.23+
 - Docker & Docker Compose
 - Make
+- (Optional) PostgreSQL 16 for local development
 
-### Installation
+### Local Development
 
-1. Clone the repository:
+#### 1. Clone and Setup
 ```bash
-git clone <repository-url>
 cd booking_api
-```
 
-2. Copy the example configuration:
-```bash
+# Copy example configuration
 cp configs/server-config.yaml.example configs/server-config.yaml
+
+# Update JWT secret in config (or via env var)
+export JWT_SECRET="your-super-secret-key"
 ```
 
-3. Start the services:
+#### 2. Start Services
 ```bash
+# Start PostgreSQL, pgAdmin, and API
 make start
+
+# This will:
+# - Start PostgreSQL on port 5432
+# - Start pgAdmin on port 8081
+# - Run database migrations
+# - Start API server on port 8080
 ```
 
-This will start:
-- PostgreSQL database on port 5432
-- pgAdmin on port 8081
-- The API server on port 8080
+#### 3. Verify Installation
+```bash
+# Check API health
+curl http://localhost:8080/api/health
 
-## API Documentation
+# Expected response:
+# {"status":"healthy"}
+```
+
+### Alternative: Manual Setup
+
+```bash
+# Start only database
+docker-compose up -d postgres
+
+# Run migrations
+make migrate-up
+
+# Run API locally (without Docker)
+go run cmd/main.go
+
+# Or build and run
+make build
+./main
+```
+
+---
+
+## 📚 API Documentation
 
 ### Base URL
 ```
-http://localhost:8080
+http://localhost:8080/api
 ```
 
-## Client Endpoints
+### Authentication
+All API endpoints require JWT authentication (except health check).
 
-### 1. Client Registration
+**Header:**
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+The JWT token is generated by the booking_client service and includes:
+- Service name
+- Issued at timestamp
+- Expiration timestamp
+
+---
+
+## 📋 API Endpoints
+
+### 🏥 Health Check
+
+#### GET `/api/health`
+Check API health status.
+
+**No authentication required**
+
+```bash
+curl http://localhost:8080/api/health
+```
+
+**Response:**
+```json
+{
+  "status": "healthy"
+}
+```
+
+---
+
+### 👤 Client Endpoints
+
+#### 1. Register Client
 **POST** `/api/clients/register`
 
 Register a new client account.
 
-**Request Body:**
-```json
-{
-  "first_name": "John",
-  "last_name": "Doe",
-  "chat_id": 123456789,
-  "phone_number": "+1234567890"
-}
-```
-
-**cURL:**
+**Request:**
 ```bash
 curl -X POST "http://localhost:8080/api/clients/register" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
     "first_name": "John",
     "last_name": "Doe",
@@ -89,176 +176,241 @@ curl -X POST "http://localhost:8080/api/clients/register" \
   }'
 ```
 
-### 2. Get Client Appointments
-**GET** `/api/clients/{id}/appointments`
-
-Get all future appointments for a client with optional status filtering.
-
-**Query Parameters:**
-- `status` (optional): `pending`, `confirmed`, `cancelled`, `completed`
-
-**cURL:**
-```bash
-# Get all future appointments
-curl -X GET "http://localhost:8080/api/clients/28c31a08-f740-440e-a161-6c8136478e2b/appointments" \
-  -H "Content-Type: application/json"
-
-# Get only confirmed appointments
-curl -X GET "http://localhost:8080/api/clients/28c31a08-f740-440e-a161-6c8136478e2b/appointments?status=confirmed" \
-  -H "Content-Type: application/json"
+**Response:**
+```json
+{
+  "id": "28c31a08-f740-440e-a161-6c8136478e2b",
+  "first_name": "John",
+  "last_name": "Doe",
+  "chat_id": 123456789,
+  "phone_number": "+1234567890",
+  "created_at": "2024-01-15T10:00:00Z"
+}
 ```
 
-### 3. Cancel Appointment (Client)
+#### 2. Get Client Appointments
+**GET** `/api/clients/{id}/appointments`
+
+Get all future appointments for a client.
+
+**Query Parameters:**
+- `status` (optional): `pending` | `confirmed` | `cancelled` | `completed`
+- `date` (optional): Filter by specific date (YYYY-MM-DD)
+
+**Request:**
+```bash
+# All appointments
+curl "http://localhost:8080/api/clients/28c31a08-f740-440e-a161-6c8136478e2b/appointments" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Only confirmed appointments
+curl "http://localhost:8080/api/clients/28c31a08-f740-440e-a161-6c8136478e2b/appointments?status=confirmed" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "appointments": [
+    {
+      "id": "71a738d8-6695-4fa3-b68a-c58797801258",
+      "professional_id": "7c065dd1-22b9-4bed-82e2-be973cb6ea47",
+      "professional_name": "Dr. Smith",
+      "start_time": "2024-01-20T10:00:00Z",
+      "end_time": "2024-01-20T11:00:00Z",
+      "status": "confirmed",
+      "created_at": "2024-01-15T10:00:00Z"
+    }
+  ]
+}
+```
+
+#### 3. Cancel Appointment (Client)
 **PATCH** `/api/clients/{id}/appointments/{appointment_id}/cancel`
 
 Cancel an appointment as a client.
 
-**Request Body:**
-```json
-{
-  "cancellation_reason": "Need to reschedule"
-}
-```
-
-**cURL:**
+**Request:**
 ```bash
 curl -X PATCH "http://localhost:8080/api/clients/28c31a08-f740-440e-a161-6c8136478e2b/appointments/71a738d8-6695-4fa3-b68a-c58797801258/cancel" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
     "cancellation_reason": "Need to reschedule"
   }'
 ```
 
-## Professional Endpoints
-
-### 1. Get All Professionals
-**GET** `/api/professionals`
-
-Get list of all professionals.
-
-**cURL:**
-```bash
-curl -X GET "http://localhost:8080/api/professionals" \
-  -H "Content-Type: application/json"
-```
-
-### 2. Professional Sign In
-**POST** `/api/professionals/sign_in`
-
-Authenticate a professional user.
-
-**Request Body:**
+**Response:**
 ```json
 {
-  "username": "dr_smith",
-  "password": "password123",
-  "chat_id": 123456789
+  "id": "71a738d8-6695-4fa3-b68a-c58797801258",
+  "status": "cancelled",
+  "cancellation_reason": "Need to reschedule",
+  "cancelled_by": "client",
+  "updated_at": "2024-01-15T11:00:00Z"
 }
 ```
 
-**cURL:**
+---
+
+### 👨‍⚕️ Professional Endpoints
+
+#### 1. Get All Professionals
+**GET** `/api/professionals`
+
+Get a list of all professionals.
+
+**Request:**
+```bash
+curl "http://localhost:8080/api/professionals" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "professionals": [
+    {
+      "id": "7c065dd1-22b9-4bed-82e2-be973cb6ea47",
+      "first_name": "John",
+      "last_name": "Smith",
+      "username": "dr_smith",
+      "phone_number": "+1234567890"
+    }
+  ]
+}
+```
+
+#### 2. Professional Sign In
+**POST** `/api/professionals/sign_in`
+
+Authenticate a professional user and update their chat_id.
+
+**Request:**
 ```bash
 curl -X POST "http://localhost:8080/api/professionals/sign_in" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
     "username": "dr_smith",
     "password": "password123",
-    "chat_id": 123456789
+    "chat_id": 987654321
   }'
 ```
 
-### 3. Get Professional Appointments
-**GET** `/api/professionals/{id}/appointments`
-
-Get all future appointments for a professional with optional status filtering.
-
-**Query Parameters:**
-- `status` (optional): `pending`, `confirmed`, `cancelled`, `completed`
-
-**cURL:**
-```bash
-# Get all future appointments
-curl -X GET "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/appointments" \
-  -H "Content-Type: application/json"
-
-# Get only pending appointments
-curl -X GET "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/appointments?status=pending" \
-  -H "Content-Type: application/json"
+**Response:**
+```json
+{
+  "id": "7c065dd1-22b9-4bed-82e2-be973cb6ea47",
+  "first_name": "John",
+  "last_name": "Smith",
+  "username": "dr_smith",
+  "chat_id": 987654321
+}
 ```
 
-### 4. Confirm Appointment
+#### 3. Get Professional Appointments
+**GET** `/api/professionals/{id}/appointments`
+
+Get all future appointments for a professional.
+
+**Query Parameters:**
+- `status` (optional): `pending` | `confirmed` | `cancelled` | `completed`
+- `date` (optional): Filter by specific date (YYYY-MM-DD)
+
+**Request:**
+```bash
+# All appointments
+curl "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/appointments" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Only pending appointments
+curl "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/appointments?status=pending" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### 4. Confirm Appointment
 **PATCH** `/api/professionals/{id}/appointments/{appointment_id}/confirm`
 
 Confirm a pending appointment.
 
-**cURL:**
+**Request:**
 ```bash
 curl -X PATCH "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/appointments/71a738d8-6695-4fa3-b68a-c58797801258/confirm" \
-  -H "Content-Type: application/json"
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-### 5. Cancel Appointment (Professional)
+**Response:**
+```json
+{
+  "id": "71a738d8-6695-4fa3-b68a-c58797801258",
+  "status": "confirmed",
+  "updated_at": "2024-01-15T11:00:00Z"
+}
+```
+
+#### 5. Cancel Appointment (Professional)
 **PATCH** `/api/professionals/{id}/appointments/{appointment_id}/cancel`
 
 Cancel an appointment as a professional.
 
-**Request Body:**
-```json
-{
-  "cancellation_reason": "Client requested to reschedule"
-}
-```
-
-**cURL:**
+**Request:**
 ```bash
 curl -X PATCH "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/appointments/71a738d8-6695-4fa3-b68a-c58797801258/cancel" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
-    "cancellation_reason": "Client requested to reschedule"
+    "cancellation_reason": "Emergency - need to reschedule"
   }'
 ```
 
-### 6. Create Unavailable Appointment
+#### 6. Create Unavailable Period
 **POST** `/api/professionals/{id}/unavailable_appointments`
 
-Mark a time period as unavailable.
+Mark a time period as unavailable (vacation, lunch break, etc.).
 
-**Request Body:**
-```json
-{
-  "start_at": "2024-01-20T09:00:00Z",
-  "end_at": "2024-01-20T17:00:00Z"
-}
-```
-
-**cURL:**
+**Request:**
 ```bash
 curl -X POST "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/unavailable_appointments" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
     "start_at": "2024-01-20T09:00:00Z",
-    "end_at": "2024-01-20T17:00:00Z"
+    "end_at": "2024-01-20T17:00:00Z",
+    "description": "Conference attendance"
   }'
 ```
 
-### 7. Get Professional Availability
+**Response:**
+```json
+{
+  "id": "9f8e7d6c-5b4a-3c2d-1e0f-fedcba987654",
+  "type": "unavailable",
+  "start_time": "2024-01-20T09:00:00Z",
+  "end_time": "2024-01-20T17:00:00Z",
+  "description": "Conference attendance"
+}
+```
+
+#### 7. Get Professional Availability
 **GET** `/api/professionals/{id}/availability`
 
-Get hourly availability slots for a specific date (5:00-23:00).
+Get hourly availability slots for a specific date (5:00 AM - 11:00 PM).
 
 **Query Parameters:**
 - `date` (required): Date in YYYY-MM-DD format
 
-**cURL:**
+**Request:**
 ```bash
-curl -X GET "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/availability?date=2024-01-15" \
-  -H "Content-Type: application/json"
+curl "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/availability?date=2024-01-15" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 **Response:**
 ```json
 {
   "date": "2024-01-15",
+  "professional_id": "7c065dd1-22b9-4bed-82e2-be973cb6ea47",
   "slots": [
     {
       "start_time": "2024-01-15T05:00:00Z",
@@ -269,50 +421,91 @@ curl -X GET "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be9
       "start_time": "2024-01-15T10:00:00Z",
       "end_time": "2024-01-15T11:00:00Z",
       "available": false,
-      "type": "appointment"
+      "type": "appointment",
+      "reason": "Booked by client"
     },
     {
       "start_time": "2024-01-15T14:00:00Z",
       "end_time": "2024-01-15T15:00:00Z",
       "available": false,
-      "type": "unavailable"
+      "type": "unavailable",
+      "reason": "Lunch break"
     }
   ]
 }
 ```
 
-## Appointment Management
+#### 8. Get Appointment Dates
+**GET** `/api/professionals/{id}/appointments/dates`
 
-### 1. Create Appointment
+Get distinct dates with confirmed appointments for a month (used for calendar display).
+
+**Query Parameters:**
+- `month` (required): Month in YYYY-MM format
+
+**Request:**
+```bash
+curl "http://localhost:8080/api/professionals/7c065dd1-22b9-4bed-82e2-be973cb6ea47/appointments/dates?month=2024-01" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "month": "2024-01",
+  "dates": [
+    "2024-01-15",
+    "2024-01-16",
+    "2024-01-22",
+    "2024-01-28"
+  ]
+}
+```
+
+---
+
+### 📅 Appointment Endpoints
+
+#### Create Appointment
 **POST** `/api/appointments`
 
 Create a new appointment between a client and professional.
 
-**Request Body:**
-```json
-{
-  "client_id": "28c31a08-f740-440e-a161-6c8136478e2b",
-  "professional_id": "7c065dd1-22b9-4bed-82e2-be973cb6ea47",
-  "start_time": "2024-01-15T10:00:00Z",
-  "end_time": "2024-01-15T11:00:00Z"
-}
-```
-
-**cURL:**
+**Request:**
 ```bash
 curl -X POST "http://localhost:8080/api/appointments" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
     "client_id": "28c31a08-f740-440e-a161-6c8136478e2b",
     "professional_id": "7c065dd1-22b9-4bed-82e2-be973cb6ea47",
     "start_time": "2024-01-15T10:00:00Z",
-    "end_time": "2024-01-15T11:00:00Z"
+    "end_time": "2024-01-15T11:00:00Z",
+    "description": "Regular checkup"
   }'
 ```
 
-## Database Schema
+**Response:**
+```json
+{
+  "id": "71a738d8-6695-4fa3-b68a-c58797801258",
+  "client_id": "28c31a08-f740-440e-a161-6c8136478e2b",
+  "professional_id": "7c065dd1-22b9-4bed-82e2-be973cb6ea47",
+  "start_time": "2024-01-15T10:00:00Z",
+  "end_time": "2024-01-15T11:00:00Z",
+  "status": "pending",
+  "type": "appointment",
+  "created_at": "2024-01-14T15:30:00Z"
+}
+```
 
-### Clients Table
+---
+
+## 🗄️ Database Schema
+
+### Tables
+
+#### Clients
 ```sql
 CREATE TABLE clients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -326,7 +519,7 @@ CREATE TABLE clients (
 );
 ```
 
-### Professionals Table
+#### Professionals
 ```sql
 CREATE TABLE professionals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -341,16 +534,17 @@ CREATE TABLE professionals (
 );
 ```
 
-### Appointments Table
+#### Appointments
 ```sql
 CREATE TABLE appointments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     type appointment_type NOT NULL,           -- 'appointment' or 'unavailable'
-    client_id UUID REFERENCES clients(id),   -- Can be null for unavailable
+    client_id UUID REFERENCES clients(id),    -- NULL for unavailable periods
     professional_id UUID NOT NULL REFERENCES professionals(id),
     start_time TIMESTAMP WITH TIME ZONE NOT NULL,
     end_time TIMESTAMP WITH TIME ZONE NOT NULL,
     status appointment_status DEFAULT 'pending',
+    description TEXT,
     cancellation_reason TEXT,
     cancelled_by_professional_id UUID REFERENCES professionals(id),
     cancelled_by_client_id UUID REFERENCES clients(id),
@@ -365,10 +559,137 @@ CREATE TYPE appointment_type AS ENUM ('appointment', 'unavailable');
 CREATE TYPE appointment_status AS ENUM ('pending', 'confirmed', 'cancelled', 'completed');
 ```
 
-## Development Commands
+### Indexes
+```sql
+-- Performance indexes
+CREATE INDEX idx_appointments_professional_time ON appointments(professional_id, start_time);
+CREATE INDEX idx_appointments_client_time ON appointments(client_id, start_time);
+CREATE INDEX idx_appointments_status ON appointments(status);
+CREATE INDEX idx_clients_chat_id ON clients(chat_id);
+CREATE INDEX idx_professionals_chat_id ON professionals(chat_id);
+```
+
+---
+
+## 🏗️ Architecture
+
+### Clean Architecture Layers
+
+```
+┌─────────────────────────────────────────┐
+│         HTTP Layer (Gin)                │
+│  - Handlers (Controllers)               │
+│  - Middleware (Auth, Logging)           │
+│  - Request/Response DTOs                │
+└─────────────────┬───────────────────────┘
+                  │
+┌─────────────────▼───────────────────────┐
+│         Service Layer                   │
+│  - Business Logic                       │
+│  - Validation Rules                     │
+│  - Domain Models                        │
+└─────────────────┬───────────────────────┘
+                  │
+┌─────────────────▼───────────────────────┐
+│      Repository Layer (SQLC)            │
+│  - Type-safe SQL queries                │
+│  - Database operations                  │
+│  - Transaction management               │
+└─────────────────┬───────────────────────┘
+                  │
+┌─────────────────▼───────────────────────┐
+│         PostgreSQL Database             │
+└─────────────────────────────────────────┘
+```
+
+### Directory Structure
+
+```
+booking_api/
+├── cmd/
+│   ├── main.go              # Application entry point
+│   └── migrate/
+│       └── main.go          # Migration tool
+├── internal/
+│   ├── api/                 # HTTP layer
+│   │   ├── handlers.go      # Route registration
+│   │   ├── middleware/      # Auth, logging middleware
+│   │   ├── common/          # Shared HTTP utilities
+│   │   ├── clients/         # Client endpoints
+│   │   ├── professionals/   # Professional endpoints
+│   │   └── appointments/    # Appointment endpoints
+│   ├── services/            # Business logic layer
+│   │   ├── clients/
+│   │   ├── professionals/
+│   │   └── appointments/
+│   ├── repository/          # Data access layer (SQLC)
+│   │   ├── queries/         # SQL query files
+│   │   └── *.sql.go         # Generated code
+│   ├── database/            # DB connection
+│   ├── config/              # Configuration
+│   ├── token/               # JWT handling
+│   ├── migrations/          # SQL migrations
+│   └── util/                # Utilities
+├── pkg/
+│   └── server/              # Server initialization
+├── configs/
+│   └── server-config.yaml   # Configuration file
+├── Dockerfile
+├── docker-compose.yml
+└── Makefile
+```
+
+---
+
+## ⚙️ Configuration
+
+### server-config.yaml
+
+```yaml
+server:
+  host: 0.0.0.0
+  port: 8080
+
+database:
+  host: postgres
+  port: 5432
+  user: booking_user
+  password: booking_pass
+  dbname: booking_db
+  sslmode: disable
+  max_connections: 25
+  max_idle_connections: 10
+  max_lifetime_seconds: 3600
+
+jwt:
+  secret: ${JWT_SECRET}  # Override with environment variable
+```
+
+### Environment Variables
 
 ```bash
-# Start all services
+# Database
+DATABASE_URL=postgresql://user:pass@localhost:5432/booking_db
+
+# JWT
+JWT_SECRET=your-super-secret-key-change-in-production
+
+# Server
+SERVER_HOST=0.0.0.0
+SERVER_PORT=8080
+
+# Logging
+LOG_LEVEL=info  # debug, info, warn, error
+```
+
+---
+
+## 🛠️ Development
+
+### Commands
+
+```bash
+# Start all services (Docker Compose)
 make start
 
 # Stop all services
@@ -377,94 +698,231 @@ make stop
 # View logs
 make logs
 
-# Build the application
-make build
-
 # Restart services
 make restart
 
 # Clean up everything
 make clean
 
-# Database commands
-make db-shell       # Connect to PostgreSQL shell
-make pgadmin        # Open pgAdmin in browser
+# Build binary
+make build
 
-# Migration commands
-make migrate-up     # Run migrations up
-make migrate-down   # Run migrations down
-make migrate-create # Create new migration
-
-# SQLC commands
-make sqlc-generate  # Generate SQLC code
-make sqlc-validate  # Validate SQLC configuration
+# Run without Docker
+make run
 ```
 
-## Accessing Services
+### Database Commands
 
-- **API Server**: http://localhost:8080
-- **pgAdmin**: http://localhost:8081
-  - Email: admin@booking.com
-  - Password: admin
-- **PostgreSQL**: localhost:5432
-  - Database: booking_db
-  - User: booking_user
-  - Password: booking_pass
+```bash
+# Connect to PostgreSQL shell
+make db-shell
 
-## Key Features
+# Open pgAdmin (http://localhost:8081)
+make pgadmin
 
-### Appointment Status Flow
-1. **Pending**: Newly created appointment (default)
-2. **Confirmed**: Professional has confirmed the appointment
-3. **Cancelled**: Either client or professional cancelled
-4. **Completed**: Appointment has been completed
+# Run migrations up
+make migrate-up
 
-### Availability System
-- **Hourly Slots**: 5:00 AM to 11:00 PM (18 slots per day)
-- **Conflict Detection**: Automatically detects overlapping appointments
-- **Type Detection**: Shows whether slot is blocked by appointment or unavailable period
+# Rollback last migration
+make migrate-down
 
-### Cancellation System
-- **Client Cancellation**: Clients can cancel their own appointments
-- **Professional Cancellation**: Professionals can cancel any appointment
-- **Reason Required**: Both must provide cancellation reason
-- **Status Tracking**: Tracks who cancelled the appointment
+# Create new migration
+make migrate-create NAME=add_new_feature
 
-## Error Handling
+# Check migration version
+make migrate-version
+```
 
-All endpoints return consistent error responses:
+### SQLC Commands
+
+```bash
+# Generate type-safe code from SQL
+make sqlc-generate
+
+# Validate SQLC configuration
+make sqlc-validate
+```
+
+### Testing
+
+```bash
+# Run all tests
+go test ./...
+
+# Run tests with coverage
+go test -cover ./...
+
+# Run tests verbosely
+go test -v ./...
+
+# Run specific package tests
+go test ./internal/services/...
+```
+
+---
+
+## 🔒 Security
+
+### JWT Authentication
+- All API endpoints require valid JWT token
+- Token includes service name and expiration
+- Shared secret between API and client
+- Tokens expire after configurable duration
+
+### Password Security
+- Professional passwords hashed with bcrypt (cost factor 10)
+- Never stored in plain text
+- Compared using constant-time comparison
+
+### Database Security
+- Type-safe queries via SQLC (SQL injection prevention)
+- Prepared statements
+- Connection pooling
+- UUID primary keys (security through obscurity)
+
+### Input Validation
+- All requests validated before processing
+- UUID format validation
+- Time range validation
+- Business rule validation in service layer
+
+---
+
+## 📊 Error Handling
+
+### Standard Error Response
 
 ```json
 {
   "error": {
-    "code": "validation_error",
-    "message": "Invalid request body",
-    "details": "Field 'first_name' is required"
+    "type": "validation_error",
+    "message": "Invalid input data",
+    "details": "start_time must be in the future",
+    "request_id": "550e8400-e29b-41d4-a716-446655440000"
   }
 }
 ```
 
-Common error codes:
-- `validation_error`: Invalid input data
-- `database_error`: Database operation failed
-- `not_found`: Resource not found
-- `unauthorized`: Authentication required
-- `conflict`: Resource already exists
+### Error Types
 
-## Security Considerations
+| Type | HTTP Status | Description |
+|------|-------------|-------------|
+| `validation_error` | 400 | Invalid input data |
+| `unauthorized` | 401 | Missing or invalid JWT token |
+| `forbidden` | 403 | Not allowed to access resource |
+| `not_found` | 404 | Resource not found |
+| `conflict` | 409 | Resource already exists or conflict |
+| `internal_error` | 500 | Internal server error |
+| `database_error` | 500 | Database operation failed |
 
-- **Password Hashing**: Using bcrypt for professional passwords
-- **Input Validation**: Comprehensive request validation
-- **SQL Injection Prevention**: Type-safe queries with SQLC
-- **UUID Usage**: All IDs are UUIDs for security
+---
 
-## Contributing
+## 📈 Monitoring
 
-1. Follow the existing code structure and patterns
+### Health Check
+```bash
+curl http://localhost:8080/api/health
+```
+
+### Logs
+Structured JSON logs with zerolog:
+```json
+{
+  "level": "info",
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "method": "POST",
+  "path": "/api/appointments",
+  "status": 201,
+  "duration_ms": 45,
+  "time": "2024-01-15T10:00:00Z",
+  "message": "request completed"
+}
+```
+
+### Metrics
+- Request duration
+- Status code distribution
+- Database query performance
+- Active connections
+
+---
+
+## 🚀 Deployment
+
+### Docker
+
+```bash
+# Build image
+docker build -t booking-api:latest .
+
+# Run container
+docker run -p 8080:8080 \
+  -e DATABASE_URL="postgresql://..." \
+  -e JWT_SECRET="..." \
+  booking-api:latest
+```
+
+### Kubernetes
+
+See [deployment documentation](../deployments/DEPLOYMENT_GUIDE.md) for:
+- Helm charts
+- ArgoCD setup
+- Multi-environment deployment
+- Secrets management
+
+---
+
+## 🧪 API Testing
+
+### Using cURL
+
+```bash
+# Get JWT token (from booking_client or generate manually)
+TOKEN="your-jwt-token"
+
+# Test health endpoint
+curl http://localhost:8080/api/health
+
+# Get professionals
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/professionals
+
+# Create appointment
+curl -X POST http://localhost:8080/api/appointments \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_id": "uuid",
+    "professional_id": "uuid",
+    "start_time": "2024-01-20T10:00:00Z",
+    "end_time": "2024-01-20T11:00:00Z"
+  }'
+```
+
+### Using Postman
+
+1. Import collection (create from API docs)
+2. Set environment variable `JWT_TOKEN`
+3. Add header: `Authorization: Bearer {{JWT_TOKEN}}`
+4. Test endpoints
+
+---
+
+## 🤝 Contributing
+
+1. Follow clean architecture principles
 2. Add tests for new features
-3. Update documentation for API changes
+3. Update API documentation
 4. Use conventional commit messages
+5. Generate SQLC code after SQL changes
+6. Run migrations for schema changes
 
-## License
+---
 
-[Add your license here]
+## 📄 License
+
+[Your License Here]
+
+---
+
+**Built with ❤️ and Go**
