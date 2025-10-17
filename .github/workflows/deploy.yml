@@ -97,6 +97,43 @@ jobs:
         # Update image URL in container definitions
         UPDATED_TASK_DEFINITION=$(echo "$NEW_TASK_DEFINITION" | jq --arg image "${{ steps.image_tag.outputs.ecr_registry }}/booking-api:${{ steps.image_tag.outputs.tag }}" '.containerDefinitions[0].image = $image')
         
+        # Get secrets from Secrets Manager and add them to task definition
+        echo "Getting secrets from Secrets Manager..."
+        
+        # Get DB password secret ARN
+        DB_PASSWORD_ARN=$(aws secretsmanager describe-secret \
+          --secret-id "dev/booking-api/db-password" \
+          --region ${{ env.AWS_REGION }} \
+          --query 'ARN' \
+          --output text)
+        
+        # Get JWT secret ARN
+        JWT_SECRET_ARN=$(aws secretsmanager describe-secret \
+          --secret-id "dev/booking-api/jwt-secret" \
+          --region ${{ env.AWS_REGION }} \
+          --query 'ARN' \
+          --output text)
+        
+        echo "DB_PASSWORD_ARN: $DB_PASSWORD_ARN"
+        echo "JWT_SECRET_ARN: $JWT_SECRET_ARN"
+        
+        # Create secrets array for task definition
+        SECRETS_JSON=$(jq -n --arg db_arn "$DB_PASSWORD_ARN" --arg jwt_arn "$JWT_SECRET_ARN" '[
+          {
+            "name": "DB_PASSWORD",
+            "valueFrom": $db_arn
+          },
+          {
+            "name": "JWT_SECRET", 
+            "valueFrom": $jwt_arn
+          }
+        ]')
+        
+        echo "Secrets JSON: $SECRETS_JSON"
+        
+        # Add secrets to task definition
+        UPDATED_TASK_DEFINITION=$(echo "$UPDATED_TASK_DEFINITION" | jq --argjson secrets "$SECRETS_JSON" '.containerDefinitions[0].secrets = $secrets')
+        
         # Register new task definition
         NEW_TASK_DEFINITION_ARN=$(aws ecs register-task-definition \
           --cli-input-json "$UPDATED_TASK_DEFINITION" \
