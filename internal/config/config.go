@@ -4,80 +4,61 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spf13/viper"
+	"github.com/caarlos0/env"
 )
 
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	Log      LogConfig      `mapstructure:"log"`
+	Server   ServerConfig   `envPrefix:"SERVER_"`
+	Database DatabaseConfig `envPrefix:"DB_"`
+	JWT      JWTConfig      `envPrefix:"JWT_"`
+	Log      LogConfig      `envPrefix:"LOG_"`
 }
 
 type ServerConfig struct {
-	Host         string        `mapstructure:"host"`
-	Port         int           `mapstructure:"port"`
-	ReadTimeout  time.Duration `mapstructure:"read_timeout"`
-	WriteTimeout time.Duration `mapstructure:"write_timeout"`
+	Host         string        `env:"HOST" envDefault:"0.0.0.0"`
+	Port         int           `env:"PORT" envDefault:"8080"`
+	ReadTimeout  time.Duration `env:"READ_TIMEOUT" envDefault:"30s"`
+	WriteTimeout time.Duration `env:"WRITE_TIMEOUT" envDefault:"30s"`
 }
 
 type DatabaseConfig struct {
-	Host            string        `mapstructure:"host"`
-	Port            int           `mapstructure:"port"`
-	User            string        `mapstructure:"user"`
-	Password        string        `mapstructure:"password"`
-	DBName          string        `mapstructure:"dbname"`
-	SSLMode         string        `mapstructure:"sslmode"`
-	MaxOpenConns    int           `mapstructure:"max_open_conns"`
-	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
-	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+	Host            string        `env:"HOST" envDefault:"localhost"`
+	Port            int           `env:"PORT" envDefault:"5432"`
+	User            string        `env:"USER" envDefault:"postgres"`
+	Password        string        `env:"PASSWORD" envDefault:""`
+	DBName          string        `env:"NAME" envDefault:"booking_db"`
+	SSLMode         string        `env:"SSLMODE" envDefault:"disable"`
+	MaxOpenConns    int           `env:"MAX_OPEN_CONNS" envDefault:"25"`
+	MaxIdleConns    int           `env:"MAX_IDLE_CONNS" envDefault:"25"`
+	ConnMaxLifetime time.Duration `env:"CONN_MAX_LIFETIME" envDefault:"5m"`
 }
 
 type JWTConfig struct {
-	Secret string `mapstructure:"secret"`
+	Secret string `env:"SECRET" envDefault:""`
 }
 
 type LogConfig struct {
-	Level  string `mapstructure:"level"`
-	Format string `mapstructure:"format"`
+	Level  string `env:"LEVEL" envDefault:"info"`
+	Format string `env:"FORMAT" envDefault:"json"`
 }
 
-func New(cfgPath string) (*Config, error) {
-	viper.SetConfigFile(cfgPath)
-	viper.SetConfigType("yaml")
+func Load() (*Config, error) {
+	cfg := &Config{}
 
-	// Set default values
-	viper.SetDefault("server.host", "0.0.0.0")
-	viper.SetDefault("server.port", 8080)
-	viper.SetDefault("server.read_timeout", "30s")
-	viper.SetDefault("server.write_timeout", "30s")
-
-	viper.SetDefault("database.host", "localhost")
-	viper.SetDefault("database.port", 5432)
-	viper.SetDefault("database.user", "booking_user")
-	viper.SetDefault("database.password", "booking_pass")
-	viper.SetDefault("database.dbname", "booking_db")
-	viper.SetDefault("database.sslmode", "disable")
-	viper.SetDefault("database.max_open_conns", 25)
-	viper.SetDefault("database.max_idle_conns", 25)
-	viper.SetDefault("database.conn_max_lifetime", "5m")
-
-	viper.SetDefault("jwt.secret", "default-secret-key")
-
-	viper.SetDefault("log.level", "info")
-	viper.SetDefault("log.format", "json")
-
-	// Read config file
-	if err := viper.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("error reading config file: %w", err)
+	if err := env.Parse(cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse environment variables: %w", err)
 	}
 
-	var cfg Config
-	if err := viper.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("error unmarshaling config: %w", err)
+	// Validate required fields
+	if cfg.Database.Password == "" {
+		return nil, fmt.Errorf("DB_PASSWORD environment variable is required")
 	}
 
-	return &cfg, nil
+	if cfg.JWT.Secret == "" {
+		return nil, fmt.Errorf("JWT_SECRET environment variable is required")
+	}
+
+	return cfg, nil
 }
 
 func (c *DatabaseConfig) GetDSN() string {

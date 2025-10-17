@@ -14,8 +14,14 @@ services:
     working_dir: /app
     command: go run ./cmd
     environment:
-      - CONFIG_PATH=/app/configs/server-config.yaml
-      - DATABASE_URL=postgres://booking_user:booking_pass@postgres:5432/booking_db?sslmode=disable
+      - PORT=8080
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=booking_user
+      - DB_PASSWORD=booking_pass
+      - DB_NAME=booking_db
+      - DB_SSLMODE=disable
+      - JWT_SECRET=dev-jwt-secret-key-at-least-32-chars-long
 
   postgres:
     image: postgres:15-alpine

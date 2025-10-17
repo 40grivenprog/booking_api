@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,15 +16,6 @@ func main() {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	defer ctxCancel()
 
-	var cfgPath string
-	flag.StringVar(&cfgPath, "cfg", "", "path where cfg is located")
-
-	flag.Parse()
-
-	if os.Getenv("CONFIG_PATH") != "" {
-		cfgPath = os.Getenv("CONFIG_PATH")
-	}
-
 	// Initialize logger
 	logger := log.With().Str("component", "api").Logger()
 
@@ -36,7 +26,8 @@ func main() {
 		logger.Info().Str("timezone", util.GetAppTimezone().String()).Msg("Timezone initialized")
 	}
 
-	cfg, err := config.New(cfgPath)
+	// Load configuration from environment variables
+	cfg, err := config.Load()
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Error loading configuration")
 	}
