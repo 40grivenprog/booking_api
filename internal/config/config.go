@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/caarlos0/env"
@@ -44,6 +45,20 @@ type LogConfig struct {
 
 func Load() (*Config, error) {
 	cfg := &Config{}
+
+	// Debug: Print all environment variables
+	fmt.Println("=== DEBUG: Environment Variables ===")
+	fmt.Printf("DB_PASSWORD: %s\n", os.Getenv("DB_PASSWORD"))
+	fmt.Printf("JWT_SECRET: %s\n", os.Getenv("JWT_SECRET"))
+	fmt.Println("=== All env vars ===")
+	for _, env := range os.Environ() {
+		if len(env) > 50 { // Only show first 50 chars to avoid secrets in logs
+			fmt.Printf("%.50s...\n", env)
+		} else {
+			fmt.Println(env)
+		}
+	}
+	fmt.Println("=== End DEBUG ===")
 
 	if err := env.Parse(cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse environment variables: %w", err)
