@@ -14,17 +14,17 @@ type DB struct {
 }
 
 func NewPostgreSQL(cfg *config.Config, logger zerolog.Logger) (*DB, error) {
-	dsn := cfg.Database.GetDSN()
-	
+	dsn := cfg.GetDSN()
+
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
 	// Configure connection pool
-	db.SetMaxOpenConns(cfg.Database.MaxOpenConns)
-	db.SetMaxIdleConns(cfg.Database.MaxIdleConns)
-	db.SetConnMaxLifetime(cfg.Database.ConnMaxLifetime)
+	db.SetMaxOpenConns(cfg.DBMaxOpenConns)
+	db.SetMaxIdleConns(cfg.DBMaxIdleConns)
+	db.SetConnMaxLifetime(cfg.DBConnMaxLifetime)
 
 	// Test connection
 	if err := db.Ping(); err != nil {

@@ -9,38 +9,29 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `envPrefix:"SERVER_"`
-	Database DatabaseConfig `envPrefix:"DB_"`
-	JWT      JWTConfig      `envPrefix:"JWT_"`
-	Log      LogConfig      `envPrefix:"LOG_"`
-}
+	// Server config
+	ServerHost         string        `env:"SERVER_HOST" envDefault:"0.0.0.0"`
+	ServerPort         int           `env:"SERVER_PORT" envDefault:"8080"`
+	ServerReadTimeout  time.Duration `env:"SERVER_READ_TIMEOUT" envDefault:"30s"`
+	ServerWriteTimeout time.Duration `env:"SERVER_WRITE_TIMEOUT" envDefault:"30s"`
 
-type ServerConfig struct {
-	Host         string        `env:"HOST" envDefault:"0.0.0.0"`
-	Port         int           `env:"PORT" envDefault:"8080"`
-	ReadTimeout  time.Duration `env:"READ_TIMEOUT" envDefault:"30s"`
-	WriteTimeout time.Duration `env:"WRITE_TIMEOUT" envDefault:"30s"`
-}
+	// Database config
+	DBHost            string        `env:"DB_HOST" envDefault:"localhost"`
+	DBPort            int           `env:"DB_PORT" envDefault:"5432"`
+	DBUser            string        `env:"DB_USER" envDefault:"postgres"`
+	DBPassword        string        `env:"DB_PASSWORD" envDefault:""`
+	DBName            string        `env:"DB_NAME" envDefault:"booking_db"`
+	DBSSLMode         string        `env:"DB_SSLMODE" envDefault:"disable"`
+	DBMaxOpenConns    int           `env:"DB_MAX_OPEN_CONNS" envDefault:"25"`
+	DBMaxIdleConns    int           `env:"DB_MAX_IDLE_CONNS" envDefault:"25"`
+	DBConnMaxLifetime time.Duration `env:"DB_CONN_MAX_LIFETIME" envDefault:"5m"`
 
-type DatabaseConfig struct {
-	Host            string        `env:"HOST" envDefault:"localhost"`
-	Port            int           `env:"PORT" envDefault:"5432"`
-	User            string        `env:"USER" envDefault:"postgres"`
-	Password        string        `env:"PASSWORD" envDefault:""`
-	DBName          string        `env:"NAME" envDefault:"booking_db"`
-	SSLMode         string        `env:"SSLMODE" envDefault:"disable"`
-	MaxOpenConns    int           `env:"MAX_OPEN_CONNS" envDefault:"25"`
-	MaxIdleConns    int           `env:"MAX_IDLE_CONNS" envDefault:"25"`
-	ConnMaxLifetime time.Duration `env:"CONN_MAX_LIFETIME" envDefault:"5m"`
-}
+	// JWT config
+	JWTSecret string `env:"JWT_SECRET" envDefault:""`
 
-type JWTConfig struct {
-	Secret string `env:"SECRET" envDefault:""`
-}
-
-type LogConfig struct {
-	Level  string `env:"LEVEL" envDefault:"info"`
-	Format string `env:"FORMAT" envDefault:"json"`
+	// Log config
+	LogLevel  string `env:"LOG_LEVEL" envDefault:"info"`
+	LogFormat string `env:"LOG_FORMAT" envDefault:"json"`
 }
 
 func Load() (*Config, error) {
@@ -64,19 +55,25 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("failed to parse environment variables: %w", err)
 	}
 
+	// Debug: Print parsed config
+	fmt.Println("=== DEBUG: Parsed Config ===")
+	fmt.Printf("cfg.DBPassword: '%s'\n", cfg.DBPassword)
+	fmt.Printf("cfg.JWTSecret: '%s'\n", cfg.JWTSecret)
+	fmt.Println("=== End Parsed Config ===")
+
 	// Validate required fields
-	if cfg.Database.Password == "" {
+	if cfg.DBPassword == "" {
 		return nil, fmt.Errorf("DB_PASSWORD environment variable is required")
 	}
 
-	if cfg.JWT.Secret == "" {
+	if cfg.JWTSecret == "" {
 		return nil, fmt.Errorf("JWT_SECRET environment variable is required")
 	}
 
 	return cfg, nil
 }
 
-func (c *DatabaseConfig) GetDSN() string {
+func (c *Config) GetDSN() string {
 	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode)
+		c.DBHost, c.DBPort, c.DBUser, c.DBPassword, c.DBName, c.DBSSLMode)
 }
