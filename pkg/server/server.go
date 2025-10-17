@@ -53,7 +53,7 @@ func Start(ctx context.Context, cfg *config.Config, logger zerolog.Logger) error
 	queries := db.New(database.DB)
 
 	// Initialize JWT token maker
-	tokenMaker, err := token.NewJWTMaker(cfg.JWT.Secret)
+	tokenMaker, err := token.NewJWTMaker(cfg.JWTSecret)
 	if err != nil {
 		return fmt.Errorf("failed to create token maker: %w", err)
 	}
@@ -85,10 +85,10 @@ func Start(ctx context.Context, cfg *config.Config, logger zerolog.Logger) error
 
 	// Start server
 	srv := &http.Server{
-		Addr:         fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port),
+		Addr:         fmt.Sprintf("%s:%d", cfg.ServerHost, cfg.ServerPort),
 		Handler:      r,
-		ReadTimeout:  cfg.Server.ReadTimeout,
-		WriteTimeout: cfg.Server.WriteTimeout,
+		ReadTimeout:  cfg.ServerReadTimeout,
+		WriteTimeout: cfg.ServerWriteTimeout,
 	}
 
 	logger.Info().
