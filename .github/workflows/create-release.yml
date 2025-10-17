@@ -75,6 +75,28 @@ jobs:
         echo "Debug: Labels found: $LABELS"
         echo "Debug: Version type: $VERSION_TYPE"
 
+    - name: Get PR titles since last release
+      id: get_pr_titles
+      run: |
+        LATEST_TAG="${{ steps.get_version.outputs.latest_tag }}"
+        NEW_TAG="${{ steps.calculate_version.outputs.new_tag }}"
+        
+        if [[ "$LATEST_TAG" == "v0.0.0" ]]; then
+          # First release - get all PRs merged to main
+          PR_TITLES=$(gh pr list --state merged --base main --json title --jq '.[].title' | sed 's/^/- /')
+        else
+          # Get PRs merged since last tag
+          PR_TITLES=$(gh pr list --state merged --base main --json title,mergedAt --jq '.[] | select(.mergedAt > "'$(git log -1 --format=%ai "$LATEST_TAG")'") | .title' | sed 's/^/- /')
+        fi
+        
+        if [[ -z "$PR_TITLES" ]]; then
+          PR_TITLES="- No PRs found since last release"
+        fi
+        
+        echo "pr_titles<<EOF" >> $GITHUB_OUTPUT
+        echo "$PR_TITLES" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
     - name: Create Draft Release
       run: |
         gh release create ${{ steps.calculate_version.outputs.new_tag }} \
@@ -87,6 +109,9 @@ jobs:
         
         - Previous version: ${{ steps.get_version.outputs.latest_tag }}
         - New version: ${{ steps.calculate_version.outputs.new_tag }}
+        
+        ### Merged PRs since last release:
+        ${{ steps.get_pr_titles.outputs.pr_titles }}
         
         ### Next Steps
         1. Review the changes
