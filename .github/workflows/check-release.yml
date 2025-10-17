@@ -32,18 +32,6 @@ jobs:
           echo "No version label found. Available labels: ${LABELS_ARRAY[*]}"
         fi
 
-    - name: Comment on PR - Missing Label
-      if: steps.check_labels.outputs.has_version_label == 'false'
-      uses: actions/github-script@v7
-      with:
-        github-token: ${{ secrets.RELEASE_TOKEN }}
-        script: |
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: '## **Version Label Required**\n\n**Missing version label**\n\nThis PR cannot be merged without a version label.\n\n### **Please add one of these labels:**\n\n- `patch` - for bug fixes (0.0.1 → 0.0.2)\n- `minor` - for new features (0.0.1 → 0.1.0)\n- `major` - for breaking changes (0.0.1 → 1.0.0)\n\n### **What happens next:**\n\n1. Add version label\n2. Merge PR to main (creates draft release)\n3. Publish the release to build image\n4. Deploy to dev/prod with new tag\n5. Merge this PR'
-          });
 
 
     - name: Fail if no version label
