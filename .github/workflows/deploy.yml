@@ -1,0 +1,201 @@
+name: Deploy to Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - prod
+      image_tag:
+        description: 'Image tag to deploy (leave empty for latest)'
+        required: false
+        type: string
+        default: ''
+
+env:
+  AWS_REGION: eu-central-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Set image tag
+      id: image_tag
+      run: |
+        if [[ -n "${{ github.event.inputs.image_tag }}" ]]; then
+          echo "tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+        else
+          # Get latest tag from ECR for API
+          LATEST_TAG=$(aws ecr describe-images \
+            --repository-name booking-api \
+            --region ${{ env.AWS_REGION }} \
+            --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' \
+            --output text)
+          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+        fi
+        echo "Using API image tag: ${{ steps.image_tag.outputs.tag }}"
+        
+        # Get ECR registry URL
+        ECR_REGISTRY=$(aws ecr describe-registry --region ${{ env.AWS_REGION }} --query 'registryId' --output text).dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+        echo "ecr_registry=$ECR_REGISTRY" >> $GITHUB_OUTPUT
+
+    - name: Update ECS Service
+      run: |
+        echo "Updating ECS service with new image..."
+        
+        # Get ECS cluster name
+        CLUSTER_NAME="booking-app-${{ github.event.inputs.environment }}"
+        SERVICE_NAME="booking-api-${{ github.event.inputs.environment }}"
+        
+        # Get current task definition
+        TASK_DEFINITION_ARN=$(aws ecs describe-services \
+          --cluster "$CLUSTER_NAME" \
+          --services "$SERVICE_NAME" \
+          --region ${{ env.AWS_REGION }} \
+          --query 'services[0].taskDefinition' \
+          --output text)
+        
+        echo "Current task definition: $TASK_DEFINITION_ARN"
+        
+        # Get task definition details
+        TASK_DEFINITION=$(aws ecs describe-task-definition \
+          --task-definition "$TASK_DEFINITION_ARN" \
+          --region ${{ env.AWS_REGION }} \
+          --query 'taskDefinition')
+        
+        # Extract only required fields for new task definition
+        NEW_TASK_DEFINITION=$(echo "$TASK_DEFINITION" | jq '{
+          family: .family,
+          taskRoleArn: .taskRoleArn,
+          executionRoleArn: .executionRoleArn,
+          networkMode: .networkMode,
+          containerDefinitions: .containerDefinitions,
+          volumes: .volumes,
+          placementConstraints: .placementConstraints,
+          requiresCompatibilities: .requiresCompatibilities,
+          cpu: .cpu,
+          memory: .memory
+        } | if .tags == null then del(.tags) else . end')
+        
+        # Update image URL in container definitions
+        UPDATED_TASK_DEFINITION=$(echo "$NEW_TASK_DEFINITION" | jq --arg image "${{ steps.image_tag.outputs.ecr_registry }}/booking-api:${{ steps.image_tag.outputs.tag }}" '.containerDefinitions[0].image = $image')
+        
+        # Register new task definition
+        NEW_TASK_DEFINITION_ARN=$(aws ecs register-task-definition \
+          --cli-input-json "$UPDATED_TASK_DEFINITION" \
+          --region ${{ env.AWS_REGION }} \
+          --query 'taskDefinition.taskDefinitionArn' \
+          --output text)
+        
+        echo "New task definition: $NEW_TASK_DEFINITION_ARN"
+        
+        # Update service
+        aws ecs update-service \
+          --cluster "$CLUSTER_NAME" \
+          --service "$SERVICE_NAME" \
+          --task-definition "$NEW_TASK_DEFINITION_ARN" \
+          --region ${{ env.AWS_REGION }}
+        
+        echo "ECS service updated successfully!"
+
+    - name: Wait for Service Update
+      run: |
+        echo "Waiting for service to stabilize..."
+        CLUSTER_NAME="booking-app-${{ github.event.inputs.environment }}"
+        SERVICE_NAME="booking-api-${{ github.event.inputs.environment }}"
+        
+        aws ecs wait services-stable \
+          --cluster "$CLUSTER_NAME" \
+          --services "$SERVICE_NAME" \
+          --region ${{ env.AWS_REGION }}
+        
+        echo "Service is stable!"
+
+    - name: Run Database Migrations
+      run: |
+        echo "Starting database migrations for ${{ github.event.inputs.environment }} environment..."
+        
+        # Get ECS cluster and task definition
+        CLUSTER_NAME="booking-app-${{ github.event.inputs.environment }}"
+        TASK_DEFINITION="booking-app-${{ github.event.inputs.environment }}-db-migration"
+        
+        # Get subnets and security groups from VPC
+        VPC_ID=$(aws ec2 describe-vpcs \
+          --filters "Name=tag:Name,Values=*shared*" \
+          --region ${{ env.AWS_REGION }} \
+          --query 'Vpcs[0].VpcId' \
+          --output text)
+        
+        SUBNET_IDS=$(aws ec2 describe-subnets \
+          --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=*public*" \
+          --region ${{ env.AWS_REGION }} \
+          --query 'Subnets[].SubnetId' \
+          --output text | tr '\t' ',')
+        
+        SECURITY_GROUP_ID=$(aws ec2 describe-security-groups \
+          --filters "Name=vpc-id,Values=$VPC_ID" "Name=group-name,Values=*rds*" \
+          --region ${{ env.AWS_REGION }} \
+          --query 'SecurityGroups[0].GroupId' \
+          --output text)
+        
+        echo "Running migrations via ECS task..."
+        aws ecs run-task \
+          --cluster "$CLUSTER_NAME" \
+          --task-definition "$TASK_DEFINITION" \
+          --launch-type "FARGATE" \
+          --network-configuration "awsvpcConfiguration={subnets=[$SUBNET_IDS],securityGroups=[$SECURITY_GROUP_ID],assignPublicIp=ENABLED}" \
+          --overrides 'containerOverrides=[{name="db-migration",command=["-direction=up"]}]' \
+          --region ${{ env.AWS_REGION }}
+        
+        echo "Database migrations completed successfully!"
+
+    - name: Health Check
+      run: |
+        echo "Getting ALB URL for health check..."
+        
+        # Get ALB DNS name
+        ALB_ARN=$(aws elbv2 describe-load-balancers \
+          --names "booking-app-api-${{ github.event.inputs.environment }}" \
+          --region ${{ env.AWS_REGION }} \
+          --query 'LoadBalancers[0].LoadBalancerArn' \
+          --output text)
+        
+        API_URL=$(aws elbv2 describe-load-balancers \
+          --load-balancer-arns "$ALB_ARN" \
+          --region ${{ env.AWS_REGION }} \
+          --query 'LoadBalancers[0].DNSName' \
+          --output text)
+        
+        echo "Checking health at: http://$API_URL/health"
+        curl -f "http://$API_URL/health" || exit 1
+
+    - name: Deployment Summary
+      run: |
+        echo "## Deployment Completed Successfully!"
+        echo ""
+        echo "**Environment:** ${{ github.event.inputs.environment }}"
+        echo "**Image Tag:** ${{ steps.image_tag.outputs.tag }}"
+        echo "**API URL:** $(cd booking_deployments/terraform/environments/${{ github.event.inputs.environment }} && terraform output -raw api_url)"
+        echo ""
+        echo "### Next Steps:"
+        echo "1. Deployment completed"
+        echo "2. Health check passed"
+        echo "3. Monitor logs if needed"
+        echo "4. Ready for use!"

@@ -1,0 +1,78 @@
+name: Check Version Label
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+
+jobs:
+  check-version-label:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check for version labels
+      id: check_labels
+      run: |
+        LABELS_ARRAY=(${{ join(github.event.pull_request.labels.*.name, ' ') }})
+        
+        HAS_VERSION_LABEL=false
+        for label in "${LABELS_ARRAY[@]}"; do
+          echo "Checking label: '$label'"
+          if [[ "$label" == "major" ]] || [[ "$label" == "minor" ]] || [[ "$label" == "patch" ]]; then
+            HAS_VERSION_LABEL=true
+            echo "Found version label: $label"
+            break
+          fi
+        done
+        
+        if [[ "$HAS_VERSION_LABEL" == "true" ]]; then
+          echo "has_version_label=true" >> $GITHUB_OUTPUT
+          echo "Version label found: ${LABELS_ARRAY[*]}"
+        else
+          echo "has_version_label=false" >> $GITHUB_OUTPUT
+          echo "No version label found. Available labels: ${LABELS_ARRAY[*]}"
+        fi
+
+    - name: Comment on PR - Missing Label
+      if: steps.check_labels.outputs.has_version_label == 'false'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.RELEASE_TOKEN }}
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '## **Version Label Required**\n\n**Missing version label**\n\nThis PR cannot be merged without a version label.\n\n### **Please add one of these labels:**\n\n- `patch` - for bug fixes (0.0.1 → 0.0.2)\n- `minor` - for new features (0.0.1 → 0.1.0)\n- `major` - for breaking changes (0.0.1 → 1.0.0)\n\n### **What happens next:**\n\n1. Add version label\n2. Merge PR to main (creates draft release)\n3. Publish the release to build image\n4. Deploy to dev/prod with new tag\n5. Merge this PR'
+          });
+
+    - name: Comment on PR - Success
+      if: steps.check_labels.outputs.has_version_label == 'true'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.RELEASE_TOKEN }}
+        script: |
+          const labels = context.payload.pull_request.labels.map(label => label.name);
+          let versionLabel = '';
+          
+          if (labels.includes('major')) {
+            versionLabel = 'major';
+          } else if (labels.includes('minor')) {
+            versionLabel = 'minor';
+          } else if (labels.includes('patch')) {
+            versionLabel = 'patch';
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '## **Version Label Check Passed**\n\nThis PR is ready for the next step!\n\n**Version label:** `' + versionLabel + '`\n\n### **Next Steps:**\n\n1. Version label added (`' + versionLabel + '`)\n2. Merge PR to main (creates draft release)\n3. Publish the draft release\n4. Deploy to dev/prod with the new tag\n5. Merge this PR\n\n### **Current labels:** ' + labels.join(', ')
+          });
+
+    - name: Fail if no version label
+      if: steps.check_labels.outputs.has_version_label == 'false'
+      run: |
+        echo "Version label check failed!"
+        echo "Available labels: ${{ github.event.pull_request.labels.*.name }}"
+        echo "Please add one of: major, minor, patch"
+        exit 1
