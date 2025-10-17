@@ -18,7 +18,6 @@ import (
 )
 
 func Start(ctx context.Context, cfg *config.Config, logger zerolog.Logger) error {
-	fmt.Println("Starting server... for test deploy 5")
 	// Initialize database
 	database, err := database.NewPostgreSQL(cfg, logger)
 	if err != nil {
