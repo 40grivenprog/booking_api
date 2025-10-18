@@ -72,7 +72,7 @@ jobs:
           echo "new_tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
           echo "version_type=$VERSION_TYPE" >> "$GITHUB_OUTPUT"
 
-      - name: Get release notes from last published release
+      - name: Get release notes from commits since last published release
         id: get_release_notes
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
@@ -81,27 +81,61 @@ jobs:
           LATEST_PUBLISHED_TAG="${{ steps.get_version.outputs.latest_published_tag }}"
           NEW_TAG="${{ steps.calculate_version.outputs.new_tag }}"
 
-          echo "Getting release notes from last published release: $LATEST_PUBLISHED_TAG"
+          echo "Getting commits since last published release: $LATEST_PUBLISHED_TAG"
 
           if [[ "$LATEST_PUBLISHED_TAG" == "v0.0.0" ]]; then
+            # First release - get all PRs merged to main
+            echo "First release - getting all PRs merged to main"
             RELEASE_NOTES=$(gh pr list --state merged --base main --json title --jq '.[].title' | sed 's/^/- /')
           else
-            LAST_RELEASE_NOTES=$(gh release view "$LATEST_PUBLISHED_TAG" --json body --jq '.body' 2>/dev/null || echo "")
-            if [[ -n "$LAST_RELEASE_NOTES" ]]; then
-              RELEASE_NOTES=$(echo "$LAST_RELEASE_NOTES" | sed -n '/### Changes:/,/^---/p' | sed '1d;$d' | sed 's/^/- /')
+            # Get the commit hash of the last published release
+            LAST_RELEASE_COMMIT=$(git rev-parse "$LATEST_PUBLISHED_TAG" 2>/dev/null || echo "")
+            
+            if [[ -n "$LAST_RELEASE_COMMIT" ]]; then
+              echo "Last published release commit: $LAST_RELEASE_COMMIT"
+              
+              # Get all commits since the last published release
+              COMMITS_SINCE=$(git log --oneline --pretty=format:"%H %s" "$LAST_RELEASE_COMMIT..HEAD")
+              echo "Commits since last release:"
+              echo "$COMMITS_SINCE"
+              
+              # Get PR titles for these commits
+              RELEASE_NOTES=""
+              while IFS= read -r line; do
+                if [[ -n "$line" ]]; then
+                  COMMIT_HASH=$(echo "$line" | cut -d' ' -f1)
+                  COMMIT_MSG=$(echo "$line" | cut -d' ' -f2-)
+                  
+                  # Try to find PR number in commit message (conventional commits often have (#123))
+                  PR_NUMBER=$(echo "$COMMIT_MSG" | grep -o '(#[0-9]\+)' | grep -o '[0-9]\+' || echo "")
+                  
+                  if [[ -n "$PR_NUMBER" ]]; then
+                    # Get PR title from PR number
+                    PR_TITLE=$(gh pr view "$PR_NUMBER" --json title --jq '.title' 2>/dev/null || echo "")
+                    if [[ -n "$PR_TITLE" ]]; then
+                      RELEASE_NOTES="$RELEASE_NOTES - $PR_TITLE"
+                    fi
+                  else
+                    # Use commit message as fallback
+                    RELEASE_NOTES="$RELEASE_NOTES - $COMMIT_MSG"
+                  fi
+                fi
+              done <<< "$COMMITS_SINCE"
             else
-              TAG_DATE=$(git log -1 --format=%ai "$LATEST_PUBLISHED_TAG")
-              RELEASE_NOTES=$(gh pr list --state merged --base main --json title,mergedAt \
-                --jq ".[] | select(.mergedAt > \"$TAG_DATE\") | .title" | sed 's/^/- /')
+              echo "Could not find commit for tag $LATEST_PUBLISHED_TAG, using current PR only"
+              RELEASE_NOTES="- ${{ github.event.pull_request.title }}"
             fi
           fi
 
-          CURRENT_PR_TITLE="${{ github.event.pull_request.title }}"
-          RELEASE_NOTES="$RELEASE_NOTES - $CURRENT_PR_TITLE"
+          # Clean up the release notes (remove leading newlines)
+          RELEASE_NOTES=$(echo "$RELEASE_NOTES" | sed '/^$/d' | sed '1s/^[[:space:]]*//')
 
           if [[ -z "$RELEASE_NOTES" ]]; then
-            RELEASE_NOTES="- $CURRENT_PR_TITLE"
+            RELEASE_NOTES="- ${{ github.event.pull_request.title }}"
           fi
+
+          echo "Final release notes:"
+          echo "$RELEASE_NOTES"
 
           {
             echo "release_notes<<EOF"
