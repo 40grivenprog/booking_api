@@ -134,24 +134,24 @@ jobs:
 
           echo "Generating clean Markdown release notes..."
           cat > release_notes.txt <<'EOF'
-            ## Auto-generated draft release
+## Auto-generated draft release
 
-            **Version Type:** '"$VERSION_TYPE"'  
-            **Previous Release:** '"$LATEST_TAG"'  
-            **New Tag:** '"$NEW_TAG"'  
+**Version Type:** '"$VERSION_TYPE"'  
+**Previous Release:** '"$LATEST_TAG"'  
+**New Tag:** '"$NEW_TAG"'  
 
-            ### Changes:
-            '"$NOTES"'
+### Changes:
+'"$NOTES"'
 
-            ---
+---
 
-            ### Next Steps
-            1. **Publish this release** to trigger *Build and Push API Image*
-            2. Wait for build to complete
-            3. **Run 'Deploy to Environment'** with tag: `'"$NEW_TAG"'`
+### Next Steps
+1. **Publish this release** to trigger *Build and Push API Image*
+2. Wait for build to complete
+3. **Run 'Deploy to Environment'** with tag: `'"$NEW_TAG"'`
 
-            _Auto-generated draft release by workflow_
-            EOF
+_Auto-generated draft release by workflow_
+EOF
 
           gh release create "$NEW_TAG" \
             --title "Release $NEW_TAG" \
