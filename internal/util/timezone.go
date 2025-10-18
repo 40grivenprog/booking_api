@@ -24,7 +24,6 @@ func InitTimezone() error {
 			}
 		}
 
-		// Fallback to UTC if all timezone loading fails
 		AppTimezone = time.UTC
 		return fmt.Errorf("unknown time zone Europe/Berlin: %w", err)
 	}
