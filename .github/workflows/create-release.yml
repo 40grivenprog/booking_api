@@ -22,6 +22,8 @@ jobs:
 
     - name: Get latest *published* release version
       id: get_version
+      env:
+        GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       run: |
         set -e
         echo "Fetching latest published release tag..."
@@ -84,6 +86,8 @@ jobs:
         echo "✅ Release notes generated."
 
     - name: Remove existing *auto-generated* draft releases
+      env:
+        GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       run: |
         set -e
         NEW_TAG="${{ steps.calculate_version.outputs.new_tag }}"
