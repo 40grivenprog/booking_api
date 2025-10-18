@@ -127,30 +127,25 @@ jobs:
           LATEST_TAG="${{ steps.get_version.outputs.latest_published_tag }}"
           NOTES="${{ steps.get_release_notes.outputs.release_notes }}"
 
-          cat > release_notes.txt <<EOF
-## Auto-generated draft release
-
-**Version Type:** $VERSION_TYPE  
-**Previous Release:** $LATEST_TAG  
-**New Tag:** $NEW_TAG  
-
-### Changes:
-$NOTES
-
----
-
-### Next Steps
-1. **Publish this release** to trigger *Build and Push API Image*
-2. Wait for build to complete
-3. **Run 'Deploy to Environment'** with tag: \`$NEW_TAG\`
-
-_Auto-generated draft release by workflow_
-EOF
-
           gh release create "$NEW_TAG" \
             --title "Release $NEW_TAG" \
-            --notes-file release_notes.txt \
-            --draft
+            --notes "## Auto-generated draft release
+                    **Version Type:** $VERSION_TYPE  
+                    **Previous Release:** $LATEST_TAG  
+                    **New Tag:** $NEW_TAG  
+
+                    ### Changes:
+                    $NOTES
+
+                    ---
+
+                    ### Next Steps
+                    1. **Publish this release** to trigger *Build and Push API Image*
+                    2. Wait for build to complete
+                    3. **Run 'Deploy to Environment'** with tag: \`$NEW_TAG\`
+
+                    _Auto-generated draft release by workflow_" \
+                                --draft
 
     outputs:
       new_tag: ${{ steps.calculate_version.outputs.new_tag }}
