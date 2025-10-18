@@ -7,6 +7,7 @@ on:
 jobs:
   check-version-label:
     runs-on: ubuntu-latest
+    name: Check Version Label
     
     steps:
     - name: Check for version labels
