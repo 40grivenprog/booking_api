@@ -40,8 +40,8 @@ jobs:
           VERSION=$(echo "$LATEST_PUBLISHED_TAG" | sed 's/^v//;s/[^0-9.].*$//')
           echo "current_version=$VERSION" >> "$GITHUB_OUTPUT"
 
-          echo "✅ Latest published tag: $LATEST_PUBLISHED_TAG"
-          echo "✅ Parsed current version: $VERSION"
+          echo "Latest published tag: $LATEST_PUBLISHED_TAG"
+          echo "Parsed current version: $VERSION"
 
       - name: Calculate new version
         id: calculate_version
@@ -106,6 +106,9 @@ jobs:
                   COMMIT_HASH=$(echo "$line" | cut -d' ' -f1)
                   COMMIT_MSG=$(echo "$line" | cut -d' ' -f2-)
                   
+                  # Clean up commit message - remove "Merge pull request" part
+                  CLEAN_MSG=$(echo "$COMMIT_MSG" | sed 's/^Merge pull request #[0-9]\+ from [^[:space:]]\+ - //')
+                  
                   # Try to find PR number in commit message (conventional commits often have (#123))
                   PR_NUMBER=$(echo "$COMMIT_MSG" | grep -o '(#[0-9]\+)' | grep -o '[0-9]\+' || echo "")
                   
@@ -114,10 +117,13 @@ jobs:
                     PR_TITLE=$(gh pr view "$PR_NUMBER" --json title --jq '.title' 2>/dev/null || echo "")
                     if [[ -n "$PR_TITLE" ]]; then
                       RELEASE_NOTES="$RELEASE_NOTES - $PR_TITLE"
+                    else
+                      # Use cleaned commit message as fallback
+                      RELEASE_NOTES="$RELEASE_NOTES - $CLEAN_MSG"
                     fi
                   else
-                    # Use commit message as fallback
-                    RELEASE_NOTES="$RELEASE_NOTES - $COMMIT_MSG"
+                    # Use cleaned commit message as fallback
+                    RELEASE_NOTES="$RELEASE_NOTES - $CLEAN_MSG"
                   fi
                 fi
               done <<< "$COMMITS_SINCE"
@@ -176,7 +182,7 @@ jobs:
                     ### Next Steps
                     1. **Publish this release** to trigger *Build and Push API Image*
                     2. Wait for build to complete
-                    3. **Run 'Deploy to Environment'** with tag: \`$NEW_TAG\`
+                    3. **Run 'Deploy to Environment'** with tag: $NEW_TAG
 
                     _Auto-generated draft release by workflow_" \
                                 --draft
