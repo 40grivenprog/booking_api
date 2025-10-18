@@ -14,154 +14,143 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        ref: main
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
-    - name: Get latest *published* release version
-      id: get_version
-      env:
-        GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-      run: |
-        set -e
-        echo "Fetching latest published release tag..."
+      - name: Get latest published release version
+        id: get_version
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          set -e
+          echo "Fetching latest published release tag..."
 
-        # Get latest non-draft release (sorted by created_at descending)
-        LATEST_PUBLISHED_TAG=$(gh release list --json tagName,isDraft,createdAt \
-          --jq '[.[] | select(.isDraft == false)] | sort_by(.createdAt) | reverse | .[0].tagName' | tr -d '"' || echo "v0.0.0")
+          LATEST_PUBLISHED_TAG=$(gh release list --json tagName,isDraft,createdAt \
+            --jq '[.[] | select(.isDraft == false)] | sort_by(.createdAt) | reverse | .[0].tagName' 2>/dev/null | tr -d '"' || echo "v0.0.0")
 
-        echo "latest_published_tag=$LATEST_PUBLISHED_TAG" >> $GITHUB_OUTPUT
-
-        VERSION=$(echo "$LATEST_PUBLISHED_TAG" | sed 's/^v//;s/[^0-9.].*$//')
-        echo "current_version=$VERSION" >> $GITHUB_OUTPUT
-
-        echo "✅ Latest published tag: $LATEST_PUBLISHED_TAG"
-        echo "✅ Parsed current version: $VERSION"
-
-    - name: Calculate new version
-      id: calculate_version
-      env:
-        LABELS: ${{ join(github.event.pull_request.labels.*.name, ' ') }}
-      run: |
-        set -e
-        CURRENT_VERSION="${{ steps.get_version.outputs.current_version }}"
-
-        IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT_VERSION:-0.0.0}"
-        PATCH=${PATCH:-0}
-        echo "Current version: $MAJOR.$MINOR.$PATCH"
-        echo "Labels: $LABELS"
-
-        if [[ "$LABELS" == *"major"* ]]; then
-          NEW_MAJOR=$((MAJOR + 1)); NEW_MINOR=0; NEW_PATCH=0; VERSION_TYPE="major"
-        elif [[ "$LABELS" == *"minor"* ]]; then
-          NEW_MAJOR=$MAJOR; NEW_MINOR=$((MINOR + 1)); NEW_PATCH=0; VERSION_TYPE="minor"
-        elif [[ "$LABELS" == *"patch"* ]]; then
-          NEW_MAJOR=$MAJOR; NEW_MINOR=$MINOR; NEW_PATCH=$((PATCH + 1)); VERSION_TYPE="patch"
-        else
-          echo "No version label found."
-          exit 1
-        fi
-
-        NEW_VERSION="${NEW_MAJOR}.${NEW_MINOR}.${NEW_PATCH}"
-        NEW_TAG="v${NEW_VERSION}"
-
-        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-        echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
-        echo "version_type=$VERSION_TYPE" >> $GITHUB_OUTPUT
-
-        echo "Calculated new version: $NEW_TAG ($VERSION_TYPE)"
-
-
-    - name: Get release notes from last published release
-      id: get_release_notes
-      env:
-        GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-      run: |
-        set -e
-        LATEST_PUBLISHED_TAG="${{ steps.get_version.outputs.latest_published_tag }}"
-        NEW_TAG="${{ steps.calculate_version.outputs.new_tag }}"
-        
-        echo "Getting release notes from last published release: $LATEST_PUBLISHED_TAG"
-        
-        if [[ "$LATEST_PUBLISHED_TAG" == "v0.0.0" ]]; then
-          # First release - get all PRs merged to main
-          echo "First release - getting all PRs merged to main"
-          RELEASE_NOTES=$(gh pr list --state merged --base main --json title --jq '.[].title' | sed 's/^/- /')
-        else
-          # Get the last published release notes
-          LAST_RELEASE_NOTES=$(gh release view "$LATEST_PUBLISHED_TAG" --json body --jq '.body' 2>/dev/null || echo "")
-          
-          if [[ -n "$LAST_RELEASE_NOTES" ]]; then
-            echo "Found release notes from $LATEST_PUBLISHED_TAG"
-            # Extract the "Changes" section from the last release
-            RELEASE_NOTES=$(echo "$LAST_RELEASE_NOTES" | sed -n '/### Changes:/,/^---/p' | sed '1d;$d' | sed 's/^/- /')
-          else
-            echo "No release notes found, getting PRs since last tag"
-            # Fallback to getting PRs merged since last tag
-            TAG_DATE=$(git log -1 --format=%ai "$LATEST_PUBLISHED_TAG")
-            RELEASE_NOTES=$(gh pr list --state merged --base main --json title,mergedAt --jq --arg date "$TAG_DATE" '.[] | select(.mergedAt > $date) | .title' | sed 's/^/- /')
+          if [[ -z "$LATEST_PUBLISHED_TAG" ]]; then
+            LATEST_PUBLISHED_TAG="v0.0.0"
           fi
-        fi
-        
-        # Add current PR title to the notes
-        CURRENT_PR_TITLE="${{ github.event.pull_request.title }}"
-        RELEASE_NOTES="$RELEASE_NOTES
-- $CURRENT_PR_TITLE"
-        
-        if [[ -z "$RELEASE_NOTES" ]]; then
-          RELEASE_NOTES="- $CURRENT_PR_TITLE"
-        fi
-        
-        echo "Final release notes:"
-        echo "$RELEASE_NOTES"
-        
-        echo "release_notes<<EOF" >> $GITHUB_OUTPUT
-        echo "$RELEASE_NOTES" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
 
-    - name: Ensure tag doesn't already exist
-      run: |
-        NEW_TAG="${{ steps.calculate_version.outputs.new_tag }}"
-        if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
-          echo "Tag $NEW_TAG already exists. Removing..."
-          git push origin ":refs/tags/$NEW_TAG"
-        fi
+          echo "latest_published_tag=$LATEST_PUBLISHED_TAG" >> "$GITHUB_OUTPUT"
 
-    - name: Create Draft Release
-      run: |
-        NEW_TAG="${{ steps.calculate_version.outputs.new_tag }}"
-        VERSION_TYPE="${{ steps.calculate_version.outputs.version_type }}"
-        LATEST_TAG="${{ steps.get_version.outputs.latest_published_tag }}"
-        NOTES="${{ steps.get_release_notes.outputs.release_notes }}"
+          VERSION=$(echo "$LATEST_PUBLISHED_TAG" | sed 's/^v//;s/[^0-9.].*$//')
+          echo "current_version=$VERSION" >> "$GITHUB_OUTPUT"
 
-        echo "Creating new draft release $NEW_TAG..."
+          echo "✅ Latest published tag: $LATEST_PUBLISHED_TAG"
+          echo "✅ Parsed current version: $VERSION"
 
-        gh release create "$NEW_TAG" \
-          --title "Release $NEW_TAG" \
-          --notes "## Auto-generated draft release
+      - name: Calculate new version
+        id: calculate_version
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ' ') }}
+        run: |
+          set -e
+          CURRENT_VERSION="${{ steps.get_version.outputs.current_version }}"
 
-        **Version Type:** $VERSION_TYPE  
-        **Previous Release:** $LATEST_TAG  
-        **New Tag:** $NEW_TAG  
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT_VERSION:-0.0.0}"
+          PATCH=${PATCH:-0}
 
-        ### Changes:
-        $NOTES
+          if [[ "$LABELS" == *"major"* ]]; then
+            NEW_MAJOR=$((MAJOR + 1)); NEW_MINOR=0; NEW_PATCH=0; VERSION_TYPE="major"
+          elif [[ "$LABELS" == *"minor"* ]]; then
+            NEW_MAJOR=$MAJOR; NEW_MINOR=$((MINOR + 1)); NEW_PATCH=0; VERSION_TYPE="minor"
+          elif [[ "$LABELS" == *"patch"* ]]; then
+            NEW_MAJOR=$MAJOR; NEW_MINOR=$MINOR; NEW_PATCH=$((PATCH + 1)); VERSION_TYPE="patch"
+          else
+            echo "No version label found."
+            exit 1
+          fi
 
-        ---
+          NEW_VERSION="${NEW_MAJOR}.${NEW_MINOR}.${NEW_PATCH}"
+          NEW_TAG="v${NEW_VERSION}"
 
-        ### Next Steps
-        1. **Publish this release** to trigger *Build and Push API Image*
-        2. Wait for build to complete
-        3. **Run 'Deploy to Environment'** with tag: \`$NEW_TAG\`
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "new_tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+          echo "version_type=$VERSION_TYPE" >> "$GITHUB_OUTPUT"
 
-        _Auto-generated draft release by workflow_" \
-          --draft
+      - name: Get release notes from last published release
+        id: get_release_notes
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          set -e
+          LATEST_PUBLISHED_TAG="${{ steps.get_version.outputs.latest_published_tag }}"
+          NEW_TAG="${{ steps.calculate_version.outputs.new_tag }}"
 
-        echo "Draft release $NEW_TAG created successfully."
-      env:
-        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          echo "Getting release notes from last published release: $LATEST_PUBLISHED_TAG"
+
+          if [[ "$LATEST_PUBLISHED_TAG" == "v0.0.0" ]]; then
+            RELEASE_NOTES=$(gh pr list --state merged --base main --json title --jq '.[].title' | sed 's/^/- /')
+          else
+            LAST_RELEASE_NOTES=$(gh release view "$LATEST_PUBLISHED_TAG" --json body --jq '.body' 2>/dev/null || echo "")
+            if [[ -n "$LAST_RELEASE_NOTES" ]]; then
+              RELEASE_NOTES=$(echo "$LAST_RELEASE_NOTES" | sed -n '/### Changes:/,/^---/p' | sed '1d;$d' | sed 's/^/- /')
+            else
+              TAG_DATE=$(git log -1 --format=%ai "$LATEST_PUBLISHED_TAG")
+              RELEASE_NOTES=$(gh pr list --state merged --base main --json title,mergedAt \
+                --jq ".[] | select(.mergedAt > \"$TAG_DATE\") | .title" | sed 's/^/- /')
+            fi
+          fi
+
+          CURRENT_PR_TITLE="${{ github.event.pull_request.title }}"
+          RELEASE_NOTES="$RELEASE_NOTES - $CURRENT_PR_TITLE"
+
+          if [[ -z "$RELEASE_NOTES" ]]; then
+            RELEASE_NOTES="- $CURRENT_PR_TITLE"
+          fi
+
+          {
+            echo "release_notes<<EOF"
+            echo "$RELEASE_NOTES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Ensure tag doesn't already exist
+        run: |
+          set -e
+          NEW_TAG="${{ steps.calculate_version.outputs.new_tag }}"
+          if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
+            git push origin ":refs/tags/$NEW_TAG"
+          fi
+
+      - name: Create Draft Release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          set -e
+          NEW_TAG="${{ steps.calculate_version.outputs.new_tag }}"
+          VERSION_TYPE="${{ steps.calculate_version.outputs.version_type }}"
+          LATEST_TAG="${{ steps.get_version.outputs.latest_published_tag }}"
+          NOTES="${{ steps.get_release_notes.outputs.release_notes }}"
+
+          cat > release_notes.txt <<EOF
+            ## Auto-generated draft release
+
+            **Version Type:** $VERSION_TYPE  
+            **Previous Release:** $LATEST_TAG  
+            **New Tag:** $NEW_TAG  
+
+            ### Changes:
+            $NOTES
+
+            ---
+
+            ### Next Steps
+            1. **Publish this release** to trigger *Build and Push API Image*
+            2. Wait for build to complete
+            3. **Run 'Deploy to Environment'** with tag: \`$NEW_TAG\`
+
+            _Auto-generated draft release by workflow_
+            EOF
+
+          gh release create "$NEW_TAG" \
+            --title "Release $NEW_TAG" \
+            --notes-file release_notes.txt \
+            --draft
 
     outputs:
       new_tag: ${{ steps.calculate_version.outputs.new_tag }}
