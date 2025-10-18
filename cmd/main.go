@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/rs/zerolog"
@@ -16,7 +15,7 @@ import (
 
 func main() {
 	// Configure logger
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	// Load configuration
@@ -28,16 +27,6 @@ func main() {
 	// Initialize timezone
 	if err := util.InitTimezone(); err != nil {
 		log.Warn().Err(err).Msg("Failed to load timezone, falling back to UTC")
-		// Debug: List available timezones
-		log.Debug().Msg("Available timezones in container:")
-		if data, err := os.ReadFile("/usr/share/zoneinfo/zone.tab"); err == nil {
-			lines := strings.Split(string(data), "\n")
-			for i, line := range lines {
-				if i < 10 && strings.Contains(line, "Europe") { // Show first 10 Europe timezones
-					log.Debug().Str("timezone", line).Msg("Available timezone")
-				}
-			}
-		}
 	} else {
 		log.Info().Str("timezone", util.GetAppTimezone().String()).Msg("Timezone initialized")
 	}
