@@ -73,40 +73,53 @@ jobs:
 
         echo "Calculated new version: $NEW_TAG ($VERSION_TYPE)"
 
-    - name: Get PR title for release notes
-      id: get_pr_titles
-      run: |
-        PR_TITLE="${{ github.event.pull_request.title }}"
-        RELEASE_NOTES="- $PR_TITLE"
 
-        echo "release_notes<<EOF" >> $GITHUB_OUTPUT
-        echo "$RELEASE_NOTES" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
-
-        echo "✅ Release notes generated."
-
-    - name: Remove existing *auto-generated* draft releases
+    - name: Get release notes from last published release
+      id: get_release_notes
       env:
         GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       run: |
         set -e
+        LATEST_PUBLISHED_TAG="${{ steps.get_version.outputs.latest_published_tag }}"
         NEW_TAG="${{ steps.calculate_version.outputs.new_tag }}"
-        echo "Checking for existing draft release with tag: $NEW_TAG"
-
-        EXISTING_DRAFT=$(gh release list --json tagName,isDraft \
-          --jq --arg tag "$NEW_TAG" '.[] | select(.tagName == $tag and .isDraft == true) | .tagName' | tr -d '"' || true)
-
-        if [[ -n "$EXISTING_DRAFT" ]]; then
-          BODY=$(gh release view "$NEW_TAG" --json body --jq '.body' || echo "")
-          if echo "$BODY" | grep -q "Auto-generated draft release"; then
-            echo "🧹 Deleting existing auto-generated draft $NEW_TAG"
-            gh release delete "$NEW_TAG" --yes
-          else
-            echo "Existing draft $NEW_TAG not auto-generated — keeping it."
-          fi
+        
+        echo "Getting release notes from last published release: $LATEST_PUBLISHED_TAG"
+        
+        if [[ "$LATEST_PUBLISHED_TAG" == "v0.0.0" ]]; then
+          # First release - get all PRs merged to main
+          echo "First release - getting all PRs merged to main"
+          RELEASE_NOTES=$(gh pr list --state merged --base main --json title --jq '.[].title' | sed 's/^/- /')
         else
-          echo "No existing draft found."
+          # Get the last published release notes
+          LAST_RELEASE_NOTES=$(gh release view "$LATEST_PUBLISHED_TAG" --json body --jq '.body' 2>/dev/null || echo "")
+          
+          if [[ -n "$LAST_RELEASE_NOTES" ]]; then
+            echo "Found release notes from $LATEST_PUBLISHED_TAG"
+            # Extract the "Changes" section from the last release
+            RELEASE_NOTES=$(echo "$LAST_RELEASE_NOTES" | sed -n '/### Changes:/,/^---/p' | sed '1d;$d' | sed 's/^/- /')
+          else
+            echo "No release notes found, getting PRs since last tag"
+            # Fallback to getting PRs merged since last tag
+            TAG_DATE=$(git log -1 --format=%ai "$LATEST_PUBLISHED_TAG")
+            RELEASE_NOTES=$(gh pr list --state merged --base main --json title,mergedAt --jq --arg date "$TAG_DATE" '.[] | select(.mergedAt > $date) | .title' | sed 's/^/- /')
+          fi
         fi
+        
+        # Add current PR title to the notes
+        CURRENT_PR_TITLE="${{ github.event.pull_request.title }}"
+        RELEASE_NOTES="$RELEASE_NOTES
+- $CURRENT_PR_TITLE"
+        
+        if [[ -z "$RELEASE_NOTES" ]]; then
+          RELEASE_NOTES="- $CURRENT_PR_TITLE"
+        fi
+        
+        echo "Final release notes:"
+        echo "$RELEASE_NOTES"
+        
+        echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+        echo "$RELEASE_NOTES" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Ensure tag doesn't already exist
       run: |
@@ -121,24 +134,24 @@ jobs:
         NEW_TAG="${{ steps.calculate_version.outputs.new_tag }}"
         VERSION_TYPE="${{ steps.calculate_version.outputs.version_type }}"
         LATEST_TAG="${{ steps.get_version.outputs.latest_published_tag }}"
-        NOTES="${{ steps.get_pr_titles.outputs.release_notes }}"
+        NOTES="${{ steps.get_release_notes.outputs.release_notes }}"
 
         echo "Creating new draft release $NEW_TAG..."
 
         gh release create "$NEW_TAG" \
           --title "Release $NEW_TAG" \
-          --notes "## 🚀 Auto-generated draft release
+          --notes "## Auto-generated draft release
 
         **Version Type:** $VERSION_TYPE  
         **Previous Release:** $LATEST_TAG  
         **New Tag:** $NEW_TAG  
 
-        ### 🔧 Changes:
+        ### Changes:
         $NOTES
 
         ---
 
-        ### 🧭 Next Steps
+        ### Next Steps
         1. **Publish this release** to trigger *Build and Push API Image*
         2. Wait for build to complete
         3. **Run 'Deploy to Environment'** with tag: \`$NEW_TAG\`
