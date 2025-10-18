@@ -105,10 +105,12 @@ jobs:
             echo "$RELEASE_NOTES"
           else
             echo "No release notes found for $LATEST_TAG, falling back to PR list"
-            echo "Getting PRs merged since: $(git log -1 --format=%ai "$LATEST_TAG")"
+            TAG_DATE=$(git log -1 --format=%ai "$LATEST_TAG")
+            echo "Getting PRs merged since: $TAG_DATE"
             
             # Fallback to getting PRs merged since last tag
-            RELEASE_NOTES=$(gh pr list --state merged --base main --json title,mergedAt --jq '.[] | select(.mergedAt > "'$(git log -1 --format=%ai "$LATEST_TAG")'") | .title' | sed 's/^/- /')
+            # Use ISO 8601 format for proper date comparison
+            RELEASE_NOTES=$(gh pr list --state merged --base main --json title,mergedAt --jq --arg date "$TAG_DATE" '.[] | select(.mergedAt > $date) | .title' | sed 's/^/- /')
             echo "Found PRs since last tag:"
             echo "$RELEASE_NOTES"
           fi
