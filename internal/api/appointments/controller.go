@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -14,6 +15,8 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 	if !ok {
 		return
 	}
+	fmt.Println("req start time", req.StartTime)
+	fmt.Println("req end time", req.EndTime)
 
 	startTime, ok := common.ParseTime(c, req.StartTime, common.ErrorMsgInvalidTime)
 	if !ok {
@@ -24,6 +27,8 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 	if !ok {
 		return
 	}
+	fmt.Println("parsed start time", startTime)
+	fmt.Println("parsed end time", endTime)
 
 	clientID, ok := common.ParseClientID(c, req.ClientID)
 	if !ok {
@@ -42,6 +47,8 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 		EndTime:        endTime,
 		Description:    "Personal training",
 	})
+	fmt.Println("result start time", result.StartTime)
+	fmt.Println("result end time", result.EndTime)
 	if err != nil {
 		common.HandleServiceError(c, err)
 		return
