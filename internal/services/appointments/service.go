@@ -3,6 +3,7 @@ package appointments
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/google/uuid"
 	db "github.com/vention/booking_api/internal/repository"
@@ -30,6 +31,8 @@ func (s *service) CreateAppointment(ctx context.Context, input CreateAppointment
 	// Convert times to application timezone (business rule)
 	startTime := util.ConvertToAppTimezone(input.StartTime)
 	endTime := util.ConvertToAppTimezone(input.EndTime)
+	fmt.Println("converted start time at service", startTime)
+	fmt.Println("converted end time at service", endTime)
 
 	// Validate appointment time
 	if err := s.validateAppointmentTime(startTime, endTime); err != nil {
@@ -47,6 +50,8 @@ func (s *service) CreateAppointment(ctx context.Context, input CreateAppointment
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("result start time at service", result.StartTime)
+	fmt.Println("result end time at service", result.EndTime)
 
 	return result, nil
 }
