@@ -47,8 +47,7 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 		EndTime:        endTime,
 		Description:    "Personal training",
 	})
-	fmt.Println("result start time", result.StartTime)
-	fmt.Println("result end time", result.EndTime)
+
 	if err != nil {
 		common.HandleServiceError(c, err)
 		return
