@@ -48,5 +48,6 @@ func NowInAppTimezone() time.Time {
 
 // ConvertToAppTimezone converts a time to application timezone for storage
 func ConvertToAppTimezone(t time.Time) time.Time {
+	// Otherwise, convert to application timezone
 	return t.In(GetAppTimezone())
 }

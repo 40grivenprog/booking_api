@@ -186,3 +186,21 @@ db-exec: ## Connect to database via ECS Exec
 		--command "sh -c 'psql -h \$$DB_HOST -U \$$DB_USER -d \$$DB_NAME'" \
 		--region eu-central-1
 
+db-exec-rds: ## Connect to RDS instance via ECS Exec
+	@echo "Connecting to RDS instance via ECS Exec..."
+	@echo "Getting running task..."
+	TASK_ARN=$$(aws ecs list-tasks --cluster booking-app-dev --service-name booking-api-dev --region eu-central-1 --query 'taskArns[0]' --output text) && \
+	if [ "$$TASK_ARN" = "None" ] || [ -z "$$TASK_ARN" ]; then \
+			echo "No running tasks found. Make sure the service is running."; \
+		exit 1; \
+	fi && \
+	echo "Task: $$TASK_ARN" && \
+	echo "Connecting to RDS instance..." && \
+	aws ecs execute-command \
+		--cluster booking-app-dev \
+		--task $$TASK_ARN \
+		--container booking-api \
+		--interactive \
+		--command "sh -c 'psql -h \$$DB_HOST -U \$$DB_USER -d postgres'" \
+		--region eu-central-1
+
