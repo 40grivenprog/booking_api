@@ -75,9 +75,15 @@ func mapAppointmentToConfirmAppointmentResponse(appointment *db.ConfirmAppointme
 	}
 }
 
+// mapAppointmentsToGetProfessionalAppointmentsResponse maps a list of appointments to a GetProfessionalAppointmentsResponse
 func mapAppointmentsToGetProfessionalAppointmentsResponse(appointments []*db.GetAppointmentsByProfessionalWithStatusAndDateRow) GetProfessionalAppointmentsResponse {
 	responseAppointments := make([]ProfessionalAppointment, len(appointments))
 	for i, appt := range appointments {
+		fmt.Println("id", appt.ID)
+		fmt.Println("start time", appt.StartTime)
+		fmt.Println("end time", appt.EndTime)
+		fmt.Println("formatted start time", common.FormatTimeRFC3339(appt.StartTime))
+		fmt.Println("formatted end time", common.FormatTimeRFC3339(appt.EndTime))
 		appointment := ProfessionalAppointment{
 			ID:          appt.ID.String(),
 			Type:        string(appt.Type),
