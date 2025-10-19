@@ -16,7 +16,8 @@ import (
 func main() {
 	// Configure logger
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+
+	log.Logger = log.Output(os.Stderr)
 
 	// Load configuration
 	cfg, err := config.Load()
