@@ -67,9 +67,9 @@ const (
 	TimeFormatWithTimezone = "2006-01-02T15:04:05Z07:00"
 )
 
-// FormatTimeRFC3339 formats time to RFC3339 string
+// FormatTimeRFC3339 formats time to RFC3339 string with timezone
 func FormatTimeRFC3339(t time.Time) string {
-	return t.Format(TimeFormatRFC3339)
+	return t.Format(TimeFormatWithTimezone)
 }
 
 // FormatTimeWithTimezone formats time with timezone
