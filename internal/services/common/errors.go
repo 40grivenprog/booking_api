@@ -17,4 +17,6 @@ var (
 	// Appointment validation errors
 	ErrAppointmentNotPending            = errors.New("appointment is not pending")
 	ErrAppointmentNotPendingOrConfirmed = errors.New("appointment is not pending or confirmed")
+
+	ErrProfessionalNotFound = errors.New("professional with such username not found")
 )
