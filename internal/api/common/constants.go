@@ -45,8 +45,8 @@ const (
 	ErrorMsgFailedToGetTimetable          = "Failed to get professional timetable"
 
 	// Not found errors
-	ErrorMsgUserNotFound = "User not found"
-
+	ErrorMsgUserNotFound         = "User not found"
+	ErrorMsgProfessionalNotFound = "Professional with such username not found"
 	// Forbidden errors
 	ErrorMsgNotAllowedToAccessResource = "You are not allowed to access this resource"
 

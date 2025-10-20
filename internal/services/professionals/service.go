@@ -3,10 +3,12 @@ package professionals
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	db "github.com/vention/booking_api/internal/repository"
+	svcCommon "github.com/vention/booking_api/internal/services/common"
 	"github.com/vention/booking_api/internal/util"
 )
 
@@ -45,6 +47,9 @@ func (s *service) SignIn(ctx context.Context, input SignInInput) (*db.Profession
 	// Get professional by username
 	professional, err := s.repo.GetProfessionalByUsername(ctx, input.Username)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, svcCommon.ErrProfessionalNotFound
+		}
 		return nil, err
 	}
 
