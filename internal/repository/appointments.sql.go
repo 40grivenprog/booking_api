@@ -498,7 +498,7 @@ WHERE a.client_id = $1
   AND a.status = $2
   AND a.start_time > NOW()
   AND a.type = 'appointment'
-ORDER BY a.start_time DESC
+ORDER BY a.start_time ASC
 `
 
 type GetAppointmentsByClientWithStatusParams struct {
@@ -725,7 +725,7 @@ WHERE a.professional_id = $1
   AND a.status = $2
   AND a.start_time > NOW()
   AND a.type = 'appointment'
-ORDER BY a.start_time DESC
+ORDER BY a.start_time ASC
 `
 
 type GetAppointmentsByProfessionalWithStatusParams struct {
