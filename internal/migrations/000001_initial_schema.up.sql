@@ -1,16 +1,5 @@
--- Create appointment_type enum
-DO $$ BEGIN
-    CREATE TYPE appointment_type AS ENUM ('appointment', 'unavailable');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
-
--- Create appointment_status enum
-DO $$ BEGIN
-    CREATE TYPE appointment_status AS ENUM ('pending', 'confirmed', 'cancelled', 'completed');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
+CREATE TYPE appointment_type AS ENUM ('appointment', 'unavailable');
+CREATE TYPE appointment_status AS ENUM ('pending', 'confirmed', 'cancelled', 'completed');
 
 -- Create professionals table
 CREATE TABLE IF NOT EXISTS professionals (

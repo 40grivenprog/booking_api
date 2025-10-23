@@ -73,7 +73,7 @@ WHERE a.professional_id = $1
   AND a.status = $2
   AND a.start_time > NOW()
   AND a.type = 'appointment'
-ORDER BY a.start_time DESC;
+ORDER BY a.start_time ASC;
 
 
 -- name: CancelAppointmentByProfessionalWithDetails :one
@@ -138,7 +138,7 @@ WHERE a.client_id = $1
   AND a.status = $2
   AND a.start_time > NOW()
   AND a.type = 'appointment'
-ORDER BY a.start_time DESC;
+ORDER BY a.start_time ASC;
 
 -- name: CancelAppointmentByClientWithDetails :one
 WITH updated_appointment AS (
