@@ -63,3 +63,11 @@ func (s *service) validateTimeRange(startTime, endTime time.Time) error {
 
 	return nil
 }
+
+// validateAppointmentNotInPast validates that the appointment is not in the past
+func (s *service) validateAppointmentNotInPast(appointment *db.Appointment) error {
+	if appointment.EndTime.Before(time.Now()) {
+		return svcCommon.ErrPastAppointment
+	}
+	return nil
+}

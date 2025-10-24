@@ -91,6 +91,11 @@ func (s *service) ConfirmAppointment(ctx context.Context, input ConfirmAppointme
 		return nil, err
 	}
 
+	// Validate appointment is not in the past
+	if err := s.validateAppointmentNotInPast(appointment); err != nil {
+		return nil, err
+	}
+
 	// Confirm appointment
 	result, err := s.repo.ConfirmAppointmentWithDetails(ctx, &db.ConfirmAppointmentWithDetailsParams{
 		ID:             input.AppointmentID,
@@ -153,6 +158,11 @@ func (s *service) CancelAppointment(ctx context.Context, input CancelAppointment
 
 	// Validate status
 	if err := s.validateAppointmentCancellable(appointment); err != nil {
+		return nil, err
+	}
+
+	// Validate appointment is not in the past
+	if err := s.validateAppointmentNotInPast(appointment); err != nil {
 		return nil, err
 	}
 
