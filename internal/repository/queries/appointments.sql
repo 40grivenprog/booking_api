@@ -73,7 +73,7 @@ WHERE a.professional_id = $1
   AND a.status = $2
   AND a.start_time > NOW()
   AND a.type = 'appointment'
-ORDER BY a.start_time ASC;
+ORDER BY a.start_time DESC;
 
 
 -- name: CancelAppointmentByProfessionalWithDetails :one
@@ -138,7 +138,7 @@ WHERE a.client_id = $1
   AND a.status = $2
   AND a.start_time > NOW()
   AND a.type = 'appointment'
-ORDER BY a.start_time ASC;
+ORDER BY a.start_time DESC;
 
 -- name: CancelAppointmentByClientWithDetails :one
 WITH updated_appointment AS (
@@ -193,6 +193,15 @@ WHERE professional_id = $1
   AND type = 'appointment' or type = 'unavailable'
   AND status not in ('cancelled', 'pending')
 ORDER BY start_time ASC;
+
+-- name: CheckClientAppointmentConflict :one
+SELECT EXISTS(
+    SELECT 1 FROM appointments 
+    WHERE client_id = $1 
+    AND professional_id = $2 
+    AND start_time = $3 
+    AND status IN ('pending', 'confirmed')
+) as has_conflict;
 
 -- name: GetAppointmentsByProfessionalAndDateWithClient :many
 SELECT 

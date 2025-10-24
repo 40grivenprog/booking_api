@@ -223,6 +223,29 @@ func (q *Queries) CancelAppointmentByProfessionalWithDetails(ctx context.Context
 	return &i, err
 }
 
+const CheckClientAppointmentConflict = `-- name: CheckClientAppointmentConflict :one
+SELECT EXISTS(
+    SELECT 1 FROM appointments 
+    WHERE client_id = $1 
+    AND professional_id = $2 
+    AND start_time = $3 
+    AND status IN ('pending', 'confirmed')
+) as has_conflict
+`
+
+type CheckClientAppointmentConflictParams struct {
+	ClientID       uuid.NullUUID `json:"client_id"`
+	ProfessionalID uuid.UUID     `json:"professional_id"`
+	StartTime      time.Time     `json:"start_time"`
+}
+
+func (q *Queries) CheckClientAppointmentConflict(ctx context.Context, arg *CheckClientAppointmentConflictParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, CheckClientAppointmentConflict, arg.ClientID, arg.ProfessionalID, arg.StartTime)
+	var has_conflict bool
+	err := row.Scan(&has_conflict)
+	return has_conflict, err
+}
+
 const ConfirmAppointmentWithDetails = `-- name: ConfirmAppointmentWithDetails :one
 WITH updated_appointment AS (
     UPDATE appointments
@@ -498,7 +521,7 @@ WHERE a.client_id = $1
   AND a.status = $2
   AND a.start_time > NOW()
   AND a.type = 'appointment'
-ORDER BY a.start_time ASC
+ORDER BY a.start_time DESC
 `
 
 type GetAppointmentsByClientWithStatusParams struct {
@@ -725,7 +748,7 @@ WHERE a.professional_id = $1
   AND a.status = $2
   AND a.start_time > NOW()
   AND a.type = 'appointment'
-ORDER BY a.start_time ASC
+ORDER BY a.start_time DESC
 `
 
 type GetAppointmentsByProfessionalWithStatusParams struct {

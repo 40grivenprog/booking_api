@@ -36,6 +36,11 @@ func (s *service) CreateAppointment(ctx context.Context, input CreateAppointment
 		return nil, err
 	}
 
+	// Check for appointment conflicts
+	if err := s.validateAppointmentConflict(ctx, input.ClientID, input.ProfessionalID, startTime); err != nil {
+		return nil, err
+	}
+
 	// Create appointment in database
 	result, err := s.repo.CreateAppointmentWithDetails(ctx, &db.CreateAppointmentWithDetailsParams{
 		ClientID:       uuid.NullUUID{UUID: input.ClientID, Valid: true},
