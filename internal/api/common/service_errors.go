@@ -17,6 +17,9 @@ func HandleServiceError(c *gin.Context, err error) {
 	case errors.Is(err, svcCommon.ErrPastTime):
 		HandleErrorResponse(c, http.StatusBadRequest, ErrorTypeValidation, ErrorMsgFutureTimeRequired, err)
 
+	case errors.Is(err, svcCommon.ErrPastAppointment):
+		HandleErrorResponse(c, http.StatusBadRequest, ErrorTypeValidation, ErrorMsgPastAppointment, err)
+
 	case errors.Is(err, svcCommon.ErrInvalidCredentials):
 		HandleErrorResponse(c, http.StatusUnauthorized, ErrorTypeValidation, ErrorMsgInvalidCredentials, err)
 

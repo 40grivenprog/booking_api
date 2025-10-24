@@ -7,6 +7,7 @@ var (
 	// Time validation errors
 	ErrInvalidTimeRange = errors.New("invalid time range")
 	ErrPastTime         = errors.New("time must be in the future")
+	ErrPastAppointment  = errors.New("cannot modify appointments from the past")
 
 	// Authentication errors
 	ErrInvalidCredentials = errors.New("invalid credentials")

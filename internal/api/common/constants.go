@@ -24,6 +24,7 @@ const (
 	ErrorMsgInvalidCredentials               = "Invalid username or password"
 	ErrorMsgMissingRequiredField             = "Missing required field"
 	ErrorMsgFutureTimeRequired               = "Appointment time must be in the future"
+	ErrorMsgPastAppointment                  = "Cannot modify appointments from the past"
 	ErrorMsgAppointmentNotPending            = "Appointment is not pending"
 	ErrorMsgAppointmentNotPendingOrConfirmed = "Appointment is not pending or confirmed. Please check the status of the appointment."
 	ErrorMsgAppointmentTimeConflict          = "You already have an appointment for this time. Please cancel it first or wait for approval."
