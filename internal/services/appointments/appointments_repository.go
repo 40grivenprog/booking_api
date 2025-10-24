@@ -8,4 +8,5 @@ import (
 
 type AppointmentsRepository interface {
 	CreateAppointmentWithDetails(ctx context.Context, arg *db.CreateAppointmentWithDetailsParams) (*db.CreateAppointmentWithDetailsRow, error)
+	CheckClientAppointmentConflict(ctx context.Context, arg *db.CheckClientAppointmentConflictParams) (bool, error)
 }

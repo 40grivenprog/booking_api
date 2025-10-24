@@ -29,6 +29,9 @@ func HandleServiceError(c *gin.Context, err error) {
 	case errors.Is(err, svcCommon.ErrAppointmentNotPendingOrConfirmed):
 		HandleErrorResponse(c, http.StatusBadRequest, ErrorTypeValidation, ErrorMsgAppointmentNotPendingOrConfirmed, err)
 
+	case errors.Is(err, svcCommon.ErrAppointmentTimeConflict):
+		HandleErrorResponse(c, http.StatusConflict, ErrorTypeConflict, ErrorMsgAppointmentTimeConflict, err)
+
 	case errors.Is(err, svcCommon.ErrProfessionalNotFound):
 		HandleErrorResponse(c, http.StatusNotFound, ErrorTypeNotFound, ErrorMsgProfessionalNotFound, err)
 
