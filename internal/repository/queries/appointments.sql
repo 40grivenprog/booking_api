@@ -248,4 +248,5 @@ LEFT JOIN clients c ON a.client_id = c.id
 WHERE a.professional_id = $1
   AND a.status = 'confirmed'
   AND DATE(a.start_time) = $2
+  AND a.end_time > NOW()
 ORDER BY a.start_time ASC;
