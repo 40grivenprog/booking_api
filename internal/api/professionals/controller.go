@@ -280,3 +280,57 @@ func (h *ProfessionalsHandler) GetProfessionalTimetable(c *gin.Context) {
 	response := mapTimetableAppointmentsToGetProfessionalTimetableResponse(appointments, dateStr)
 	c.JSON(http.StatusOK, response)
 }
+
+// GetProfessionalClients handles GET /api/professionals/:id/clients
+func (h *ProfessionalsHandler) GetProfessionalClients(c *gin.Context) {
+	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	if !ok {
+		return
+	}
+
+	clients, err := h.professionalsService.GetClients(c.Request.Context(), professionalID)
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToRetrieveClients, err)
+		return
+	}
+
+	response := mapClientsToGetProfessionalClientsResponse(clients)
+	c.JSON(http.StatusOK, response)
+}
+
+// GetPreviousAppointmentsByClient handles GET /api/professionals/:id/previous_appointments?client_id=?&month=?
+func (h *ProfessionalsHandler) GetPreviousAppointmentsByClient(c *gin.Context) {
+	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	if !ok {
+		return
+	}
+
+	clientIDStr, ok := common.RequireQueryParam(c, "client_id")
+	if !ok {
+		return
+	}
+
+	clientID, ok := common.ParseClientID(c, clientIDStr)
+	if !ok {
+		return
+	}
+
+	// Parse optional month filter
+	var monthFilter *time.Time
+	if monthStr := c.Query("month"); monthStr != "" {
+		month, ok := common.ParseMonth(c, monthStr)
+		if !ok {
+			return
+		}
+		monthFilter = &month
+	}
+
+	appointments, err := h.professionalsService.GetPreviousAppointmentsByClient(c.Request.Context(), professionalID, clientID, monthFilter)
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToRetrieveAppointments, err)
+		return
+	}
+
+	response := mapPreviousAppointmentsToGetPreviousAppointmentsByClientResponse(appointments)
+	c.JSON(http.StatusOK, response)
+}

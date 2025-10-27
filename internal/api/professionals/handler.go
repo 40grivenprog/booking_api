@@ -44,6 +44,8 @@ func ProfessionalsRegister(p ProfessionalsHandlerParams) error {
 		professionals.POST("/:id/unavailable_appointments", h.CreateUnavailableAppointment)
 		professionals.GET("/:id/availability", h.GetProfessionalAvailability)
 		professionals.GET("/:id/timetable", h.GetProfessionalTimetable)
+		professionals.GET("/:id/clients", h.GetProfessionalClients)
+		professionals.GET("/:id/previous_appointments", h.GetPreviousAppointmentsByClient)
 	}
 
 	return nil

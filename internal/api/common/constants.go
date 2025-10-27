@@ -44,6 +44,7 @@ const (
 	ErrorMsgFailedToUpdateProfessional    = "Failed to update professional"
 	ErrorMsgFailedToRetrieveAppointments  = "Failed to retrieve appointments"
 	ErrorMsgFailedToRetrieveProfessionals = "Failed to retrieve professionals"
+	ErrorMsgFailedToRetrieveClients       = "Failed to retrieve clients"
 	ErrorMsgFailedToGetTimetable          = "Failed to get professional timetable"
 
 	// Not found errors

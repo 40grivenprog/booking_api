@@ -819,6 +819,108 @@ func (q *Queries) GetAppointmentsByProfessionalWithStatus(ctx context.Context, a
 	return items, nil
 }
 
+const GetPreviousAppointmentsByClientForMonth = `-- name: GetPreviousAppointmentsByClientForMonth :many
+SELECT id, start_time, end_time, description
+FROM appointments
+WHERE client_id = $1
+  AND professional_id = $2
+  AND status = 'confirmed'
+  AND end_time < NOW()
+  AND DATE_TRUNC('month', start_time) = DATE_TRUNC('month', $3::date)
+ORDER BY start_time DESC
+`
+
+type GetPreviousAppointmentsByClientForMonthParams struct {
+	ClientID       uuid.NullUUID `json:"client_id"`
+	ProfessionalID uuid.UUID     `json:"professional_id"`
+	MonthDate      time.Time     `json:"month_date"`
+}
+
+type GetPreviousAppointmentsByClientForMonthRow struct {
+	ID          uuid.UUID      `json:"id"`
+	StartTime   time.Time      `json:"start_time"`
+	EndTime     time.Time      `json:"end_time"`
+	Description sql.NullString `json:"description"`
+}
+
+func (q *Queries) GetPreviousAppointmentsByClientForMonth(ctx context.Context, arg *GetPreviousAppointmentsByClientForMonthParams) ([]*GetPreviousAppointmentsByClientForMonthRow, error) {
+	rows, err := q.db.QueryContext(ctx, GetPreviousAppointmentsByClientForMonth, arg.ClientID, arg.ProfessionalID, arg.MonthDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetPreviousAppointmentsByClientForMonthRow{}
+	for rows.Next() {
+		var i GetPreviousAppointmentsByClientForMonthRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const GetPreviousProfessionalAppointmentsByClient = `-- name: GetPreviousProfessionalAppointmentsByClient :many
+SELECT id, start_time, end_time, description
+FROM appointments
+WHERE client_id = $1
+  AND professional_id = $2
+  AND status = 'confirmed'
+  AND end_time < NOW()
+ORDER BY start_time DESC
+`
+
+type GetPreviousProfessionalAppointmentsByClientParams struct {
+	ClientID       uuid.NullUUID `json:"client_id"`
+	ProfessionalID uuid.UUID     `json:"professional_id"`
+}
+
+type GetPreviousProfessionalAppointmentsByClientRow struct {
+	ID          uuid.UUID      `json:"id"`
+	StartTime   time.Time      `json:"start_time"`
+	EndTime     time.Time      `json:"end_time"`
+	Description sql.NullString `json:"description"`
+}
+
+func (q *Queries) GetPreviousProfessionalAppointmentsByClient(ctx context.Context, arg *GetPreviousProfessionalAppointmentsByClientParams) ([]*GetPreviousProfessionalAppointmentsByClientRow, error) {
+	rows, err := q.db.QueryContext(ctx, GetPreviousProfessionalAppointmentsByClient, arg.ClientID, arg.ProfessionalID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetPreviousProfessionalAppointmentsByClientRow{}
+	for rows.Next() {
+		var i GetPreviousProfessionalAppointmentsByClientRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const GetProfessionalAppointmentDates = `-- name: GetProfessionalAppointmentDates :many
 SELECT DISTINCT DATE(start_time) AS appointment_date
 FROM appointments

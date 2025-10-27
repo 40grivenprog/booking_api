@@ -186,3 +186,28 @@ type GetProfessionalTimetableResponse struct {
 	Date         string                 `json:"date"`
 	Appointments []TimetableAppointment `json:"appointments"`
 }
+
+// Client represents a client in API responses
+type ProfessionalClient struct {
+	ID        string `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
+
+// GetProfessionalClientsResponse represents the response for getting professional clients
+type GetProfessionalClientsResponse struct {
+	Clients []ProfessionalClient `json:"clients"`
+}
+
+// PreviousAppointment represents a previous appointment
+type PreviousAppointment struct {
+	ID          string `json:"id"`
+	StartTime   string `json:"start_time"`
+	EndTime     string `json:"end_time"`
+	Description string `json:"description"`
+}
+
+// GetPreviousAppointmentsByClientResponse represents the response for getting previous appointments by client
+type GetPreviousAppointmentsByClientResponse struct {
+	Appointments []PreviousAppointment `json:"appointments"`
+}

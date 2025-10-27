@@ -155,6 +155,48 @@ func (q *Queries) GetProfessionalByUsername(ctx context.Context, username string
 	return &i, err
 }
 
+const GetProfessionalClients = `-- name: GetProfessionalClients :many
+SELECT id, first_name, last_name
+FROM clients
+WHERE id IN (
+    SELECT DISTINCT(client_id)
+    FROM appointments
+    WHERE professional_id = $1
+        AND client_id IS NOT NULL
+        AND status = 'confirmed'
+)
+ORDER BY first_name, last_name
+`
+
+type GetProfessionalClientsRow struct {
+	ID        uuid.UUID `json:"id"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+}
+
+func (q *Queries) GetProfessionalClients(ctx context.Context, professionalID uuid.UUID) ([]*GetProfessionalClientsRow, error) {
+	rows, err := q.db.QueryContext(ctx, GetProfessionalClients, professionalID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetProfessionalClientsRow{}
+	for rows.Next() {
+		var i GetProfessionalClientsRow
+		if err := rows.Scan(&i.ID, &i.FirstName, &i.LastName); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const GetProfessionals = `-- name: GetProfessionals :many
 SELECT id, chat_id, first_name, last_name, phone_number, username, password_hash, created_at, updated_at FROM professionals
 WHERE chat_id is not null
