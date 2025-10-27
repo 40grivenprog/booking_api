@@ -40,3 +40,15 @@ WHERE a.professional_id = $1
     AND a.start_time > NOW()
     AND a.type = 'appointment'
 ORDER BY a.start_time ASC;
+
+-- name: GetProfessionalClients :many
+SELECT id, first_name, last_name
+FROM clients
+WHERE id IN (
+    SELECT DISTINCT(client_id)
+    FROM appointments
+    WHERE professional_id = $1
+        AND client_id IS NOT NULL
+        AND status = 'confirmed'
+)
+ORDER BY first_name, last_name;

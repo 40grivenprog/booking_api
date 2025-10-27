@@ -175,3 +175,38 @@ func mapTimetableAppointmentsToGetProfessionalTimetableResponse(appointments []*
 
 	return response
 }
+
+func mapClientsToGetProfessionalClientsResponse(clients []*db.GetProfessionalClientsRow) GetProfessionalClientsResponse {
+	responseClients := make([]ProfessionalClient, len(clients))
+	for i, client := range clients {
+		responseClients[i] = ProfessionalClient{
+			ID:        client.ID.String(),
+			FirstName: client.FirstName,
+			LastName:  client.LastName,
+		}
+	}
+
+	response := GetProfessionalClientsResponse{
+		Clients: responseClients,
+	}
+
+	return response
+}
+
+func mapPreviousAppointmentsToGetPreviousAppointmentsByClientResponse(appointments []*db.GetPreviousProfessionalAppointmentsByClientRow) GetPreviousAppointmentsByClientResponse {
+	responseAppointments := make([]PreviousAppointment, len(appointments))
+	for i, apt := range appointments {
+		responseAppointments[i] = PreviousAppointment{
+			ID:          apt.ID.String(),
+			StartTime:   common.FormatTimeRFC3339(apt.StartTime),
+			EndTime:     common.FormatTimeRFC3339(apt.EndTime),
+			Description: *common.FromNullString(apt.Description),
+		}
+	}
+
+	response := GetPreviousAppointmentsByClientResponse{
+		Appointments: responseAppointments,
+	}
+
+	return response
+}

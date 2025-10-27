@@ -23,6 +23,8 @@ type Service interface {
 	CreateUnavailableAppointment(ctx context.Context, input CreateUnavailableAppointmentInput) (*db.Appointment, error)
 	GetAvailability(ctx context.Context, professionalID uuid.UUID, date time.Time) ([]*db.GetAppointmentsByProfessionalAndDateWithClientRow, error)
 	GetTimetable(ctx context.Context, professionalID uuid.UUID, date time.Time) ([]*db.GetProfessionalTimetableRow, error)
+	GetClients(ctx context.Context, professionalID uuid.UUID) ([]*db.GetProfessionalClientsRow, error)
+	GetPreviousAppointmentsByClient(ctx context.Context, professionalID uuid.UUID, clientID uuid.UUID, monthFilter *time.Time) ([]*db.GetPreviousProfessionalAppointmentsByClientRow, error)
 	GenerateAvailabilitySlots(date time.Time, appointments []*db.GetAppointmentsByProfessionalAndDateWithClientRow, config AvailabilityConfig) []TimeSlot
 }
 
@@ -222,5 +224,49 @@ func (s *service) GetTimetable(ctx context.Context, professionalID uuid.UUID, da
 	return s.repo.GetProfessionalTimetable(ctx, &db.GetProfessionalTimetableParams{
 		ProfessionalID: professionalID,
 		StartTime:      date,
+	})
+}
+
+// GetClients retrieves all clients who have appointments with the professional
+func (s *service) GetClients(ctx context.Context, professionalID uuid.UUID) ([]*db.GetProfessionalClientsRow, error) {
+	return s.repo.GetProfessionalClients(ctx, professionalID)
+}
+
+// GetPreviousAppointmentsByClient retrieves previous confirmed appointments for a specific client with the professional
+func (s *service) GetPreviousAppointmentsByClient(ctx context.Context, professionalID uuid.UUID, clientID uuid.UUID, monthFilter *time.Time) ([]*db.GetPreviousProfessionalAppointmentsByClientRow, error) {
+	if monthFilter != nil {
+		// Use the month-specific query
+		appointments, err := s.repo.GetPreviousAppointmentsByClientForMonth(ctx, &db.GetPreviousAppointmentsByClientForMonthParams{
+			ClientID: uuid.NullUUID{
+				UUID:  clientID,
+				Valid: true,
+			},
+			ProfessionalID: professionalID,
+			MonthDate:      *monthFilter,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		// Convert to the common return type
+		result := make([]*db.GetPreviousProfessionalAppointmentsByClientRow, len(appointments))
+		for i, apt := range appointments {
+			result[i] = &db.GetPreviousProfessionalAppointmentsByClientRow{
+				ID:          apt.ID,
+				StartTime:   apt.StartTime,
+				EndTime:     apt.EndTime,
+				Description: apt.Description,
+			}
+		}
+		return result, nil
+	}
+
+	// Use the general query without month filter
+	return s.repo.GetPreviousProfessionalAppointmentsByClient(ctx, &db.GetPreviousProfessionalAppointmentsByClientParams{
+		ClientID: uuid.NullUUID{
+			UUID:  clientID,
+			Valid: true,
+		},
+		ProfessionalID: professionalID,
 	})
 }

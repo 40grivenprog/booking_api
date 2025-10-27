@@ -250,3 +250,22 @@ WHERE a.professional_id = $1
   AND DATE(a.start_time) = $2
   AND a.end_time > NOW()
 ORDER BY a.start_time ASC;
+
+-- name: GetPreviousProfessionalAppointmentsByClient :many
+SELECT id, start_time, end_time, description
+FROM appointments
+WHERE client_id = $1
+  AND professional_id = $2
+  AND status = 'confirmed'
+  AND end_time < NOW()
+ORDER BY start_time DESC;
+
+-- name: GetPreviousAppointmentsByClientForMonth :many
+SELECT id, start_time, end_time, description
+FROM appointments
+WHERE client_id = sqlc.arg(client_id)
+  AND professional_id = sqlc.arg(professional_id)
+  AND status = 'confirmed'
+  AND end_time < NOW()
+  AND DATE_TRUNC('month', start_time) = DATE_TRUNC('month', sqlc.arg(month_date)::date)
+ORDER BY start_time DESC;
