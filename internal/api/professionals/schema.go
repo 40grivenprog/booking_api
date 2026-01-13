@@ -14,7 +14,17 @@ type ProfessionalSignInResponse struct {
 
 // GetProfessionalsResponse represents the response for getting all professionals
 type GetProfessionalsResponse struct {
-	Professionals []User `json:"professionals"`
+	Professionals []GetProfessionalsResponseItem `json:"professionals"`
+	Total         int                            `json:"total"`
+	Limit         int                            `json:"limit"`
+	Offset        int                            `json:"offset"`
+}
+
+// GetProfessionalsResponseItem represents a professional in the response
+type GetProfessionalsResponseItem struct {
+	ID        string `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
 }
 
 // User represents a user in API responses (using SQLC generated model)

@@ -6,19 +6,27 @@ import (
 
 	"github.com/gin-gonic/gin"
 	common "github.com/vention/booking_api/internal/api/common"
+	db "github.com/vention/booking_api/internal/repository"
 	"github.com/vention/booking_api/internal/services/professionals"
 	"github.com/vention/booking_api/internal/util"
 )
 
 // GetProfessionals handles GET /api/professionals
 func (h *ProfessionalsHandler) GetProfessionals(c *gin.Context) {
-	professionals, err := h.professionalsService.GetProfessionals(c.Request.Context())
+	limit := common.ParseIntQuery(c, "limit", 15, 1, 100)
+	offset := common.ParseIntQuery(c, "offset", 0, 0, 10000)
+	dbParams := &db.GetProfessionalsParams{
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	}
+
+	professionals, total, err := h.professionalsService.GetProfessionals(c.Request.Context(), dbParams)
 	if err != nil {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToRetrieveProfessionals, err)
 		return
 	}
 
-	response := mapProfessionalsToGetProfessionalsResponse(professionals)
+	response := mapProfessionalsToGetProfessionalsResponse(professionals, total, limit, offset)
 	c.JSON(http.StatusOK, response)
 }
 

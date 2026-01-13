@@ -14,7 +14,7 @@ import (
 
 // Service defines the business logic operations for professionals
 type Service interface {
-	GetProfessionals(ctx context.Context) ([]*db.Professional, error)
+	GetProfessionals(ctx context.Context, dbParams *db.GetProfessionalsParams) ([]*db.GetProfessionalsRow, int, error)
 	SignIn(ctx context.Context, input SignInInput) (*db.Professional, error)
 	ConfirmAppointment(ctx context.Context, input ConfirmAppointmentInput) (*db.ConfirmAppointmentWithDetailsRow, error)
 	GetAppointments(ctx context.Context, professionalID uuid.UUID, statusFilter, dateFilter string) ([]*db.GetAppointmentsByProfessionalWithStatusAndDateRow, error)
@@ -39,9 +39,19 @@ func NewService(repo ProfessionalsRepository) Service {
 	}
 }
 
-// GetProfessionals retrieves all professionals
-func (s *service) GetProfessionals(ctx context.Context) ([]*db.Professional, error) {
-	return s.repo.GetProfessionals(ctx)
+// GetProfessionals retrieves professionals with pagination
+func (s *service) GetProfessionals(ctx context.Context, dbParams *db.GetProfessionalsParams) ([]*db.GetProfessionalsRow, int, error) {
+	professionals, err := s.repo.GetProfessionals(ctx, dbParams)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err := s.repo.CountProfessionals(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return professionals, int(total), nil
 }
 
 // SignIn authenticates a professional and updates their chat ID

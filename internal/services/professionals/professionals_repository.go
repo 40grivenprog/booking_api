@@ -10,7 +10,8 @@ import (
 
 // ProfessionalsRepository defines the database operations needed by the professionals service
 type ProfessionalsRepository interface {
-	GetProfessionals(ctx context.Context) ([]*db.Professional, error)
+	GetProfessionals(ctx context.Context, dbParams *db.GetProfessionalsParams) ([]*db.GetProfessionalsRow, error)
+	CountProfessionals(ctx context.Context) (int64, error)
 	GetProfessionalByUsername(ctx context.Context, username string) (*db.Professional, error)
 	UpdateProfessionalChatID(ctx context.Context, arg *db.UpdateProfessionalChatIDParams) (*db.Professional, error)
 	GetAppointmentByID(ctx context.Context, id uuid.UUID) (*db.Appointment, error)

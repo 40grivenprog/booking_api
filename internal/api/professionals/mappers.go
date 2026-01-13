@@ -7,29 +7,22 @@ import (
 	db "github.com/vention/booking_api/internal/repository"
 )
 
-func mapProfessionalsToGetProfessionalsResponse(professionals []*db.Professional) GetProfessionalsResponse {
-	responseUsers := make([]User, len(professionals))
-	for i, prof := range professionals {
-		user := User{
-			ID:          prof.ID.String(),
-			Username:    prof.Username,
-			FirstName:   prof.FirstName,
-			LastName:    prof.LastName,
-			UserType:    common.UserTypeProfessional,
-			PhoneNumber: common.FromNullString(prof.PhoneNumber),
-			ChatID:      common.FromNullInt64(prof.ChatID),
-			CreatedAt:   common.FormatTimeWithTimezone(prof.CreatedAt),
-			UpdatedAt:   common.FormatTimeWithTimezone(prof.UpdatedAt),
+func mapProfessionalsToGetProfessionalsResponse(rows []*db.GetProfessionalsRow, total, limit, offset int) GetProfessionalsResponse {
+	responseItems := make([]GetProfessionalsResponseItem, len(rows))
+	for i, row := range rows {
+		responseItems[i] = GetProfessionalsResponseItem{
+			ID:        row.ID.String(),
+			FirstName: row.FirstName,
+			LastName:  row.LastName,
 		}
-
-		responseUsers[i] = user
 	}
 
-	response := GetProfessionalsResponse{
-		Professionals: responseUsers,
+	return GetProfessionalsResponse{
+		Professionals: responseItems,
+		Total:         total,
+		Limit:         limit,
+		Offset:        offset,
 	}
-
-	return response
 }
 
 func mapProfessionalToProfessionalSignInResponse(professional *db.Professional) ProfessionalSignInResponse {
