@@ -1,5 +1,9 @@
 package api
 
+import (
+	common "github.com/vention/booking_api/internal/api/common"
+)
+
 // ProfessionalSignInRequest represents the request body for professional sign in
 type ProfessionalSignInRequest struct {
 	Username string `json:"username" binding:"required"`
@@ -15,9 +19,7 @@ type ProfessionalSignInResponse struct {
 // GetProfessionalsResponse represents the response for getting all professionals
 type GetProfessionalsResponse struct {
 	Professionals []GetProfessionalsResponseItem `json:"professionals"`
-	Total         int                            `json:"total"`
-	Limit         int                            `json:"limit"`
-	Offset        int                            `json:"offset"`
+	Pagination    common.PaginationResponse      `json:"pagination"`
 }
 
 // GetProfessionalsResponseItem represents a professional in the response
@@ -170,11 +172,9 @@ type GetProfessionalAvailabilityResponse struct {
 
 // TimeSlot represents a one-hour time slot
 type TimeSlot struct {
-	StartTime   string `json:"start_time"`
-	EndTime     string `json:"end_time"`
-	Available   bool   `json:"available"`
-	Type        string `json:"type,omitempty"`        // "appointment", "unavailable", or empty if available
-	Description string `json:"description,omitempty"` // Description with client info if available
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+	Available bool   `json:"available"`
 }
 
 // GetProfessionalAppointmentDatesResponse represents the response for getting appointment dates

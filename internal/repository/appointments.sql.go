@@ -333,22 +333,16 @@ WITH new_appointment AS (
     RETURNING id, type, client_id, professional_id, start_time, end_time, status, cancellation_reason, cancelled_by_professional_id, cancelled_by_client_id, created_at, updated_at, description
 )
 SELECT 
-    na.id, na.type, na.client_id, na.professional_id, na.start_time, na.end_time, na.status, na.cancellation_reason, na.cancelled_by_professional_id, na.cancelled_by_client_id, na.created_at, na.updated_at, na.description,
-    c.id as client_id_full,
+    na.id,
+    na.start_time,
+    na.end_time,
+    na.description,
     c.first_name as client_first_name,
     c.last_name as client_last_name,
-    c.phone_number as client_phone_number,
     c.chat_id as client_chat_id,
-    c.created_at as client_created_at,
-    c.updated_at as client_updated_at,
-    p.id as professional_id_full,
-    p.username as professional_username,
     p.first_name as professional_first_name,
     p.last_name as professional_last_name,
-    p.phone_number as professional_phone_number,
-    p.chat_id as professional_chat_id,
-    p.created_at as professional_created_at,
-    p.updated_at as professional_updated_at
+    p.chat_id as professional_chat_id
 FROM new_appointment na
 LEFT JOIN clients c ON c.id = na.client_id
 LEFT JOIN professionals p ON p.id = na.professional_id
@@ -363,34 +357,16 @@ type CreateAppointmentWithDetailsParams struct {
 }
 
 type CreateAppointmentWithDetailsRow struct {
-	ID                        uuid.UUID             `json:"id"`
-	Type                      AppointmentType       `json:"type"`
-	ClientID                  uuid.NullUUID         `json:"client_id"`
-	ProfessionalID            uuid.UUID             `json:"professional_id"`
-	StartTime                 time.Time             `json:"start_time"`
-	EndTime                   time.Time             `json:"end_time"`
-	Status                    NullAppointmentStatus `json:"status"`
-	CancellationReason        sql.NullString        `json:"cancellation_reason"`
-	CancelledByProfessionalID uuid.NullUUID         `json:"cancelled_by_professional_id"`
-	CancelledByClientID       uuid.NullUUID         `json:"cancelled_by_client_id"`
-	CreatedAt                 time.Time             `json:"created_at"`
-	UpdatedAt                 time.Time             `json:"updated_at"`
-	Description               sql.NullString        `json:"description"`
-	ClientIDFull              uuid.UUID             `json:"client_id_full"`
-	ClientFirstName           sql.NullString        `json:"client_first_name"`
-	ClientLastName            sql.NullString        `json:"client_last_name"`
-	ClientPhoneNumber         sql.NullString        `json:"client_phone_number"`
-	ClientChatID              sql.NullInt64         `json:"client_chat_id"`
-	ClientCreatedAt           time.Time             `json:"client_created_at"`
-	ClientUpdatedAt           time.Time             `json:"client_updated_at"`
-	ProfessionalIDFull        uuid.UUID             `json:"professional_id_full"`
-	ProfessionalUsername      sql.NullString        `json:"professional_username"`
-	ProfessionalFirstName     sql.NullString        `json:"professional_first_name"`
-	ProfessionalLastName      sql.NullString        `json:"professional_last_name"`
-	ProfessionalPhoneNumber   sql.NullString        `json:"professional_phone_number"`
-	ProfessionalChatID        sql.NullInt64         `json:"professional_chat_id"`
-	ProfessionalCreatedAt     time.Time             `json:"professional_created_at"`
-	ProfessionalUpdatedAt     time.Time             `json:"professional_updated_at"`
+	ID                    uuid.UUID      `json:"id"`
+	StartTime             time.Time      `json:"start_time"`
+	EndTime               time.Time      `json:"end_time"`
+	Description           sql.NullString `json:"description"`
+	ClientFirstName       sql.NullString `json:"client_first_name"`
+	ClientLastName        sql.NullString `json:"client_last_name"`
+	ClientChatID          sql.NullInt64  `json:"client_chat_id"`
+	ProfessionalFirstName sql.NullString `json:"professional_first_name"`
+	ProfessionalLastName  sql.NullString `json:"professional_last_name"`
+	ProfessionalChatID    sql.NullInt64  `json:"professional_chat_id"`
 }
 
 func (q *Queries) CreateAppointmentWithDetails(ctx context.Context, arg *CreateAppointmentWithDetailsParams) (*CreateAppointmentWithDetailsRow, error) {
@@ -404,33 +380,15 @@ func (q *Queries) CreateAppointmentWithDetails(ctx context.Context, arg *CreateA
 	var i CreateAppointmentWithDetailsRow
 	err := row.Scan(
 		&i.ID,
-		&i.Type,
-		&i.ClientID,
-		&i.ProfessionalID,
 		&i.StartTime,
 		&i.EndTime,
-		&i.Status,
-		&i.CancellationReason,
-		&i.CancelledByProfessionalID,
-		&i.CancelledByClientID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.Description,
-		&i.ClientIDFull,
 		&i.ClientFirstName,
 		&i.ClientLastName,
-		&i.ClientPhoneNumber,
 		&i.ClientChatID,
-		&i.ClientCreatedAt,
-		&i.ClientUpdatedAt,
-		&i.ProfessionalIDFull,
-		&i.ProfessionalUsername,
 		&i.ProfessionalFirstName,
 		&i.ProfessionalLastName,
-		&i.ProfessionalPhoneNumber,
 		&i.ProfessionalChatID,
-		&i.ProfessionalCreatedAt,
-		&i.ProfessionalUpdatedAt,
 	)
 	return &i, err
 }
@@ -657,20 +615,9 @@ func (q *Queries) GetAppointmentsByProfessionalAndDate(ctx context.Context, arg 
 
 const GetAppointmentsByProfessionalAndDateWithClient = `-- name: GetAppointmentsByProfessionalAndDateWithClient :many
 SELECT 
-    a.id,
-    a.professional_id,
-    a.client_id,
     a.start_time,
-    a.end_time,
-    a.description,
-    a.type,
-    a.status,
-    a.created_at,
-    a.updated_at,
-    c.first_name as client_first_name,
-    c.last_name as client_last_name
+    a.end_time
 FROM appointments a
-LEFT JOIN clients c ON a.client_id = c.id
 WHERE a.professional_id = $1
   AND DATE(a.start_time) = $2
   AND (a.type = 'appointment' OR a.type = 'unavailable')
@@ -684,18 +631,8 @@ type GetAppointmentsByProfessionalAndDateWithClientParams struct {
 }
 
 type GetAppointmentsByProfessionalAndDateWithClientRow struct {
-	ID              uuid.UUID             `json:"id"`
-	ProfessionalID  uuid.UUID             `json:"professional_id"`
-	ClientID        uuid.NullUUID         `json:"client_id"`
-	StartTime       time.Time             `json:"start_time"`
-	EndTime         time.Time             `json:"end_time"`
-	Description     sql.NullString        `json:"description"`
-	Type            AppointmentType       `json:"type"`
-	Status          NullAppointmentStatus `json:"status"`
-	CreatedAt       time.Time             `json:"created_at"`
-	UpdatedAt       time.Time             `json:"updated_at"`
-	ClientFirstName sql.NullString        `json:"client_first_name"`
-	ClientLastName  sql.NullString        `json:"client_last_name"`
+	StartTime time.Time `json:"start_time"`
+	EndTime   time.Time `json:"end_time"`
 }
 
 func (q *Queries) GetAppointmentsByProfessionalAndDateWithClient(ctx context.Context, arg *GetAppointmentsByProfessionalAndDateWithClientParams) ([]*GetAppointmentsByProfessionalAndDateWithClientRow, error) {
@@ -707,20 +644,7 @@ func (q *Queries) GetAppointmentsByProfessionalAndDateWithClient(ctx context.Con
 	items := []*GetAppointmentsByProfessionalAndDateWithClientRow{}
 	for rows.Next() {
 		var i GetAppointmentsByProfessionalAndDateWithClientRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.ProfessionalID,
-			&i.ClientID,
-			&i.StartTime,
-			&i.EndTime,
-			&i.Description,
-			&i.Type,
-			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.ClientFirstName,
-			&i.ClientLastName,
-		); err != nil {
+		if err := rows.Scan(&i.StartTime, &i.EndTime); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)

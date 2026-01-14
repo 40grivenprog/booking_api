@@ -9,22 +9,16 @@ WITH new_appointment AS (
     RETURNING *
 )
 SELECT 
-    na.*,
-    c.id as client_id_full,
+    na.id,
+    na.start_time,
+    na.end_time,
+    na.description,
     c.first_name as client_first_name,
     c.last_name as client_last_name,
-    c.phone_number as client_phone_number,
     c.chat_id as client_chat_id,
-    c.created_at as client_created_at,
-    c.updated_at as client_updated_at,
-    p.id as professional_id_full,
-    p.username as professional_username,
     p.first_name as professional_first_name,
     p.last_name as professional_last_name,
-    p.phone_number as professional_phone_number,
-    p.chat_id as professional_chat_id,
-    p.created_at as professional_created_at,
-    p.updated_at as professional_updated_at
+    p.chat_id as professional_chat_id
 FROM new_appointment na
 LEFT JOIN clients c ON c.id = na.client_id
 LEFT JOIN professionals p ON p.id = na.professional_id;
@@ -205,20 +199,9 @@ SELECT EXISTS(
 
 -- name: GetAppointmentsByProfessionalAndDateWithClient :many
 SELECT 
-    a.id,
-    a.professional_id,
-    a.client_id,
     a.start_time,
-    a.end_time,
-    a.description,
-    a.type,
-    a.status,
-    a.created_at,
-    a.updated_at,
-    c.first_name as client_first_name,
-    c.last_name as client_last_name
+    a.end_time
 FROM appointments a
-LEFT JOIN clients c ON a.client_id = c.id
 WHERE a.professional_id = $1
   AND DATE(a.start_time) = $2
   AND (a.type = 'appointment' OR a.type = 'unavailable')

@@ -13,10 +13,13 @@ import (
 
 // GetProfessionals handles GET /api/professionals
 func (h *ProfessionalsHandler) GetProfessionals(c *gin.Context) {
-	limit := common.ParseIntQuery(c, "limit", 15, 1, 100)
-	offset := common.ParseIntQuery(c, "offset", 0, 0, 10000)
+	page := common.ParseIntQuery(c, "page", 1, 1, 10000)
+	pageSize := common.ParseIntQuery(c, "pageSize", 15, 1, 100)
+
+	offset := (page - 1) * pageSize
+
 	dbParams := &db.GetProfessionalsParams{
-		Limit:  int32(limit),
+		Limit:  int32(pageSize),
 		Offset: int32(offset),
 	}
 
@@ -26,7 +29,7 @@ func (h *ProfessionalsHandler) GetProfessionals(c *gin.Context) {
 		return
 	}
 
-	response := mapProfessionalsToGetProfessionalsResponse(professionals, total, limit, offset)
+	response := mapProfessionalsToGetProfessionalsResponse(professionals, total, page, pageSize)
 	c.JSON(http.StatusOK, response)
 }
 
@@ -246,11 +249,9 @@ func (h *ProfessionalsHandler) GetProfessionalAvailability(c *gin.Context) {
 	responseSlots := make([]TimeSlot, len(slots))
 	for i, slot := range slots {
 		responseSlots[i] = TimeSlot{
-			StartTime:   slot.StartTime,
-			EndTime:     slot.EndTime,
-			Available:   slot.Available,
-			Type:        slot.Type,
-			Description: slot.Description,
+			StartTime: slot.StartTime,
+			EndTime:   slot.EndTime,
+			Available: slot.Available,
 		}
 	}
 
