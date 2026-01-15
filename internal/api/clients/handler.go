@@ -49,8 +49,8 @@ func ClientsRegister(p ClientsHandlerParams) error {
 	{
 		clients.POST("/book_appointment", h.BookAppointment)
 		clients.POST("/register", h.RegisterClient)
-		clients.GET("/:id/appointments", h.GetClientAppointments)
-		clients.PATCH("/:id/appointments/:appointment_id/cancel", h.CancelClientAppointment)
+		clients.GET("/appointments", h.GetClientAppointments)
+		clients.PATCH("/appointments/:appointment_id/cancel", h.CancelClientAppointment)
 	}
 
 	return nil

@@ -149,28 +149,12 @@ WITH updated_appointment AS (
     RETURNING *
 )
 SELECT 
-    ua.id,
-    ua.type,
-    ua.client_id,
-    ua.professional_id,
     ua.start_time,
     ua.end_time,
-    ua.status,
     ua.cancellation_reason,
-    ua.cancelled_by_professional_id,
-    ua.cancelled_by_client_id,
-    ua.created_at,
-    ua.updated_at,
-    c.id as client_id_full,
+    ua.description,
     c.first_name as client_first_name,
     c.last_name as client_last_name,
-    c.phone_number as client_phone_number,
-    c.chat_id as client_chat_id,
-    p.id as professional_id_full,
-    p.username as professional_username,
-    p.first_name as professional_first_name,
-    p.last_name as professional_last_name,
-    p.phone_number as professional_phone_number,
     p.chat_id as professional_chat_id
 FROM updated_appointment ua
 LEFT JOIN clients c ON c.id = ua.client_id

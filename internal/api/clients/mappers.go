@@ -58,27 +58,16 @@ func mapAppointmentToGetClientAppointmentsResponse(appointments []*db.GetAppoint
 func mapAppointmentToCancelClientAppointmentResponse(appointment *db.CancelAppointmentByClientWithDetailsRow) CancelClientAppointmentResponse {
 	return CancelClientAppointmentResponse{
 		Appointment: CancelledAppointment{
-			ID:                 appointment.ID.String(),
-			Type:               string(appointment.Type),
 			StartTime:          common.FormatTimeRFC3339(appointment.StartTime),
 			EndTime:            common.FormatTimeRFC3339(appointment.EndTime),
-			Status:             string(appointment.Status.AppointmentStatus),
 			CancellationReason: appointment.CancellationReason.String,
-			CancelledBy:        common.CancelledByClient,
-			CreatedAt:          common.FormatTimeRFC3339(appointment.CreatedAt),
-			UpdatedAt:          common.FormatTimeRFC3339(appointment.UpdatedAt),
 		},
-		Client: ClientAppointmentClient{
-			ID:          appointment.ClientIDFull.String(),
-			FirstName:   appointment.ClientFirstName.String,
-			LastName:    appointment.ClientLastName.String,
-			PhoneNumber: common.FromNullString(appointment.ClientPhoneNumber),
-			ChatID:      common.FromNullInt64(appointment.ClientChatID),
+		Client: CancelledAppointmentClient{
+			FirstName: appointment.ClientFirstName.String,
+			LastName:  appointment.ClientLastName.String,
 		},
-		Professional: ClientAppointmentProfessional{
-			FirstName: appointment.ProfessionalFirstName.String,
-			LastName:  appointment.ProfessionalLastName.String,
-			ChatID:    common.FromNullInt64(appointment.ProfessionalChatID),
+		Professional: CancelledAppointmentProfessional{
+			ChatID: common.FromNullInt64(appointment.ProfessionalChatID),
 		},
 	}
 }

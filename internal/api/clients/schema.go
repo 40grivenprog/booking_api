@@ -86,30 +86,26 @@ type CancelClientAppointmentRequest struct {
 
 // CancelClientAppointmentResponse represents the response after cancelling an appointment by client
 type CancelClientAppointmentResponse struct {
-	Appointment  CancelledAppointment          `json:"appointment"`
-	Client       ClientAppointmentClient       `json:"client"`
-	Professional ClientAppointmentProfessional `json:"professional"`
+	Appointment  CancelledAppointment             `json:"appointment"`
+	Client       CancelledAppointmentClient       `json:"client"`
+	Professional CancelledAppointmentProfessional `json:"professional"`
 }
 
 // ClientAppointmentClient represents client details in appointment context
-type ClientAppointmentClient struct {
-	ID          string  `json:"id"`
-	FirstName   string  `json:"first_name"`
-	LastName    string  `json:"last_name"`
-	PhoneNumber *string `json:"phone_number,omitempty"`
-	ChatID      *int64  `json:"chat_id,omitempty"`
+type CancelledAppointmentClient struct {
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
+
+// CancelledAppointmentProfessional represents professional details in appointment context
+type CancelledAppointmentProfessional struct {
+	ChatID *int64 `json:"chat_id,omitempty"`
 }
 
 // CancelledAppointment represents a cancelled appointment
 type CancelledAppointment struct {
-	ID                 string `json:"id"`
-	Type               string `json:"type"`
 	StartTime          string `json:"start_time"`
 	EndTime            string `json:"end_time"`
-	Status             string `json:"status"`
 	Description        string `json:"description,omitempty"`
 	CancellationReason string `json:"cancellation_reason"`
-	CancelledBy        string `json:"cancelled_by"`
-	CreatedAt          string `json:"created_at"`
-	UpdatedAt          string `json:"updated_at"`
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/vention/booking_api/internal/services/clients"
 )
 
+// BookAppointment handles POST /api/clients/book_appointment
 func (h *ClientsHandler) BookAppointment(c *gin.Context) {
 	req, ok := common.BindAndValidate[CreateAppointmentRequest](c)
 	if !ok {
@@ -88,9 +89,9 @@ func (h *ClientsHandler) RegisterClient(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-// GetClientAppointments handles GET /api/clients/{id}/appointments
+// GetClientAppointments handles GET /api/clients/appointments
 func (h *ClientsHandler) GetClientAppointments(c *gin.Context) {
-	clientID, ok := common.ParseClientID(c, c.Param("id"))
+	clientID, ok := common.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -114,9 +115,9 @@ func (h *ClientsHandler) GetClientAppointments(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// CancelClientAppointment handles PATCH /api/clients/{id}/appointments/{appointment_id}/cancel
+// CancelClientAppointment handles PATCH /api/clients/appointments/{appointment_id}/cancel
 func (h *ClientsHandler) CancelClientAppointment(c *gin.Context) {
-	clientID, ok := common.ParseClientID(c, c.Param("id"))
+	clientID, ok := common.GetUserID(c)
 	if !ok {
 		return
 	}

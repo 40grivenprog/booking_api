@@ -48,6 +48,7 @@ func NotificationsRegister(p NotificationsHandlerParams) error {
 	notifications := p.Router.Group("/notifications")
 	{
 		notifications.POST("/send_appointment_request", h.SendAppointmentRequest)
+		notifications.POST("/send_appointment_cancellation_notification", h.SendAppointmentCancellationNotification)
 	}
 
 	return nil
