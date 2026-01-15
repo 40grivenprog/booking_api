@@ -39,6 +39,7 @@ type User struct {
 	UserType    string  `json:"user_type"`
 	PhoneNumber *string `json:"phone_number,omitempty"`
 	Role        string  `json:"role"`
+	Token       string  `json:"token"`
 	CreatedAt   string  `json:"created_at"`
 	UpdatedAt   string  `json:"updated_at"`
 }

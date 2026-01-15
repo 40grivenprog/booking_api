@@ -30,7 +30,7 @@ func mapProfessionalsToGetProfessionalsResponse(rows []*db.GetProfessionalsRow, 
 	}
 }
 
-func mapProfessionalToProfessionalSignInResponse(professional *db.Professional) ProfessionalSignInResponse {
+func mapProfessionalToProfessionalSignInResponse(professional *db.Professional, token string) ProfessionalSignInResponse {
 	responseUser := User{
 		ID:          professional.ID.String(),
 		Username:    professional.Username,
@@ -39,6 +39,7 @@ func mapProfessionalToProfessionalSignInResponse(professional *db.Professional) 
 		Role:        common.RoleProfessional,
 		PhoneNumber: common.FromNullString(professional.PhoneNumber),
 		ChatID:      common.FromNullInt64(professional.ChatID),
+		Token:       token,
 		CreatedAt:   common.FormatTimeWithTimezone(professional.CreatedAt),
 		UpdatedAt:   common.FormatTimeWithTimezone(professional.UpdatedAt),
 	}

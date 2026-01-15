@@ -6,12 +6,14 @@ import (
 
 	"github.com/google/uuid"
 	db "github.com/vention/booking_api/internal/repository"
+	"github.com/vention/booking_api/internal/util"
 )
 
 // Service defines the business logic operations for clients
 type Service interface {
+	CreateAppointment(ctx context.Context, input CreateAppointmentInput) (*db.CreateAppointmentWithDetailsRow, error)
 	RegisterClient(ctx context.Context, input RegisterClientInput) (*db.Client, error)
-	GetClientAppointments(ctx context.Context, clientID uuid.UUID, statusFilter string) ([]*db.GetAppointmentsByClientWithStatusRow, error)
+	GetClientAppointments(ctx context.Context, clientID uuid.UUID, statusFilter string, page, pageSize int) ([]*db.GetAppointmentsByClientWithStatusRow, int, error)
 	CancelAppointment(ctx context.Context, input CancelAppointmentInput) (*db.CancelAppointmentByClientWithDetailsRow, error)
 }
 
@@ -24,6 +26,37 @@ func NewService(repo ClientsRepository) Service {
 	return &service{
 		repo: repo,
 	}
+}
+
+// CreateAppointment creates a new appointment with business logic validation
+func (s *service) CreateAppointment(ctx context.Context, input CreateAppointmentInput) (*db.CreateAppointmentWithDetailsRow, error) {
+	// Convert times to application timezone (business rule)
+	startTime := util.ConvertToAppTimezone(input.StartTime)
+	endTime := util.ConvertToAppTimezone(input.EndTime)
+
+	// Validate appointment time
+	if err := s.validateAppointmentTime(startTime, endTime); err != nil {
+		return nil, err
+	}
+
+	// Check for appointment conflicts
+	if err := s.validateAppointmentConflict(ctx, input.ClientID, input.ProfessionalID, startTime); err != nil {
+		return nil, err
+	}
+
+	// Create appointment in database
+	result, err := s.repo.CreateAppointmentWithDetails(ctx, &db.CreateAppointmentWithDetailsParams{
+		ClientID:       uuid.NullUUID{UUID: input.ClientID, Valid: true},
+		ProfessionalID: input.ProfessionalID,
+		StartTime:      startTime,
+		EndTime:        endTime,
+		Description:    sql.NullString{String: input.Description, Valid: true},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 // RegisterClient registers a new client
@@ -56,10 +89,14 @@ func (s *service) RegisterClient(ctx context.Context, input RegisterClientInput)
 	return client, nil
 }
 
-// GetClientAppointments retrieves appointments for a client with optional status filter
-func (s *service) GetClientAppointments(ctx context.Context, clientID uuid.UUID, statusFilter string) ([]*db.GetAppointmentsByClientWithStatusRow, error) {
+// GetClientAppointments retrieves appointments for a client with optional status filter and pagination
+func (s *service) GetClientAppointments(ctx context.Context, clientID uuid.UUID, statusFilter string, page, pageSize int) ([]*db.GetAppointmentsByClientWithStatusRow, int, error) {
+	offset := (page - 1) * pageSize
+
 	params := &db.GetAppointmentsByClientWithStatusParams{
 		ClientID: uuid.NullUUID{UUID: clientID, Valid: true},
+		Limit:    int32(pageSize),
+		Offset:   int32(offset),
 	}
 
 	// Set optional status filter
@@ -72,10 +109,26 @@ func (s *service) GetClientAppointments(ctx context.Context, clientID uuid.UUID,
 
 	appointments, err := s.repo.GetAppointmentsByClientWithStatus(ctx, params)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return appointments, nil
+	// Get total count for pagination
+	countParams := &db.CountClientAppointmentsWithStatusParams{
+		ClientID: uuid.NullUUID{UUID: clientID, Valid: true},
+	}
+	if statusFilter != "" {
+		countParams.Status = db.NullAppointmentStatus{
+			AppointmentStatus: db.AppointmentStatus(statusFilter),
+			Valid:             true,
+		}
+	}
+
+	total, err := s.repo.CountClientAppointmentsWithStatus(ctx, countParams)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return appointments, int(total), nil
 }
 
 // CancelAppointment cancels an appointment with business logic validation

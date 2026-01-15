@@ -4,9 +4,6 @@ SELECT
     chat_id,
     first_name,
     last_name,
-    phone_number,
-    created_at,
-    updated_at,
     'client' as role,
     NULL as username
 FROM clients 
@@ -20,8 +17,6 @@ SELECT
     first_name,
     last_name,
     phone_number,
-    created_at,
-    updated_at,
     'professional' as role,
     username
 FROM professionals 

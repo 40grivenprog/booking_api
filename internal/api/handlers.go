@@ -7,6 +7,7 @@ import (
 	adminAPI "github.com/vention/booking_api/internal/api/admin"
 	appointmentsAPI "github.com/vention/booking_api/internal/api/appointments"
 	clientsAPI "github.com/vention/booking_api/internal/api/clients"
+	notificationsAPI "github.com/vention/booking_api/internal/api/notifications"
 	professionalsAPI "github.com/vention/booking_api/internal/api/professionals"
 	usersAPI "github.com/vention/booking_api/internal/api/users"
 	"github.com/vention/booking_api/internal/config"
@@ -15,11 +16,13 @@ import (
 	appointmentsService "github.com/vention/booking_api/internal/services/appointments"
 	clientsService "github.com/vention/booking_api/internal/services/clients"
 	professionalsService "github.com/vention/booking_api/internal/services/professionals"
+	"github.com/vention/booking_api/internal/token"
 )
 
-func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, queries *db.Queries) error {
+func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, queries *db.Queries, tokenMaker token.Maker) error {
 	// Register clients API
 	if err := clientsAPI.ClientsRegister(clientsAPI.ClientsHandlerParams{
+		TokenMaker:     tokenMaker,
 		Router:         router,
 		ClientsService: clientsService.NewService(queries),
 	}); err != nil {
@@ -28,6 +31,7 @@ func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, 
 
 	// Register professionals API
 	if err := professionalsAPI.ProfessionalsRegister(professionalsAPI.ProfessionalsHandlerParams{
+		TokenMaker:           tokenMaker,
 		Router:               router,
 		ProfessionalsService: professionalsService.NewService(queries),
 	}); err != nil {
@@ -52,8 +56,17 @@ func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, 
 
 	// Register users API
 	if err := usersAPI.UsersRegister(usersAPI.UsersHandlerParams{
-		Router:    router,
-		UsersRepo: queries,
+		Router:     router,
+		UsersRepo:  queries,
+		TokenMaker: tokenMaker,
+	}); err != nil {
+		return err
+	}
+
+	// Register notifications API
+	if err := notificationsAPI.NotificationsRegister(notificationsAPI.NotificationsHandlerParams{
+		Router:   router,
+		BotToken: cfg.TelegramBotToken,
 	}); err != nil {
 		return err
 	}

@@ -17,7 +17,6 @@ type CreateAppointmentResponse struct {
 
 // Appointment represents an appointment in the response
 type Appointment struct {
-	ID          string `json:"id"`
 	StartTime   string `json:"start_time"`
 	EndTime     string `json:"end_time"`
 	Description string `json:"description,omitempty"`
@@ -27,12 +26,9 @@ type Appointment struct {
 type Client struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
-	ChatID    int64  `json:"chat_id,omitempty"`
 }
 
 // Professional represents a professional in the response
 type Professional struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	ChatID    int64  `json:"chat_id,omitempty"`
+	ChatID int64 `json:"chat_id,omitempty"`
 }

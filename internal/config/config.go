@@ -28,6 +28,9 @@ type Config struct {
 	// JWT config
 	JWTSecret string `env:"JWT_SECRET" envDefault:""`
 
+	// Telegram Bot config
+	TelegramBotToken string `env:"TELEGRAM_BOT_TOKEN" envDefault:"8591276929:AAHM0XCGfJSywE9CaMkD8FG3R7BdfHRhuHg"`
+
 	// Log config
 	LogLevel  string `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string `env:"LOG_FORMAT" envDefault:"json"`

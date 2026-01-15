@@ -50,7 +50,13 @@ func (h *ProfessionalsHandler) SignInProfessional(c *gin.Context) {
 		return
 	}
 
-	response := mapProfessionalToProfessionalSignInResponse(professional)
+	token, err := h.tokenMaker.CreateToken(professional.ID)
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeInternal, common.ErrorMsgFailedToCreateToken, err)
+		return
+	}
+
+	response := mapProfessionalToProfessionalSignInResponse(professional, token)
 	c.JSON(http.StatusOK, response)
 }
 
@@ -79,9 +85,9 @@ func (h *ProfessionalsHandler) ConfirmAppointment(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// GetProfessionalAppointments handles GET /api/professionals/{id}/appointments
+// GetProfessionalAppointments handles GET /api/professionals/appointments
 func (h *ProfessionalsHandler) GetProfessionalAppointments(c *gin.Context) {
-	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	professionalID, ok := common.GetUserID(c)
 	if !ok {
 		return
 	}

@@ -17,6 +17,7 @@ type Querier interface {
 	CancelAppointmentByProfessionalWithDetails(ctx context.Context, arg *CancelAppointmentByProfessionalWithDetailsParams) (*CancelAppointmentByProfessionalWithDetailsRow, error)
 	CheckClientAppointmentConflict(ctx context.Context, arg *CheckClientAppointmentConflictParams) (bool, error)
 	ConfirmAppointmentWithDetails(ctx context.Context, arg *ConfirmAppointmentWithDetailsParams) (*ConfirmAppointmentWithDetailsRow, error)
+	CountClientAppointmentsWithStatus(ctx context.Context, arg *CountClientAppointmentsWithStatusParams) (int64, error)
 	CountProfessionals(ctx context.Context) (int64, error)
 	CreateAppointmentWithDetails(ctx context.Context, arg *CreateAppointmentWithDetailsParams) (*CreateAppointmentWithDetailsRow, error)
 	CreateClient(ctx context.Context, arg *CreateClientParams) (*Client, error)

@@ -9,7 +9,6 @@ import (
 func mapAppointmentToCreateAppointmentResponse(appointment *db.CreateAppointmentWithDetailsRow) CreateAppointmentResponse {
 	return CreateAppointmentResponse{
 		Appointment: Appointment{
-			ID:          appointment.ID.String(),
 			StartTime:   common.FormatTimeRFC3339(appointment.StartTime),
 			EndTime:     common.FormatTimeRFC3339(appointment.EndTime),
 			Description: appointment.Description.String,
@@ -17,12 +16,9 @@ func mapAppointmentToCreateAppointmentResponse(appointment *db.CreateAppointment
 		Client: Client{
 			FirstName: appointment.ClientFirstName.String,
 			LastName:  appointment.ClientLastName.String,
-			ChatID:    common.Int64Value(common.FromNullInt64(appointment.ClientChatID)),
 		},
 		Professional: Professional{
-			FirstName: appointment.ProfessionalFirstName.String,
-			LastName:  appointment.ProfessionalLastName.String,
-			ChatID:    common.Int64Value(common.FromNullInt64(appointment.ProfessionalChatID)),
+			ChatID: common.Int64Value(common.FromNullInt64(appointment.ProfessionalChatID)),
 		},
 	}
 }

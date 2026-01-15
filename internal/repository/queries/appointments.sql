@@ -9,15 +9,11 @@ WITH new_appointment AS (
     RETURNING *
 )
 SELECT 
-    na.id,
     na.start_time,
     na.end_time,
     na.description,
     c.first_name as client_first_name,
     c.last_name as client_last_name,
-    c.chat_id as client_chat_id,
-    p.first_name as professional_first_name,
-    p.last_name as professional_last_name,
     p.chat_id as professional_chat_id
 FROM new_appointment na
 LEFT JOIN clients c ON c.id = na.client_id
@@ -113,17 +109,13 @@ LEFT JOIN professionals p ON p.id = ua.professional_id;
 
 -- name: GetAppointmentsByClientWithStatus :many
 SELECT 
-    a.*,
-    c.id AS client_id_full,
-    c.first_name AS client_first_name,
-    c.last_name AS client_last_name,
-    c.phone_number AS client_phone_number,
-    c.chat_id AS client_chat_id,
-    p.id AS professional_id_full,
-    p.username AS professional_username,
+    a.id,
+    a.start_time,
+    a.end_time,
+    a.description,
+    a.status,
     p.first_name AS professional_first_name,
     p.last_name AS professional_last_name,
-    p.phone_number AS professional_phone_number,
     p.chat_id AS professional_chat_id
 FROM appointments a
 LEFT JOIN clients c ON c.id = a.client_id
@@ -132,7 +124,16 @@ WHERE a.client_id = $1
   AND a.status = $2
   AND a.start_time > NOW()
   AND a.type = 'appointment'
-ORDER BY a.start_time DESC;
+ORDER BY a.start_time ASC
+LIMIT $3 OFFSET $4;
+
+-- name: CountClientAppointmentsWithStatus :one
+SELECT COUNT(*)
+FROM appointments a
+WHERE a.client_id = $1
+  AND a.status = $2
+  AND a.start_time > NOW()
+  AND a.type = 'appointment';
 
 -- name: CancelAppointmentByClientWithDetails :one
 WITH updated_appointment AS (
