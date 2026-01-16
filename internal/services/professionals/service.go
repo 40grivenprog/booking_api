@@ -17,7 +17,7 @@ type Service interface {
 	GetProfessionals(ctx context.Context, dbParams *db.GetProfessionalsParams) ([]*db.GetProfessionalsRow, int, error)
 	SignIn(ctx context.Context, input SignInInput) (*db.Professional, error)
 	ConfirmAppointment(ctx context.Context, input ConfirmAppointmentInput) (*db.ConfirmAppointmentWithDetailsRow, error)
-	GetAppointments(ctx context.Context, professionalID uuid.UUID, statusFilter, dateFilter string) ([]*db.GetAppointmentsByProfessionalWithStatusAndDateRow, error)
+	GetAppointments(ctx context.Context, professionalID uuid.UUID, statusFilter, dateFilter string, page, pageSize int) ([]*db.GetAppointmentsByProfessionalWithStatusAndDateRow, int, error)
 	GetAppointmentDates(ctx context.Context, professionalID uuid.UUID, month time.Time) ([]time.Time, error)
 	CancelAppointment(ctx context.Context, input CancelAppointmentInput) (*db.CancelAppointmentByProfessionalWithDetailsRow, error)
 	CreateUnavailableAppointment(ctx context.Context, input CreateUnavailableAppointmentInput) (*db.Appointment, error)
@@ -120,13 +120,35 @@ func (s *service) ConfirmAppointment(ctx context.Context, input ConfirmAppointme
 	return result, nil
 }
 
-// GetAppointments retrieves appointments with optional filters
-func (s *service) GetAppointments(ctx context.Context, professionalID uuid.UUID, statusFilter, dateFilter string) ([]*db.GetAppointmentsByProfessionalWithStatusAndDateRow, error) {
-	return s.repo.GetAppointmentsByProfessionalWithStatusAndDate(ctx, &db.GetAppointmentsByProfessionalWithStatusAndDateParams{
+// GetAppointments retrieves appointments with optional filters and pagination
+func (s *service) GetAppointments(ctx context.Context, professionalID uuid.UUID, statusFilter, dateFilter string, page, pageSize int) ([]*db.GetAppointmentsByProfessionalWithStatusAndDateRow, int, error) {
+	offset := (page - 1) * pageSize
+
+	params := &db.GetAppointmentsByProfessionalWithStatusAndDateParams{
 		ProfessionalID: professionalID,
 		Column2:        statusFilter,
 		Column3:        dateFilter,
-	})
+		Limit:          int32(pageSize),
+		Offset:         int32(offset),
+	}
+
+	appointments, err := s.repo.GetAppointmentsByProfessionalWithStatusAndDate(ctx, params)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Get total count for pagination
+	countParams := &db.CountProfessionalAppointmentsWithStatusAndDateParams{
+		ProfessionalID: professionalID,
+		Column2:        statusFilter,
+		Column3:        dateFilter,
+	}
+	total, err := s.repo.CountProfessionalAppointmentsWithStatusAndDate(ctx, countParams)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return appointments, int(total), nil
 }
 
 // GetAppointmentDates retrieves distinct dates with appointments for a month

@@ -5,28 +5,32 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/vention/booking_api/internal/services/clients"
+	"github.com/vention/booking_api/internal/services/notifications"
 	"github.com/vention/booking_api/internal/token"
 )
 
 // ClientsHandler handles HTTP requests for clients
 type ClientsHandler struct {
-	clientsService clients.Service
-	tokenMaker     token.Maker
+	clientsService       clients.Service
+	tokenMaker           token.Maker
+	notificationsService notifications.Service
 }
 
 // NewClientsHandler creates a new handler with dependency injection
-func NewClientsHandler(service clients.Service, tokenMaker token.Maker) *ClientsHandler {
+func NewClientsHandler(service clients.Service, tokenMaker token.Maker, notificationsService notifications.Service) *ClientsHandler {
 	return &ClientsHandler{
-		clientsService: service,
-		tokenMaker:     tokenMaker,
+		clientsService:       service,
+		tokenMaker:           tokenMaker,
+		notificationsService: notificationsService,
 	}
 }
 
 // ClientsHandlerParams defines the parameters for the ClientsHandler
 type ClientsHandlerParams struct {
-	Router         *gin.RouterGroup
-	ClientsService clients.Service
-	TokenMaker     token.Maker
+	Router               *gin.RouterGroup
+	ClientsService       clients.Service
+	TokenMaker           token.Maker
+	NotificationsService notifications.Service
 }
 
 // ClientsRegister registers the ClientsHandler with the router
@@ -43,7 +47,11 @@ func ClientsRegister(p ClientsHandlerParams) error {
 		return errors.New("missing token maker")
 	}
 
-	h := NewClientsHandler(p.ClientsService, p.TokenMaker)
+	if p.NotificationsService == nil {
+		return errors.New("missing notifications service")
+	}
+
+	h := NewClientsHandler(p.ClientsService, p.TokenMaker, p.NotificationsService)
 
 	clients := p.Router.Group("/clients")
 	{

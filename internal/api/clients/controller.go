@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	common "github.com/vention/booking_api/internal/api/common"
 	"github.com/vention/booking_api/internal/services/clients"
+	"github.com/vention/booking_api/internal/services/notifications"
 )
 
 // BookAppointment handles POST /api/clients/book_appointment
@@ -45,6 +46,18 @@ func (h *ClientsHandler) BookAppointment(c *gin.Context) {
 
 	if err != nil {
 		common.HandleServiceError(c, err)
+		return
+	}
+
+	err = h.notificationsService.SendAppointmentRequestNotification(c.Request.Context(), notifications.SendAppointmentRequestNotificationInput{
+		ChatID:      common.Int64Value(common.FromNullInt64(result.ProfessionalChatID)),
+		ClientName:  result.ClientFirstName.String + " " + result.ClientLastName.String,
+		StartTime:   common.FormatTimeRFC3339(result.StartTime),
+		EndTime:     common.FormatTimeRFC3339(result.EndTime),
+		Description: result.Description.String,
+	})
+	if err != nil {
+		common.HandleNotificationError(c, err)
 		return
 	}
 
@@ -141,6 +154,15 @@ func (h *ClientsHandler) CancelClientAppointment(c *gin.Context) {
 		common.HandleServiceError(c, err)
 		return
 	}
+
+	err = h.notificationsService.SendAppointmentCancellationNotification(c.Request.Context(), notifications.SendAppointmentCancellationNotificationInput{
+		ChatID:             common.Int64Value(common.FromNullInt64(result.ProfessionalChatID)),
+		StartTime:          common.FormatTimeRFC3339(result.StartTime),
+		EndTime:            common.FormatTimeRFC3339(result.EndTime),
+		RespondentName:     result.ClientFirstName.String + " " + result.ClientLastName.String,
+		CancellationReason: req.CancellationReason,
+		Type:               "client",
+	})
 
 	response := mapAppointmentToCancelClientAppointmentResponse(result)
 	c.JSON(http.StatusOK, response)

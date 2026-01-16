@@ -7,7 +7,6 @@ import (
 	adminAPI "github.com/vention/booking_api/internal/api/admin"
 	appointmentsAPI "github.com/vention/booking_api/internal/api/appointments"
 	clientsAPI "github.com/vention/booking_api/internal/api/clients"
-	notificationsAPI "github.com/vention/booking_api/internal/api/notifications"
 	professionalsAPI "github.com/vention/booking_api/internal/api/professionals"
 	usersAPI "github.com/vention/booking_api/internal/api/users"
 	"github.com/vention/booking_api/internal/config"
@@ -15,16 +14,22 @@ import (
 	adminService "github.com/vention/booking_api/internal/services/admin"
 	appointmentsService "github.com/vention/booking_api/internal/services/appointments"
 	clientsService "github.com/vention/booking_api/internal/services/clients"
+	"github.com/vention/booking_api/internal/services/notifications"
 	professionalsService "github.com/vention/booking_api/internal/services/professionals"
 	"github.com/vention/booking_api/internal/token"
 )
 
 func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, queries *db.Queries, tokenMaker token.Maker) error {
 	// Register clients API
+	notificationsService, err := notifications.NewService(cfg.TelegramBotToken)
+	if err != nil {
+		return err
+	}
 	if err := clientsAPI.ClientsRegister(clientsAPI.ClientsHandlerParams{
-		TokenMaker:     tokenMaker,
-		Router:         router,
-		ClientsService: clientsService.NewService(queries),
+		TokenMaker:           tokenMaker,
+		Router:               router,
+		ClientsService:       clientsService.NewService(queries),
+		NotificationsService: notificationsService,
 	}); err != nil {
 		return err
 	}
@@ -34,6 +39,7 @@ func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, 
 		TokenMaker:           tokenMaker,
 		Router:               router,
 		ProfessionalsService: professionalsService.NewService(queries),
+		NotificationsService: notificationsService,
 	}); err != nil {
 		return err
 	}
@@ -59,14 +65,6 @@ func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, 
 		Router:     router,
 		UsersRepo:  queries,
 		TokenMaker: tokenMaker,
-	}); err != nil {
-		return err
-	}
-
-	// Register notifications API
-	if err := notificationsAPI.NotificationsRegister(notificationsAPI.NotificationsHandlerParams{
-		Router:   router,
-		BotToken: cfg.TelegramBotToken,
 	}); err != nil {
 		return err
 	}

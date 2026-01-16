@@ -19,6 +19,7 @@ type ProfessionalsRepository interface {
 	CancelAppointmentByProfessionalWithDetails(ctx context.Context, arg *db.CancelAppointmentByProfessionalWithDetailsParams) (*db.CancelAppointmentByProfessionalWithDetailsRow, error)
 	CreateUnavailableAppointment(ctx context.Context, arg *db.CreateUnavailableAppointmentParams) (*db.Appointment, error)
 	GetAppointmentsByProfessionalWithStatusAndDate(ctx context.Context, arg *db.GetAppointmentsByProfessionalWithStatusAndDateParams) ([]*db.GetAppointmentsByProfessionalWithStatusAndDateRow, error)
+	CountProfessionalAppointmentsWithStatusAndDate(ctx context.Context, arg *db.CountProfessionalAppointmentsWithStatusAndDateParams) (int64, error)
 	GetProfessionalAppointmentDates(ctx context.Context, arg *db.GetProfessionalAppointmentDatesParams) ([]time.Time, error)
 	GetAppointmentsByProfessionalAndDateWithClient(ctx context.Context, arg *db.GetAppointmentsByProfessionalAndDateWithClientParams) ([]*db.GetAppointmentsByProfessionalAndDateWithClientRow, error)
 	GetProfessionalTimetable(ctx context.Context, arg *db.GetProfessionalTimetableParams) ([]*db.GetProfessionalTimetableRow, error)
