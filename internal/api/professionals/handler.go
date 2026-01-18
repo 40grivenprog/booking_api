@@ -59,7 +59,7 @@ func ProfessionalsRegister(p ProfessionalsHandlerParams) error {
 		professionals.PATCH("/appointments/:appointment_id/cancel", h.CancelAppointment)
 		professionals.POST("/unavailable_appointments", h.CreateUnavailableAppointment)
 		professionals.GET("/:id/availability", h.GetProfessionalAvailability)
-		professionals.GET("/:id/timetable", h.GetProfessionalTimetable)
+		professionals.GET("/timetable", h.GetProfessionalTimetable)
 		professionals.GET("/:id/clients", h.GetProfessionalClients)
 		professionals.GET("/:id/previous_appointments", h.GetPreviousAppointmentsByClient)
 	}

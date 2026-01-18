@@ -300,7 +300,7 @@ func (h *ProfessionalsHandler) GetProfessionalAvailability(c *gin.Context) {
 
 // GetProfessionalTimetable handles GET /api/professionals/:id/timetable
 func (h *ProfessionalsHandler) GetProfessionalTimetable(c *gin.Context) {
-	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	professionalID, ok := common.GetUserID(c)
 	if !ok {
 		return
 	}
