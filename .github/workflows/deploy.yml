@@ -106,14 +106,14 @@ jobs:
           gcloud run jobs update $JOB_NAME \
             --image=${{ steps.image_tag.outputs.image_path }} \
             --region=${{ env.GCP_REGION }} \
-            --update-env-vars="DB_HOST=/cloudsql/${{ env.CONNECTION_NAME }}" \
-            --update-env-vars="DB_PORT=5432" \
-            --update-env-vars="DB_USER=booking_admin" \
-            --update-env-vars="DB_NAME=booking_${{ github.event.inputs.environment }}" \
-            --update-env-vars="DB_SSLMODE=disable" \
-            --update-secrets="DB_PASSWORD=${DB_PASSWORD_SECRET_NAME}:latest" \
-            --update-secrets="JWT_SECRET=${JWT_SECRET_SECRET_NAME}:latest" \
-            --update-cloudsql-instances=${{ env.CONNECTION_NAME }} \
+            --set-env-vars="DB_HOST=/cloudsql/${{ env.CONNECTION_NAME }}" \
+            --set-env-vars="DB_PORT=5432" \
+            --set-env-vars="DB_USER=booking_admin" \
+            --set-env-vars="DB_NAME=booking_${{ github.event.inputs.environment }}" \
+            --set-env-vars="DB_SSLMODE=disable" \
+            --set-secrets="DB_PASSWORD=${DB_PASSWORD_SECRET_NAME}:latest" \
+            --set-secrets="JWT_SECRET=${JWT_SECRET_SECRET_NAME}:latest" \
+            --set-cloudsql-instances=${{ env.CONNECTION_NAME }} \
             --command=/app/migrate \
             --args="up" \
             --project=${{ env.GCP_PROJECT_ID }}
