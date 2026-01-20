@@ -11,7 +11,7 @@ import (
 type Config struct {
 	// Server config
 	ServerHost         string        `env:"SERVER_HOST" envDefault:"0.0.0.0"`
-	ServerPort         int           `env:"SERVER_PORT" envDefault:"8080"`
+	ServerPort         int           `env:"PORT" envDefault:"8080"` // Cloud Run sets PORT automatically
 	ServerReadTimeout  time.Duration `env:"SERVER_READ_TIMEOUT" envDefault:"30s"`
 	ServerWriteTimeout time.Duration `env:"SERVER_WRITE_TIMEOUT" envDefault:"30s"`
 

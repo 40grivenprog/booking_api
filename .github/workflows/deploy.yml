@@ -28,7 +28,10 @@ jobs:
     environment: ${{ github.event.inputs.environment }}
     
     env:
+      # Cloud SQL connection name (format: PROJECT_ID:REGION:INSTANCE_NAME)
       CONNECTION_NAME: ${{ secrets.CLOUD_SQL_CONNECTION_NAME }}
+      # Secret Manager secret names (NOT the secret values!)
+      # These should be names like: booking-app-dev-api-db-password
       DEV_DB_PASSWORD_SECRET: ${{ secrets.DEV_DB_PASSWORD_SECRET }}
       DEV_JWT_SECRET_SECRET: ${{ secrets.DEV_JWT_SECRET_SECRET }}
       PROD_DB_PASSWORD_SECRET: ${{ secrets.PROD_DB_PASSWORD_SECRET }}
@@ -77,17 +80,25 @@ jobs:
       run: |
         echo "Running database migrations for ${{ github.event.inputs.environment }} environment..."
         
-        # Set secrets based on environment
-        if [[ "${{ github.event.inputs.environment }}" == "dev" ]]; then
-          DB_PASSWORD_SECRET="${{ env.DEV_DB_PASSWORD_SECRET }}"
-          JWT_SECRET_SECRET="${{ env.DEV_JWT_SECRET_SECRET }}"
-        else
-          DB_PASSWORD_SECRET="${{ env.PROD_DB_PASSWORD_SECRET }}"
-          JWT_SECRET_SECRET="${{ env.PROD_JWT_SECRET_SECRET }}"
-        fi
-        
         # Create and execute Cloud Run Job for migrations
         JOB_NAME="booking-app-migration-${{ github.event.inputs.environment }}"
+        
+        # Set Secret Manager secret names based on environment
+        # These are NAMES of secrets in GCP Secret Manager, not the secret values themselves
+        if [[ "${{ github.event.inputs.environment }}" == "dev" ]]; then
+          DB_PASSWORD_SECRET_NAME="${{ env.DEV_DB_PASSWORD_SECRET }}"
+          JWT_SECRET_SECRET_NAME="${{ env.DEV_JWT_SECRET_SECRET }}"
+        else
+          DB_PASSWORD_SECRET_NAME="${{ env.PROD_DB_PASSWORD_SECRET }}"
+          JWT_SECRET_SECRET_NAME="${{ env.PROD_JWT_SECRET_SECRET }}"
+        fi
+        
+        # Verify secret names are set
+        if [[ -z "$DB_PASSWORD_SECRET_NAME" ]] || [[ -z "$JWT_SECRET_SECRET_NAME" ]]; then
+          echo "ERROR: Secret Manager secret names are not set in GitHub Secrets!"
+          echo "Expected: Names of secrets in GCP Secret Manager (e.g., booking-app-dev-api-db-password)"
+          exit 1
+        fi
         
         # Check if job exists
         if gcloud run jobs describe $JOB_NAME --region=${{ env.GCP_REGION }} --project=${{ env.GCP_PROJECT_ID }} 2>/dev/null; then
@@ -95,14 +106,14 @@ jobs:
           gcloud run jobs update $JOB_NAME \
             --image=${{ steps.image_tag.outputs.image_path }} \
             --region=${{ env.GCP_REGION }} \
-            --set-env-vars="DB_HOST=/cloudsql/${{ env.CONNECTION_NAME }}" \
-            --set-env-vars="DB_PORT=5432" \
-            --set-env-vars="DB_USER=booking_admin" \
-            --set-env-vars="DB_NAME=booking_${{ github.event.inputs.environment }}" \
-            --set-env-vars="DB_SSLMODE=disable" \
-            --set-secrets="DB_PASSWORD=$DB_PASSWORD_SECRET:latest" \
-            --set-secrets="JWT_SECRET=$JWT_SECRET_SECRET:latest" \
-            --set-cloudsql-instances=${{ env.CONNECTION_NAME }} \
+            --update-env-vars="DB_HOST=/cloudsql/${{ env.CONNECTION_NAME }}" \
+            --update-env-vars="DB_PORT=5432" \
+            --update-env-vars="DB_USER=booking_admin" \
+            --update-env-vars="DB_NAME=booking_${{ github.event.inputs.environment }}" \
+            --update-env-vars="DB_SSLMODE=disable" \
+            --update-secrets="DB_PASSWORD=${DB_PASSWORD_SECRET_NAME}:latest" \
+            --update-secrets="JWT_SECRET=${JWT_SECRET_SECRET_NAME}:latest" \
+            --update-cloudsql-instances=${{ env.CONNECTION_NAME }} \
             --command=/app/migrate \
             --args="up" \
             --project=${{ env.GCP_PROJECT_ID }}
@@ -116,8 +127,8 @@ jobs:
             --set-env-vars="DB_USER=booking_admin" \
             --set-env-vars="DB_NAME=booking_${{ github.event.inputs.environment }}" \
             --set-env-vars="DB_SSLMODE=disable" \
-            --set-secrets="DB_PASSWORD=$DB_PASSWORD_SECRET:latest" \
-            --set-secrets="JWT_SECRET=$JWT_SECRET_SECRET:latest" \
+            --set-secrets="DB_PASSWORD=${DB_PASSWORD_SECRET_NAME}:latest" \
+            --set-secrets="JWT_SECRET=${JWT_SECRET_SECRET_NAME}:latest" \
             --set-cloudsql-instances=${{ env.CONNECTION_NAME }} \
             --command=/app/migrate \
             --args="up" \

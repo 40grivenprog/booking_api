@@ -103,8 +103,8 @@ func Start(ctx context.Context, cfg *config.Config, logger zerolog.Logger) error
 		}
 	}()
 
-	// Give server a moment to start
-	time.Sleep(100 * time.Millisecond)
+	// Give server more time to start (Cloud Run needs this)
+	time.Sleep(500 * time.Millisecond)
 
 	// Check if server started successfully
 	select {
@@ -113,7 +113,7 @@ func Start(ctx context.Context, cfg *config.Config, logger zerolog.Logger) error
 	default:
 		// Server started successfully
 		logger.Info().Msg("HTTP server started successfully")
-	}
+		}
 
 	// Wait for context cancellation
 	<-ctx.Done()
