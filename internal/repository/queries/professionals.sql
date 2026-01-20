@@ -8,9 +8,15 @@ SELECT * FROM professionals
 WHERE username = $1;
 
 -- name: GetProfessionals :many
-SELECT * FROM professionals
+SELECT id, first_name, last_name
+FROM professionals
 WHERE chat_id is not null
-ORDER BY created_at DESC;
+ORDER BY first_name, last_name
+LIMIT $1 OFFSET $2;
+
+-- name: CountProfessionals :one
+SELECT COUNT(*) FROM professionals
+WHERE chat_id is not null;
 
 -- name: UpdateProfessionalChatID :one
 UPDATE professionals
@@ -21,17 +27,11 @@ RETURNING *;
 -- name: GetAppointmentsByProfessionalWithStatusAndDate :many
 SELECT 
     a.id,
-    a.type,
     a.start_time,
     a.end_time,
     a.description,
-    a.status,
-    a.created_at,
-    a.updated_at,
-    a.client_id,
     c.first_name as client_first_name,
-    c.last_name as client_last_name,
-    c.phone_number as client_phone_number
+    c.last_name as client_last_name
 FROM appointments a
 LEFT JOIN clients c ON a.client_id = c.id
 WHERE a.professional_id = $1
@@ -39,7 +39,17 @@ WHERE a.professional_id = $1
     AND ($3 = '' OR DATE(a.start_time) = $3::date)
     AND a.start_time > NOW()
     AND a.type = 'appointment'
-ORDER BY a.start_time ASC;
+ORDER BY a.start_time ASC
+LIMIT $4 OFFSET $5;
+
+-- name: CountProfessionalAppointmentsWithStatusAndDate :one
+SELECT COUNT(*)
+FROM appointments a
+WHERE a.professional_id = $1
+    AND ($2 = '' OR a.status = $2::appointment_status)
+    AND ($3 = '' OR DATE(a.start_time) = $3::date)
+    AND a.start_time > NOW()
+    AND a.type = 'appointment';
 
 -- name: GetProfessionalClients :many
 SELECT id, first_name, last_name

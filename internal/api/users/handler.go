@@ -4,12 +4,14 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vention/booking_api/internal/token"
 )
 
 // UsersHandlerParams contains the parameters needed to register users handlers
 type UsersHandlerParams struct {
-	Router    *gin.RouterGroup
-	UsersRepo UsersRepository
+	Router     *gin.RouterGroup
+	UsersRepo  UsersRepository
+	TokenMaker token.Maker
 }
 
 // UsersRegister registers all users-related routes
@@ -22,8 +24,12 @@ func UsersRegister(params UsersHandlerParams) error {
 		return errors.New("missing users repository")
 	}
 
+	if params.TokenMaker == nil {
+		return errors.New("missing token maker")
+	}
+
 	// Create controller
-	controller := NewUsersController(params.UsersRepo)
+	controller := NewUsersController(params.UsersRepo, params.TokenMaker)
 
 	// Create users group
 	users := params.Router.Group("/users")

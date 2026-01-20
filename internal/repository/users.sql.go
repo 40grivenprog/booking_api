@@ -8,7 +8,6 @@ package db
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -20,8 +19,6 @@ SELECT
     first_name,
     last_name,
     phone_number,
-    created_at,
-    updated_at,
     'client' as role,
     NULL as username
 FROM clients 
@@ -35,8 +32,6 @@ SELECT
     first_name,
     last_name,
     phone_number,
-    created_at,
-    updated_at,
     'professional' as role,
     username
 FROM professionals 
@@ -49,8 +44,6 @@ type GetUserByChatIDRow struct {
 	FirstName   string         `json:"first_name"`
 	LastName    string         `json:"last_name"`
 	PhoneNumber sql.NullString `json:"phone_number"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
 	Role        string         `json:"role"`
 	Username    interface{}    `json:"username"`
 }
@@ -64,8 +57,6 @@ func (q *Queries) GetUserByChatID(ctx context.Context, chatID sql.NullInt64) (*G
 		&i.FirstName,
 		&i.LastName,
 		&i.PhoneNumber,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.Role,
 		&i.Username,
 	)

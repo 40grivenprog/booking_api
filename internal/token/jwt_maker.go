@@ -3,8 +3,10 @@ package token
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 const minSecretKeySize = 32
@@ -20,6 +22,18 @@ func NewJWTMaker(secretKey string) (Maker, error) {
 		return nil, fmt.Errorf("invalid key size: must be at least %d characters", minSecretKeySize)
 	}
 	return &JWTMaker{secretKey}, nil
+}
+
+// CreateToken creates a new token for a specific email and duration
+func (maker *JWTMaker) CreateToken(id uuid.UUID) (string, error) {
+	payload, err := NewPayload(id, 30*time.Minute)
+	if err != nil {
+		return "", err
+	}
+
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, payload)
+	token, err := jwtToken.SignedString([]byte(maker.secretKey))
+	return token, err
 }
 
 // VerifyToken checks if the token is valid or not

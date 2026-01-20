@@ -1,6 +1,10 @@
 package clients
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 // RegisterClientInput represents the input for registering a client
 type RegisterClientInput struct {
@@ -15,4 +19,13 @@ type CancelAppointmentInput struct {
 	ClientID           uuid.UUID
 	AppointmentID      uuid.UUID
 	CancellationReason string
+}
+
+// CreateAppointmentInput represents the input for creating an appointment
+type CreateAppointmentInput struct {
+	ClientID       uuid.UUID
+	ProfessionalID uuid.UUID
+	StartTime      time.Time
+	EndTime        time.Time
+	Description    string
 }

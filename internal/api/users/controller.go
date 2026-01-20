@@ -7,17 +7,20 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/vention/booking_api/internal/api/common"
+	"github.com/vention/booking_api/internal/token"
 )
 
 // UsersController handles user-related HTTP requests
 type UsersController struct {
-	usersRepo UsersRepository
+	usersRepo  UsersRepository
+	tokenMaker token.Maker
 }
 
 // NewUsersController creates a new users controller
-func NewUsersController(usersRepo UsersRepository) *UsersController {
+func NewUsersController(usersRepo UsersRepository, tokenMaker token.Maker) *UsersController {
 	return &UsersController{
-		usersRepo: usersRepo,
+		usersRepo:  usersRepo,
+		tokenMaker: tokenMaker,
 	}
 }
 
@@ -38,17 +41,21 @@ func (c *UsersController) GetUserByChatID(ctx *gin.Context) {
 		return
 	}
 
+	token, err := c.tokenMaker.CreateToken(user.ID)
+	if err != nil {
+		common.HandleErrorResponse(ctx, http.StatusInternalServerError, common.ErrorTypeInternal, common.ErrorMsgFailedToCreateToken, err)
+		return
+	}
+
 	// Return success response
 	ctx.JSON(http.StatusOK, GetUserByChatIDResponse{
 		User: User{
-			ID:          user.ID.String(),
-			ChatID:      common.FromNullInt64(user.ChatID),
-			FirstName:   user.FirstName,
-			LastName:    user.LastName,
-			Role:        user.Role,
-			PhoneNumber: common.FromNullString(user.PhoneNumber),
-			CreatedAt:   common.FormatTimeWithTimezone(user.CreatedAt),
-			UpdatedAt:   common.FormatTimeWithTimezone(user.UpdatedAt),
+			ID:        user.ID.String(),
+			ChatID:    common.FromNullInt64(user.ChatID),
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+			Role:      user.Role,
+			Token:     token,
 		},
 	})
 }

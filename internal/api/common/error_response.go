@@ -31,6 +31,14 @@ func HandleErrorResponse(c *gin.Context, statusCode int, errorType, message stri
 	c.JSON(statusCode, errorResp)
 }
 
+func HandleNotificationError(c *gin.Context, err error) {
+	logger := GetLogger(c)
+
+	logger.Error().
+		Err(err).
+		Msg("Failed to send notification")
+}
+
 // ErrorResponse represents error responses
 type ErrorResponse struct {
 	Error     string `json:"error"`

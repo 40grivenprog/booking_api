@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -14,9 +16,17 @@ const (
 	authorizationTypeBearer = "Bearer"
 )
 
+var skipPaths = []string{"/api/users/:chat_id", "/api/clients/register", "/api/professionals/sign_in", "/api/admins/professionals"}
+
 // AuthMiddleware creates a gin middleware for authorization
 func AuthMiddleware(tokenMaker token.Maker) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if slices.Contains(skipPaths, c.FullPath()) {
+			fmt.Println("skipping path", c.Request.URL.Path)
+			c.Next()
+			return
+		}
+
 		authorizationHeader := c.GetHeader(authorizationHeaderKey)
 
 		if len(authorizationHeader) == 0 {
@@ -40,12 +50,13 @@ func AuthMiddleware(tokenMaker token.Maker) gin.HandlerFunc {
 		}
 
 		accessToken := fields[1]
-		_, err := tokenMaker.VerifyToken(accessToken)
+		payload, err := tokenMaker.VerifyToken(accessToken)
 		if err != nil {
 			common.HandleErrorResponse(c, http.StatusUnauthorized, common.ErrorTypeAuth, common.ErrorMsgInvalidToken, err)
 			c.Abort()
 			return
 		}
+		c.Set(common.UserIDKey, payload.UserID)
 
 		c.Next()
 	}

@@ -2,6 +2,7 @@ package common
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -93,4 +94,26 @@ func RequireQueryParam(c *gin.Context, paramName string) (string, bool) {
 		return "", false
 	}
 	return value, true
+}
+
+// ParseIntQuery parses an integer query parameter with default, min, and max values
+func ParseIntQuery(c *gin.Context, paramName string, defaultValue, minValue, maxValue int) int {
+	valueStr := c.Query(paramName)
+	if valueStr == "" {
+		return defaultValue
+	}
+
+	value, err := strconv.Atoi(valueStr)
+	if err != nil {
+		return defaultValue
+	}
+
+	if value < minValue {
+		return minValue
+	}
+	if value > maxValue {
+		return maxValue
+	}
+
+	return value
 }

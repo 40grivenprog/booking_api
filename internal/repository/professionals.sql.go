@@ -13,6 +13,41 @@ import (
 	"github.com/google/uuid"
 )
 
+const CountProfessionalAppointmentsWithStatusAndDate = `-- name: CountProfessionalAppointmentsWithStatusAndDate :one
+SELECT COUNT(*)
+FROM appointments a
+WHERE a.professional_id = $1
+    AND ($2 = '' OR a.status = $2::appointment_status)
+    AND ($3 = '' OR DATE(a.start_time) = $3::date)
+    AND a.start_time > NOW()
+    AND a.type = 'appointment'
+`
+
+type CountProfessionalAppointmentsWithStatusAndDateParams struct {
+	ProfessionalID uuid.UUID   `json:"professional_id"`
+	Column2        interface{} `json:"column_2"`
+	Column3        interface{} `json:"column_3"`
+}
+
+func (q *Queries) CountProfessionalAppointmentsWithStatusAndDate(ctx context.Context, arg *CountProfessionalAppointmentsWithStatusAndDateParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, CountProfessionalAppointmentsWithStatusAndDate, arg.ProfessionalID, arg.Column2, arg.Column3)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const CountProfessionals = `-- name: CountProfessionals :one
+SELECT COUNT(*) FROM professionals
+WHERE chat_id is not null
+`
+
+func (q *Queries) CountProfessionals(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, CountProfessionals)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const CreateProfessional = `-- name: CreateProfessional :one
 INSERT INTO professionals (username, first_name, last_name, phone_number, password_hash, chat_id)
 VALUES ($1, $2, $3, $4, $5, $6)
@@ -55,17 +90,11 @@ func (q *Queries) CreateProfessional(ctx context.Context, arg *CreateProfessiona
 const GetAppointmentsByProfessionalWithStatusAndDate = `-- name: GetAppointmentsByProfessionalWithStatusAndDate :many
 SELECT 
     a.id,
-    a.type,
     a.start_time,
     a.end_time,
     a.description,
-    a.status,
-    a.created_at,
-    a.updated_at,
-    a.client_id,
     c.first_name as client_first_name,
-    c.last_name as client_last_name,
-    c.phone_number as client_phone_number
+    c.last_name as client_last_name
 FROM appointments a
 LEFT JOIN clients c ON a.client_id = c.id
 WHERE a.professional_id = $1
@@ -74,31 +103,34 @@ WHERE a.professional_id = $1
     AND a.start_time > NOW()
     AND a.type = 'appointment'
 ORDER BY a.start_time ASC
+LIMIT $4 OFFSET $5
 `
 
 type GetAppointmentsByProfessionalWithStatusAndDateParams struct {
 	ProfessionalID uuid.UUID   `json:"professional_id"`
 	Column2        interface{} `json:"column_2"`
 	Column3        interface{} `json:"column_3"`
+	Limit          int32       `json:"limit"`
+	Offset         int32       `json:"offset"`
 }
 
 type GetAppointmentsByProfessionalWithStatusAndDateRow struct {
-	ID                uuid.UUID             `json:"id"`
-	Type              AppointmentType       `json:"type"`
-	StartTime         time.Time             `json:"start_time"`
-	EndTime           time.Time             `json:"end_time"`
-	Description       sql.NullString        `json:"description"`
-	Status            NullAppointmentStatus `json:"status"`
-	CreatedAt         time.Time             `json:"created_at"`
-	UpdatedAt         time.Time             `json:"updated_at"`
-	ClientID          uuid.NullUUID         `json:"client_id"`
-	ClientFirstName   sql.NullString        `json:"client_first_name"`
-	ClientLastName    sql.NullString        `json:"client_last_name"`
-	ClientPhoneNumber sql.NullString        `json:"client_phone_number"`
+	ID              uuid.UUID      `json:"id"`
+	StartTime       time.Time      `json:"start_time"`
+	EndTime         time.Time      `json:"end_time"`
+	Description     sql.NullString `json:"description"`
+	ClientFirstName sql.NullString `json:"client_first_name"`
+	ClientLastName  sql.NullString `json:"client_last_name"`
 }
 
 func (q *Queries) GetAppointmentsByProfessionalWithStatusAndDate(ctx context.Context, arg *GetAppointmentsByProfessionalWithStatusAndDateParams) ([]*GetAppointmentsByProfessionalWithStatusAndDateRow, error) {
-	rows, err := q.db.QueryContext(ctx, GetAppointmentsByProfessionalWithStatusAndDate, arg.ProfessionalID, arg.Column2, arg.Column3)
+	rows, err := q.db.QueryContext(ctx, GetAppointmentsByProfessionalWithStatusAndDate,
+		arg.ProfessionalID,
+		arg.Column2,
+		arg.Column3,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -108,17 +140,11 @@ func (q *Queries) GetAppointmentsByProfessionalWithStatusAndDate(ctx context.Con
 		var i GetAppointmentsByProfessionalWithStatusAndDateRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.Type,
 			&i.StartTime,
 			&i.EndTime,
 			&i.Description,
-			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.ClientID,
 			&i.ClientFirstName,
 			&i.ClientLastName,
-			&i.ClientPhoneNumber,
 		); err != nil {
 			return nil, err
 		}
@@ -198,31 +224,34 @@ func (q *Queries) GetProfessionalClients(ctx context.Context, professionalID uui
 }
 
 const GetProfessionals = `-- name: GetProfessionals :many
-SELECT id, chat_id, first_name, last_name, phone_number, username, password_hash, created_at, updated_at FROM professionals
+SELECT id, first_name, last_name
+FROM professionals
 WHERE chat_id is not null
-ORDER BY created_at DESC
+ORDER BY first_name, last_name
+LIMIT $1 OFFSET $2
 `
 
-func (q *Queries) GetProfessionals(ctx context.Context) ([]*Professional, error) {
-	rows, err := q.db.QueryContext(ctx, GetProfessionals)
+type GetProfessionalsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type GetProfessionalsRow struct {
+	ID        uuid.UUID `json:"id"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+}
+
+func (q *Queries) GetProfessionals(ctx context.Context, arg *GetProfessionalsParams) ([]*GetProfessionalsRow, error) {
+	rows, err := q.db.QueryContext(ctx, GetProfessionals, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []*Professional{}
+	items := []*GetProfessionalsRow{}
 	for rows.Next() {
-		var i Professional
-		if err := rows.Scan(
-			&i.ID,
-			&i.ChatID,
-			&i.FirstName,
-			&i.LastName,
-			&i.PhoneNumber,
-			&i.Username,
-			&i.PasswordHash,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
+		var i GetProfessionalsRow
+		if err := rows.Scan(&i.ID, &i.FirstName, &i.LastName); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -28,6 +29,9 @@ type Config struct {
 	// JWT config
 	JWTSecret string `env:"JWT_SECRET" envDefault:""`
 
+	// Telegram Bot config
+	TelegramBotToken string `env:"TELEGRAM_BOT_TOKEN" envDefault:""`
+
 	// Log config
 	LogLevel  string `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat string `env:"LOG_FORMAT" envDefault:"json"`
@@ -53,6 +57,13 @@ func Load() (*Config, error) {
 }
 
 func (c *Config) GetDSN() string {
+	// If DB_HOST starts with /cloudsql/, it's a Unix socket connection
+	// For Unix socket, we don't specify port (it's ignored by PostgreSQL driver)
+	if strings.HasPrefix(c.DBHost, "/cloudsql/") {
+		return fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=%s timezone=Europe/Berlin",
+			c.DBHost, c.DBUser, c.DBPassword, c.DBName, c.DBSSLMode)
+	}
+	// For TCP/IP connection, include port
 	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s timezone=Europe/Berlin",
 		c.DBHost, c.DBPort, c.DBUser, c.DBPassword, c.DBName, c.DBSSLMode)
 }

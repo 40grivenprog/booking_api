@@ -58,6 +58,7 @@ const (
 
 	// Internal errors
 	ErrorMsgInternalServerError = "Internal server error"
+	ErrorMsgFailedToCreateToken = "Failed to create token"
 )
 
 // User roles

@@ -7,32 +7,30 @@ import (
 	db "github.com/vention/booking_api/internal/repository"
 )
 
-func mapProfessionalsToGetProfessionalsResponse(professionals []*db.Professional) GetProfessionalsResponse {
-	responseUsers := make([]User, len(professionals))
-	for i, prof := range professionals {
-		user := User{
-			ID:          prof.ID.String(),
-			Username:    prof.Username,
-			FirstName:   prof.FirstName,
-			LastName:    prof.LastName,
-			UserType:    common.UserTypeProfessional,
-			PhoneNumber: common.FromNullString(prof.PhoneNumber),
-			ChatID:      common.FromNullInt64(prof.ChatID),
-			CreatedAt:   common.FormatTimeWithTimezone(prof.CreatedAt),
-			UpdatedAt:   common.FormatTimeWithTimezone(prof.UpdatedAt),
+func mapProfessionalsToGetProfessionalsResponse(rows []*db.GetProfessionalsRow, total, page, pageSize int) GetProfessionalsResponse {
+	responseItems := make([]GetProfessionalsResponseItem, len(rows))
+	for i, row := range rows {
+		responseItems[i] = GetProfessionalsResponseItem{
+			ID:        row.ID.String(),
+			FirstName: row.FirstName,
+			LastName:  row.LastName,
 		}
-
-		responseUsers[i] = user
 	}
 
-	response := GetProfessionalsResponse{
-		Professionals: responseUsers,
-	}
+	offset := (page - 1) * pageSize
+	hasNextPage := offset+pageSize < total
 
-	return response
+	return GetProfessionalsResponse{
+		Professionals: responseItems,
+		Pagination: common.PaginationResponse{
+			HasNextPage: hasNextPage,
+			Page:        page,
+			PageSize:    pageSize,
+		},
+	}
 }
 
-func mapProfessionalToProfessionalSignInResponse(professional *db.Professional) ProfessionalSignInResponse {
+func mapProfessionalToProfessionalSignInResponse(professional *db.Professional, token string) ProfessionalSignInResponse {
 	responseUser := User{
 		ID:          professional.ID.String(),
 		Username:    professional.Username,
@@ -41,6 +39,7 @@ func mapProfessionalToProfessionalSignInResponse(professional *db.Professional) 
 		Role:        common.RoleProfessional,
 		PhoneNumber: common.FromNullString(professional.PhoneNumber),
 		ChatID:      common.FromNullInt64(professional.ChatID),
+		Token:       token,
 		CreatedAt:   common.FormatTimeWithTimezone(professional.CreatedAt),
 		UpdatedAt:   common.FormatTimeWithTimezone(professional.UpdatedAt),
 	}
@@ -52,23 +51,14 @@ func mapProfessionalToProfessionalSignInResponse(professional *db.Professional) 
 
 func mapAppointmentToConfirmAppointmentResponse(appointment *db.ConfirmAppointmentWithDetailsRow) ConfirmAppointmentResponse {
 	return ConfirmAppointmentResponse{
-		Appointment: AppointmentConfirm{
-			ID:        appointment.ID.String(),
-			Status:    string(appointment.Status.AppointmentStatus),
+		Appointment: ConfirmAppointmentResponseAppointmentItem{
 			StartTime: common.FormatTimeRFC3339(appointment.StartTime),
 			EndTime:   common.FormatTimeRFC3339(appointment.EndTime),
-			CreatedAt: common.FormatTimeRFC3339(appointment.CreatedAt),
-			UpdatedAt: common.FormatTimeRFC3339(appointment.UpdatedAt),
 		},
-		Client: ClientConfirm{
-			ID:        appointment.ClientID.UUID.String(),
-			FirstName: appointment.ClientFirstName.String,
-			LastName:  appointment.ClientLastName.String,
-			ChatID:    appointment.ClientChatID.Int64,
+		Client: ConfirmAppointmentResponseClientItem{
+			ChatID: appointment.ClientChatID.Int64,
 		},
-		Professional: ProfessionalConfirm{
-			ID:        appointment.ProfessionalIDFull.String(),
-			Username:  appointment.ProfessionalUsername.String,
+		Professional: ConfirmAppointmentResponseProfessionalItem{
 			FirstName: appointment.ProfessionalFirstName.String,
 			LastName:  appointment.ProfessionalLastName.String,
 		},
@@ -76,30 +66,37 @@ func mapAppointmentToConfirmAppointmentResponse(appointment *db.ConfirmAppointme
 }
 
 // mapAppointmentsToGetProfessionalAppointmentsResponse maps a list of appointments to a GetProfessionalAppointmentsResponse
-func mapAppointmentsToGetProfessionalAppointmentsResponse(appointments []*db.GetAppointmentsByProfessionalWithStatusAndDateRow) GetProfessionalAppointmentsResponse {
-	responseAppointments := make([]ProfessionalAppointment, len(appointments))
+func mapAppointmentsToGetProfessionalAppointmentsResponse(appointments []*db.GetAppointmentsByProfessionalWithStatusAndDateRow, total, page, pageSize int) GetProfessionalAppointmentsResponse {
+	responseAppointments := make([]GetProfessionalAppointmentsResponseItem, len(appointments))
 	for i, appt := range appointments {
-		appointment := ProfessionalAppointment{
+		appointment := GetProfessionalAppointmentsResponseItem{
 			ID:          appt.ID.String(),
-			Type:        string(appt.Type),
 			StartTime:   common.FormatTimeRFC3339(appt.StartTime),
 			EndTime:     common.FormatTimeRFC3339(appt.EndTime),
 			Description: appt.Description.String,
-			Status:      string(appt.Status.AppointmentStatus),
-			CreatedAt:   common.FormatTimeRFC3339(appt.CreatedAt),
-			UpdatedAt:   common.FormatTimeRFC3339(appt.UpdatedAt),
 		}
-		appointment.Client = &ProfessionalAppointmentClient{
-			ID:          appt.ClientID.UUID.String(),
-			FirstName:   appt.ClientFirstName.String,
-			LastName:    appt.ClientLastName.String,
-			PhoneNumber: &appt.ClientPhoneNumber.String,
+
+		// Only include client if we have client data
+		if appt.ClientFirstName.Valid && appt.ClientLastName.Valid {
+			appointment.Client = &GetProfessionalAppointmentsResponseClient{
+				FirstName: appt.ClientFirstName.String,
+				LastName:  appt.ClientLastName.String,
+			}
 		}
+
 		responseAppointments[i] = appointment
 	}
 
+	offset := (page - 1) * pageSize
+	hasNextPage := offset+pageSize < total
+
 	response := GetProfessionalAppointmentsResponse{
 		Appointments: responseAppointments,
+		Pagination: common.PaginationResponse{
+			HasNextPage: hasNextPage,
+			Page:        page,
+			PageSize:    pageSize,
+		},
 	}
 
 	return response
@@ -136,14 +133,11 @@ func mapAppointmentToCancelAppointmentResponse(appointment *db.CancelAppointment
 func mapAppointmentToCreateUnavailableAppointmentResponse(appointment *db.Appointment) CreateUnavailableAppointmentResponse {
 	return CreateUnavailableAppointmentResponse{
 		Appointment: UnavailableAppointment{
-			ID:          appointment.ID.String(),
 			Type:        string(appointment.Type),
 			StartTime:   common.FormatTimeRFC3339(appointment.StartTime),
 			EndTime:     common.FormatTimeRFC3339(appointment.EndTime),
 			Status:      string(appointment.Status.AppointmentStatus),
 			Description: appointment.Description.String,
-			CreatedAt:   common.FormatTimeRFC3339(appointment.CreatedAt),
-			UpdatedAt:   common.FormatTimeRFC3339(appointment.UpdatedAt),
 		},
 	}
 }

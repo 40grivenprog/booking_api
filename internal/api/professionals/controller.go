@@ -6,19 +6,31 @@ import (
 
 	"github.com/gin-gonic/gin"
 	common "github.com/vention/booking_api/internal/api/common"
+	db "github.com/vention/booking_api/internal/repository"
+	"github.com/vention/booking_api/internal/services/notifications"
 	"github.com/vention/booking_api/internal/services/professionals"
 	"github.com/vention/booking_api/internal/util"
 )
 
 // GetProfessionals handles GET /api/professionals
 func (h *ProfessionalsHandler) GetProfessionals(c *gin.Context) {
-	professionals, err := h.professionalsService.GetProfessionals(c.Request.Context())
+	page := common.ParseIntQuery(c, "page", 1, 1, 10000)
+	pageSize := common.ParseIntQuery(c, "pageSize", 15, 1, 100)
+
+	offset := (page - 1) * pageSize
+
+	dbParams := &db.GetProfessionalsParams{
+		Limit:  int32(pageSize),
+		Offset: int32(offset),
+	}
+
+	professionals, total, err := h.professionalsService.GetProfessionals(c.Request.Context(), dbParams)
 	if err != nil {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToRetrieveProfessionals, err)
 		return
 	}
 
-	response := mapProfessionalsToGetProfessionalsResponse(professionals)
+	response := mapProfessionalsToGetProfessionalsResponse(professionals, total, page, pageSize)
 	c.JSON(http.StatusOK, response)
 }
 
@@ -39,13 +51,19 @@ func (h *ProfessionalsHandler) SignInProfessional(c *gin.Context) {
 		return
 	}
 
-	response := mapProfessionalToProfessionalSignInResponse(professional)
+	token, err := h.tokenMaker.CreateToken(professional.ID)
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeInternal, common.ErrorMsgFailedToCreateToken, err)
+		return
+	}
+
+	response := mapProfessionalToProfessionalSignInResponse(professional, token)
 	c.JSON(http.StatusOK, response)
 }
 
-// ConfirmAppointment handles PATCH /api/professionals/{id}/appointments/{appointment_id}/confirm
+// ConfirmAppointment handles PATCH /api/professionals/appointments/{appointment_id}/confirm
 func (h *ProfessionalsHandler) ConfirmAppointment(c *gin.Context) {
-	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	professionalID, ok := common.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -64,13 +82,24 @@ func (h *ProfessionalsHandler) ConfirmAppointment(c *gin.Context) {
 		return
 	}
 
+	err = h.notificationsService.SendAppointmentConfirmationNotification(c.Request.Context(), notifications.SendAppointmentConfirmationNotificationInput{
+		ChatID:           common.Int64Value(common.FromNullInt64(result.ClientChatID)),
+		StartTime:        common.FormatTimeRFC3339(result.StartTime),
+		EndTime:          common.FormatTimeRFC3339(result.EndTime),
+		ProfessionalName: result.ProfessionalFirstName.String + " " + result.ProfessionalLastName.String,
+	})
+	if err != nil {
+		common.HandleNotificationError(c, err)
+		return
+	}
+
 	response := mapAppointmentToConfirmAppointmentResponse(result)
 	c.JSON(http.StatusOK, response)
 }
 
-// GetProfessionalAppointments handles GET /api/professionals/{id}/appointments
+// GetProfessionalAppointments handles GET /api/professionals/appointments
 func (h *ProfessionalsHandler) GetProfessionalAppointments(c *gin.Context) {
-	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	professionalID, ok := common.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -87,13 +116,17 @@ func (h *ProfessionalsHandler) GetProfessionalAppointments(c *gin.Context) {
 		}
 	}
 
-	appointments, err := h.professionalsService.GetAppointments(c.Request.Context(), professionalID, statusFilter, dateFilter)
+	// Parse pagination parameters: page (min 1, default 1) and pageSize (min 1, default 15)
+	page := common.ParseIntQuery(c, "page", 1, 1, 10000)
+	pageSize := common.ParseIntQuery(c, "pageSize", 15, 1, 100)
+
+	appointments, total, err := h.professionalsService.GetAppointments(c.Request.Context(), professionalID, statusFilter, dateFilter, page, pageSize)
 	if err != nil {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToRetrieveAppointments, err)
 		return
 	}
 
-	response := mapAppointmentsToGetProfessionalAppointmentsResponse(appointments)
+	response := mapAppointmentsToGetProfessionalAppointmentsResponse(appointments, total, page, pageSize)
 	c.JSON(http.StatusOK, response)
 }
 
@@ -134,9 +167,9 @@ func (h *ProfessionalsHandler) GetProfessionalAppointmentDates(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// CancelAppointment handles PATCH /api/professionals/{id}/appointments/{appointment_id}/cancel
+// CancelAppointment handles PATCH /api/professionals/appointments/{appointment_id}/cancel
 func (h *ProfessionalsHandler) CancelAppointment(c *gin.Context) {
-	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	professionalID, ok := common.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -161,13 +194,26 @@ func (h *ProfessionalsHandler) CancelAppointment(c *gin.Context) {
 		return
 	}
 
+	err = h.notificationsService.SendAppointmentCancellationNotification(c.Request.Context(), notifications.SendAppointmentCancellationNotificationInput{
+		ChatID:             common.Int64Value(common.FromNullInt64(result.ClientChatID)),
+		StartTime:          common.FormatTimeRFC3339(result.StartTime),
+		EndTime:            common.FormatTimeRFC3339(result.EndTime),
+		RespondentName:     result.ProfessionalFirstName.String + " " + result.ProfessionalLastName.String,
+		CancellationReason: req.CancellationReason,
+		Type:               "professional",
+	})
+	if err != nil {
+		common.HandleNotificationError(c, err)
+		return
+	}
+
 	response := mapAppointmentToCancelAppointmentResponse(result)
 	c.JSON(http.StatusOK, response)
 }
 
-// CreateUnavailableAppointment handles POST /api/professionals/{id}/unavailable_appointments
+// CreateUnavailableAppointment handles POST /api/professionals/unavailable_appointments
 func (h *ProfessionalsHandler) CreateUnavailableAppointment(c *gin.Context) {
-	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	professionalID, ok := common.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -202,7 +248,7 @@ func (h *ProfessionalsHandler) CreateUnavailableAppointment(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-// GetProfessionalAvailability handles GET /api/professionals/{id}/availability
+// GetProfessionalAvailability handles GET /api/professionals/:id/availability
 func (h *ProfessionalsHandler) GetProfessionalAvailability(c *gin.Context) {
 	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
 	if !ok {
@@ -238,11 +284,9 @@ func (h *ProfessionalsHandler) GetProfessionalAvailability(c *gin.Context) {
 	responseSlots := make([]TimeSlot, len(slots))
 	for i, slot := range slots {
 		responseSlots[i] = TimeSlot{
-			StartTime:   slot.StartTime,
-			EndTime:     slot.EndTime,
-			Available:   slot.Available,
-			Type:        slot.Type,
-			Description: slot.Description,
+			StartTime: slot.StartTime,
+			EndTime:   slot.EndTime,
+			Available: slot.Available,
 		}
 	}
 
@@ -256,7 +300,7 @@ func (h *ProfessionalsHandler) GetProfessionalAvailability(c *gin.Context) {
 
 // GetProfessionalTimetable handles GET /api/professionals/:id/timetable
 func (h *ProfessionalsHandler) GetProfessionalTimetable(c *gin.Context) {
-	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+	professionalID, ok := common.GetUserID(c)
 	if !ok {
 		return
 	}

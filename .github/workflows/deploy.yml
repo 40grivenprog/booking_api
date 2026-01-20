@@ -18,23 +18,33 @@ on:
         default: ''
 
 env:
-  AWS_REGION: eu-central-1
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  ARTIFACT_REGISTRY_REPO: ${{ vars.ARTIFACT_REGISTRY_REPO }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
     
+    env:
+      CONNECTION_NAME: ${{ secrets.CLOUD_SQL_CONNECTION_NAME }}
+      DEV_DB_PASSWORD_SECRET: ${{ secrets.DEV_DB_PASSWORD_SECRET }}
+      DEV_JWT_SECRET_SECRET: ${{ secrets.DEV_JWT_SECRET_SECRET }}
+      PROD_DB_PASSWORD_SECRET: ${{ secrets.PROD_DB_PASSWORD_SECRET }}
+      PROD_JWT_SECRET_SECRET: ${{ secrets.PROD_JWT_SECRET_SECRET }}
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
 
     - name: Set image tag
       id: image_tag
@@ -43,198 +53,112 @@ jobs:
           TAG="${{ github.event.inputs.image_tag }}"
           echo "Using provided image tag: $TAG"
         else
-          # Get latest tag from ECR for API
-          echo "Getting latest tag from ECR..."
-          LATEST_TAG=$(aws ecr describe-images \
-            --repository-name booking-api \
-            --region ${{ env.AWS_REGION }} \
-            --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' \
-            --output text)
-          TAG="$LATEST_TAG"
-          echo "Using latest ECR tag: $TAG"
+          TAG="latest"
+          echo "Using latest tag: $TAG"
         fi
         
         echo "tag=$TAG" >> $GITHUB_OUTPUT
         echo "Using API image tag: $TAG"
         
-        # Get ECR registry URL
-        ECR_REGISTRY=$(aws ecr describe-registry --region ${{ env.AWS_REGION }} --query 'registryId' --output text).dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
-        echo "ecr_registry=$ECR_REGISTRY" >> $GITHUB_OUTPUT
+        # Full image path
+        IMAGE_PATH="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/booking-api:$TAG"
+        echo "image_path=$IMAGE_PATH" >> $GITHUB_OUTPUT
 
-    - name: Update ECS Service
-      run: |
-        echo "Updating ECS service with new image..."
-        
-        # Get ECS cluster name
-        CLUSTER_NAME="booking-app-${{ github.event.inputs.environment }}"
-        SERVICE_NAME="booking-api-${{ github.event.inputs.environment }}"
-        
-        # Get current task definition
-        TASK_DEFINITION_ARN=$(aws ecs describe-services \
-          --cluster "$CLUSTER_NAME" \
-          --services "$SERVICE_NAME" \
-          --region ${{ env.AWS_REGION }} \
-          --query 'services[0].taskDefinition' \
-          --output text)
-        
-        echo "Current task definition: $TASK_DEFINITION_ARN"
-        
-        # Get task definition details
-        TASK_DEFINITION=$(aws ecs describe-task-definition \
-          --task-definition "$TASK_DEFINITION_ARN" \
-          --region ${{ env.AWS_REGION }} \
-          --query 'taskDefinition')
-        
-        # Extract only required fields for new task definition
-        NEW_TASK_DEFINITION=$(echo "$TASK_DEFINITION" | jq '{
-          family: .family,
-          taskRoleArn: .taskRoleArn,
-          executionRoleArn: .executionRoleArn,
-          networkMode: .networkMode,
-          containerDefinitions: .containerDefinitions,
-          volumes: .volumes,
-          placementConstraints: .placementConstraints,
-          requiresCompatibilities: .requiresCompatibilities,
-          cpu: .cpu,
-          memory: .memory
-        } | if .tags == null then del(.tags) else . end')
-        
-        # Update image URL in container definitions
-        UPDATED_TASK_DEFINITION=$(echo "$NEW_TASK_DEFINITION" | jq --arg image "${{ steps.image_tag.outputs.ecr_registry }}/booking-api:${{ steps.image_tag.outputs.tag }}" '.containerDefinitions[0].image = $image')
-        
-        # Get secrets from Secrets Manager and add them to task definition
-        echo "Getting secrets from Secrets Manager..."
-        
-        # Get DB password secret ARN
-        DB_PASSWORD_ARN=$(aws secretsmanager describe-secret \
-          --secret-id "dev/booking-api/db-password" \
-          --region ${{ env.AWS_REGION }} \
-          --query 'ARN' \
-          --output text)
-        
-        # Get JWT secret ARN
-        JWT_SECRET_ARN=$(aws secretsmanager describe-secret \
-          --secret-id "dev/booking-api/jwt-secret" \
-          --region ${{ env.AWS_REGION }} \
-          --query 'ARN' \
-          --output text)
-        
-        echo "DB_PASSWORD_ARN: $DB_PASSWORD_ARN"
-        echo "JWT_SECRET_ARN: $JWT_SECRET_ARN"
-        
-        # Create secrets array for task definition
-        SECRETS_JSON=$(jq -n --arg db_arn "$DB_PASSWORD_ARN" --arg jwt_arn "$JWT_SECRET_ARN" '[
-          {
-            "name": "DB_PASSWORD",
-            "valueFrom": $db_arn
-          },
-          {
-            "name": "JWT_SECRET", 
-            "valueFrom": $jwt_arn
-          }
-        ]')
-        
-        echo "Secrets JSON: $SECRETS_JSON"
-        
-        # Add secrets to task definition
-        UPDATED_TASK_DEFINITION=$(echo "$UPDATED_TASK_DEFINITION" | jq --argjson secrets "$SECRETS_JSON" '.containerDefinitions[0].secrets = $secrets')
-        
-        # Register new task definition
-        NEW_TASK_DEFINITION_ARN=$(aws ecs register-task-definition \
-          --cli-input-json "$UPDATED_TASK_DEFINITION" \
-          --region ${{ env.AWS_REGION }} \
-          --query 'taskDefinition.taskDefinitionArn' \
-          --output text)
-        
-        echo "New task definition: $NEW_TASK_DEFINITION_ARN"
-        
-        # Update service
-        aws ecs update-service \
-          --cluster "$CLUSTER_NAME" \
-          --service "$SERVICE_NAME" \
-          --task-definition "$NEW_TASK_DEFINITION_ARN" \
-          --region ${{ env.AWS_REGION }}
-        
-        echo "ECS service updated successfully!"
-
-    - name: Wait for Service Update
-      run: |
-        echo "Waiting for service to stabilize..."
-        CLUSTER_NAME="booking-app-${{ github.event.inputs.environment }}"
-        SERVICE_NAME="booking-api-${{ github.event.inputs.environment }}"
-        
-        aws ecs wait services-stable \
-          --cluster "$CLUSTER_NAME" \
-          --services "$SERVICE_NAME" \
-          --region ${{ env.AWS_REGION }}
-        
-        echo "Service is stable!"
+    - name: Deploy to Cloud Run
+      uses: google-github-actions/deploy-cloudrun@v2
+      with:
+        service: booking-app-api-${{ github.event.inputs.environment }}
+        image: ${{ steps.image_tag.outputs.image_path }}
+        region: ${{ env.GCP_REGION }}
+        flags: '--platform=managed'
 
     - name: Run Database Migrations
+      if: github.event.inputs.environment == 'dev'
       run: |
-        echo "Starting database migrations for ${{ github.event.inputs.environment }} environment..."
+        echo "Running database migrations for ${{ github.event.inputs.environment }} environment..."
         
-        # Get ECS cluster and task definition
-        CLUSTER_NAME="booking-app-${{ github.event.inputs.environment }}"
-        TASK_DEFINITION="booking-app-${{ github.event.inputs.environment }}-db-migration"
+        # Set secrets based on environment
+        if [[ "${{ github.event.inputs.environment }}" == "dev" ]]; then
+          DB_PASSWORD_SECRET="${{ env.DEV_DB_PASSWORD_SECRET }}"
+          JWT_SECRET_SECRET="${{ env.DEV_JWT_SECRET_SECRET }}"
+        else
+          DB_PASSWORD_SECRET="${{ env.PROD_DB_PASSWORD_SECRET }}"
+          JWT_SECRET_SECRET="${{ env.PROD_JWT_SECRET_SECRET }}"
+        fi
         
-        # Get subnets and security groups from VPC
-        VPC_ID=$(aws ec2 describe-vpcs \
-          --filters "Name=tag:Name,Values=*shared*" \
-          --region ${{ env.AWS_REGION }} \
-          --query 'Vpcs[0].VpcId' \
-          --output text)
+        # Create and execute Cloud Run Job for migrations
+        JOB_NAME="booking-app-migration-${{ github.event.inputs.environment }}"
         
-        SUBNET_IDS=$(aws ec2 describe-subnets \
-          --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=*public*" \
-          --region ${{ env.AWS_REGION }} \
-          --query 'Subnets[].SubnetId' \
-          --output text | tr '\t' ',')
+        # Check if job exists
+        if gcloud run jobs describe $JOB_NAME --region=${{ env.GCP_REGION }} --project=${{ env.GCP_PROJECT_ID }} 2>/dev/null; then
+          echo "Job exists, updating..."
+          gcloud run jobs update $JOB_NAME \
+            --image=${{ steps.image_tag.outputs.image_path }} \
+            --region=${{ env.GCP_REGION }} \
+            --set-env-vars="DB_HOST=/cloudsql/${{ env.CONNECTION_NAME }}" \
+            --set-env-vars="DB_PORT=5432" \
+            --set-env-vars="DB_USER=booking_admin" \
+            --set-env-vars="DB_NAME=booking_${{ github.event.inputs.environment }}" \
+            --set-env-vars="DB_SSLMODE=disable" \
+            --set-secrets="DB_PASSWORD=$DB_PASSWORD_SECRET:latest" \
+            --set-secrets="JWT_SECRET=$JWT_SECRET_SECRET:latest" \
+            --set-cloudsql-instances=${{ env.CONNECTION_NAME }} \
+            --command=/app/migrate \
+            --args="up" \
+            --project=${{ env.GCP_PROJECT_ID }}
+        else
+          echo "Job does not exist, creating..."
+          gcloud run jobs create $JOB_NAME \
+            --image=${{ steps.image_tag.outputs.image_path }} \
+            --region=${{ env.GCP_REGION }} \
+            --set-env-vars="DB_HOST=/cloudsql/${{ env.CONNECTION_NAME }}" \
+            --set-env-vars="DB_PORT=5432" \
+            --set-env-vars="DB_USER=booking_admin" \
+            --set-env-vars="DB_NAME=booking_${{ github.event.inputs.environment }}" \
+            --set-env-vars="DB_SSLMODE=disable" \
+            --set-secrets="DB_PASSWORD=$DB_PASSWORD_SECRET:latest" \
+            --set-secrets="JWT_SECRET=$JWT_SECRET_SECRET:latest" \
+            --set-cloudsql-instances=${{ env.CONNECTION_NAME }} \
+            --command=/app/migrate \
+            --args="up" \
+            --project=${{ env.GCP_PROJECT_ID }}
+        fi
         
-        SECURITY_GROUP_ID=$(aws ec2 describe-security-groups \
-          --filters "Name=vpc-id,Values=$VPC_ID" "Name=group-name,Values=*rds*" \
-          --region ${{ env.AWS_REGION }} \
-          --query 'SecurityGroups[0].GroupId' \
-          --output text)
-        
-        echo "Running migrations via ECS task..."
-        aws ecs run-task \
-          --cluster "$CLUSTER_NAME" \
-          --task-definition "$TASK_DEFINITION" \
-          --launch-type "FARGATE" \
-          --network-configuration "awsvpcConfiguration={subnets=[$SUBNET_IDS],securityGroups=[$SECURITY_GROUP_ID],assignPublicIp=ENABLED}" \
-          --overrides 'containerOverrides=[{name="db-migration",command=["-direction=up"]}]' \
-          --region ${{ env.AWS_REGION }}
+        # Execute the migration job
+        echo "Executing migration job..."
+        gcloud run jobs execute $JOB_NAME \
+          --region=${{ env.GCP_REGION }} \
+          --wait \
+          --project=${{ env.GCP_PROJECT_ID }}
         
         echo "Database migrations completed successfully!"
 
     - name: Health Check
       run: |
-        echo "Getting ALB URL for health check..."
+        echo "Checking health endpoint..."
         
-        # Get ALB DNS name
-        ALB_ARN=$(aws elbv2 describe-load-balancers \
-          --names "booking-app-api-${{ github.event.inputs.environment }}" \
-          --region ${{ env.AWS_REGION }} \
-          --query 'LoadBalancers[0].LoadBalancerArn' \
-          --output text)
+        SERVICE_URL=$(gcloud run services describe booking-app-api-${{ github.event.inputs.environment }} \
+          --region=${{ env.GCP_REGION }} \
+          --project=${{ env.GCP_PROJECT_ID }} \
+          --format='value(status.url)')
         
-        API_URL=$(aws elbv2 describe-load-balancers \
-          --load-balancer-arns "$ALB_ARN" \
-          --region ${{ env.AWS_REGION }} \
-          --query 'LoadBalancers[0].DNSName' \
-          --output text)
-        
-        echo "Checking health at: http://$API_URL/health"
-        curl -f "http://$API_URL/health" || exit 1
+        echo "Service URL: $SERVICE_URL"
+        echo "Checking health at: $SERVICE_URL/health"
+        curl -f "$SERVICE_URL/health" || exit 1
+        echo "Health check passed!"
 
     - name: Deployment Summary
       run: |
+        SERVICE_URL=$(gcloud run services describe booking-app-api-${{ github.event.inputs.environment }} \
+          --region=${{ env.GCP_REGION }} \
+          --project=${{ env.GCP_PROJECT_ID }} \
+          --format='value(status.url)')
+        
         echo "## Deployment Completed Successfully!"
         echo ""
         echo "**Environment:** ${{ github.event.inputs.environment }}"
         echo "**Image Tag:** ${{ steps.image_tag.outputs.tag }}"
-        echo "**API URL:** $(cd booking_deployments/terraform/environments/${{ github.event.inputs.environment }} && terraform output -raw api_url)"
+        echo "**Service URL:** $SERVICE_URL"
         echo ""
         echo "### Next Steps:"
         echo "1. Deployment completed"

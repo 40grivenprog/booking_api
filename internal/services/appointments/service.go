@@ -47,7 +47,7 @@ func (s *service) CreateAppointment(ctx context.Context, input CreateAppointment
 		ProfessionalID: input.ProfessionalID,
 		StartTime:      startTime,
 		EndTime:        endTime,
-		Description:    sql.NullString{String: input.Description, Valid: input.Description != ""},
+		Description:    sql.NullString{String: input.Description, Valid: true},
 	})
 	if err != nil {
 		return nil, err

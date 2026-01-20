@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	adminAPI "github.com/vention/booking_api/internal/api/admin"
 	appointmentsAPI "github.com/vention/booking_api/internal/api/appointments"
 	clientsAPI "github.com/vention/booking_api/internal/api/clients"
@@ -14,22 +15,33 @@ import (
 	adminService "github.com/vention/booking_api/internal/services/admin"
 	appointmentsService "github.com/vention/booking_api/internal/services/appointments"
 	clientsService "github.com/vention/booking_api/internal/services/clients"
+	"github.com/vention/booking_api/internal/services/notifications"
 	professionalsService "github.com/vention/booking_api/internal/services/professionals"
+	"github.com/vention/booking_api/internal/token"
 )
 
-func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, queries *db.Queries) error {
+func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, queries *db.Queries, tokenMaker token.Maker) error {
 	// Register clients API
+	notificationsService, err := notifications.NewService(cfg.TelegramBotToken)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create notifications service")
+		return err
+	}
 	if err := clientsAPI.ClientsRegister(clientsAPI.ClientsHandlerParams{
-		Router:         router,
-		ClientsService: clientsService.NewService(queries),
+		TokenMaker:           tokenMaker,
+		Router:               router,
+		ClientsService:       clientsService.NewService(queries),
+		NotificationsService: notificationsService,
 	}); err != nil {
 		return err
 	}
 
 	// Register professionals API
 	if err := professionalsAPI.ProfessionalsRegister(professionalsAPI.ProfessionalsHandlerParams{
+		TokenMaker:           tokenMaker,
 		Router:               router,
 		ProfessionalsService: professionalsService.NewService(queries),
+		NotificationsService: notificationsService,
 	}); err != nil {
 		return err
 	}
@@ -52,8 +64,9 @@ func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, 
 
 	// Register users API
 	if err := usersAPI.UsersRegister(usersAPI.UsersHandlerParams{
-		Router:    router,
-		UsersRepo: queries,
+		Router:     router,
+		UsersRepo:  queries,
+		TokenMaker: tokenMaker,
 	}); err != nil {
 		return err
 	}

@@ -1,7 +1,6 @@
 package professionals
 
 import (
-	"fmt"
 	"time"
 
 	db "github.com/vention/booking_api/internal/repository"
@@ -73,21 +72,6 @@ func (s *service) GenerateAvailabilitySlots(date time.Time, appointments []*db.G
 			// Check if the slot overlaps with the appointment (both in application timezone)
 			if startTime.Before(apptEndLocal) && endTime.After(apptStartLocal) {
 				slot.Available = false
-				slot.Type = string(appointment.Type)
-
-				// Generate description based on appointment type and client info
-				if appointment.Description.Valid {
-					if appointment.ClientID.Valid && appointment.ClientFirstName.Valid && appointment.ClientLastName.Valid {
-						// Appointment with client - show client info + description
-						slot.Description = fmt.Sprintf("%s %s - %s",
-							appointment.ClientFirstName.String,
-							appointment.ClientLastName.String,
-							appointment.Description.String)
-					} else {
-						// Unavailable period - show just description
-						slot.Description = appointment.Description.String
-					}
-				}
 				break
 			}
 		}

@@ -17,6 +17,9 @@ type Querier interface {
 	CancelAppointmentByProfessionalWithDetails(ctx context.Context, arg *CancelAppointmentByProfessionalWithDetailsParams) (*CancelAppointmentByProfessionalWithDetailsRow, error)
 	CheckClientAppointmentConflict(ctx context.Context, arg *CheckClientAppointmentConflictParams) (bool, error)
 	ConfirmAppointmentWithDetails(ctx context.Context, arg *ConfirmAppointmentWithDetailsParams) (*ConfirmAppointmentWithDetailsRow, error)
+	CountClientAppointmentsWithStatus(ctx context.Context, arg *CountClientAppointmentsWithStatusParams) (int64, error)
+	CountProfessionalAppointmentsWithStatusAndDate(ctx context.Context, arg *CountProfessionalAppointmentsWithStatusAndDateParams) (int64, error)
+	CountProfessionals(ctx context.Context) (int64, error)
 	CreateAppointmentWithDetails(ctx context.Context, arg *CreateAppointmentWithDetailsParams) (*CreateAppointmentWithDetailsRow, error)
 	CreateClient(ctx context.Context, arg *CreateClientParams) (*Client, error)
 	CreateProfessional(ctx context.Context, arg *CreateProfessionalParams) (*Professional, error)
@@ -33,7 +36,7 @@ type Querier interface {
 	GetProfessionalByUsername(ctx context.Context, username string) (*Professional, error)
 	GetProfessionalClients(ctx context.Context, professionalID uuid.UUID) ([]*GetProfessionalClientsRow, error)
 	GetProfessionalTimetable(ctx context.Context, arg *GetProfessionalTimetableParams) ([]*GetProfessionalTimetableRow, error)
-	GetProfessionals(ctx context.Context) ([]*Professional, error)
+	GetProfessionals(ctx context.Context, arg *GetProfessionalsParams) ([]*GetProfessionalsRow, error)
 	GetUserByChatID(ctx context.Context, chatID sql.NullInt64) (*GetUserByChatIDRow, error)
 	UpdateProfessionalChatID(ctx context.Context, arg *UpdateProfessionalChatIDParams) (*Professional, error)
 }

@@ -62,7 +62,7 @@ func Start(ctx context.Context, cfg *config.Config, logger zerolog.Logger) error
 	apiGroup.Use(middleware.AuthMiddleware(tokenMaker))
 
 	// Register API routes with JWT protection
-	if err := api.Register(ctx, cfg, apiGroup, queries); err != nil {
+	if err := api.Register(ctx, cfg, apiGroup, queries, tokenMaker); err != nil {
 		return fmt.Errorf("failed to register API routes: %w", err)
 	}
 
@@ -95,11 +95,25 @@ func Start(ctx context.Context, cfg *config.Config, logger zerolog.Logger) error
 		Msg("Starting HTTP server")
 
 	// Start server in a goroutine
+	serverErr := make(chan error, 1)
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal().Err(err).Msg("Failed to start HTTP server")
+			logger.Error().Err(err).Msg("HTTP server error")
+			serverErr <- err
 		}
 	}()
+
+	// Give server a moment to start
+	time.Sleep(100 * time.Millisecond)
+
+	// Check if server started successfully
+	select {
+	case err := <-serverErr:
+		return fmt.Errorf("server failed to start: %w", err)
+	default:
+		// Server started successfully
+		logger.Info().Msg("HTTP server started successfully")
+	}
 
 	// Wait for context cancellation
 	<-ctx.Done()
