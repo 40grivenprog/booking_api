@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -108,11 +109,31 @@ func buildDatabaseURLFromEnv() string {
 		log.Fatalf("Missing required DB environment variables. Set DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT, DB_SSLMODE or DATABASE_URL.")
 	}
 
-	url := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		user, pass, host, port, name, sslmode,
+	// URL encode user and password to handle special characters
+	// Use url.UserPassword which properly encodes userinfo
+	u := url.UserPassword(user, pass)
+
+	// If host starts with /cloudsql/, it's a Unix socket connection
+	// Format: postgres://user:pass@/dbname?host=/cloudsql/...&sslmode=...
+	if strings.HasPrefix(host, "/cloudsql/") {
+		// URL encode the host path for query parameter
+		hostEncoded := url.QueryEscape(host)
+		dbURL := fmt.Sprintf(
+			"postgres://%s@/%s?host=%s&sslmode=%s",
+			u.String(), name, hostEncoded, sslmode,
+		)
+		return dbURL
+	}
+
+	// For TCP/IP connection, include port
+	if port == "" {
+		port = "5432"
+	}
+	dbURL := fmt.Sprintf(
+		"postgres://%s@%s:%s/%s?sslmode=%s",
+		u.String(), host, port, name, sslmode,
 	)
-	return url
+	return dbURL
 }
 
 func maskPassword(url string) string {

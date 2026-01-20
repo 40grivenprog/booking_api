@@ -49,6 +49,7 @@ func main() {
 	// Start server
 	log.Info().Msg("Starting booking API server...")
 	if err := server.Start(ctx, cfg, log.Logger); err != nil {
+		log.Error().Err(err).Msg("Failed to start server")
 		log.Fatal().Err(err).Msg("Failed to start server")
 	}
 

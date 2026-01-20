@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	adminAPI "github.com/vention/booking_api/internal/api/admin"
 	appointmentsAPI "github.com/vention/booking_api/internal/api/appointments"
 	clientsAPI "github.com/vention/booking_api/internal/api/clients"
@@ -23,6 +24,7 @@ func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, 
 	// Register clients API
 	notificationsService, err := notifications.NewService(cfg.TelegramBotToken)
 	if err != nil {
+		log.Error().Err(err).Msg("Failed to create notifications service")
 		return err
 	}
 	if err := clientsAPI.ClientsRegister(clientsAPI.ClientsHandlerParams{
