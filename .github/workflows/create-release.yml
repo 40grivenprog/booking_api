@@ -13,17 +13,22 @@ jobs:
        contains(github.event.pull_request.labels.*.name, 'patch'))
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+      pull-requests: read
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get latest published release version
         id: get_version
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
           echo "Fetching latest published release tag..."
@@ -75,7 +80,7 @@ jobs:
       - name: Build release notes from commits
         id: get_release_notes
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
           LATEST_PUBLISHED_TAG="${{ steps.get_version.outputs.latest_published_tag }}"
@@ -124,7 +129,7 @@ jobs:
 
       - name: Create Draft Release
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
           NEW_TAG="${{ steps.calculate_version.outputs.new_tag }}"
