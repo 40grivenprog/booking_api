@@ -51,7 +51,7 @@ func (q *Queries) CountProfessionals(ctx context.Context) (int64, error) {
 const CreateProfessional = `-- name: CreateProfessional :one
 INSERT INTO professionals (username, first_name, last_name, phone_number, password_hash, chat_id)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, chat_id, first_name, last_name, phone_number, username, password_hash, created_at, updated_at
+RETURNING id, chat_id, first_name, last_name, phone_number, username, password_hash, created_at, updated_at, locale
 `
 
 type CreateProfessionalParams struct {
@@ -83,6 +83,7 @@ func (q *Queries) CreateProfessional(ctx context.Context, arg *CreateProfessiona
 		&i.PasswordHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Locale,
 	)
 	return &i, err
 }
@@ -160,7 +161,7 @@ func (q *Queries) GetAppointmentsByProfessionalWithStatusAndDate(ctx context.Con
 }
 
 const GetProfessionalByUsername = `-- name: GetProfessionalByUsername :one
-SELECT id, chat_id, first_name, last_name, phone_number, username, password_hash, created_at, updated_at FROM professionals
+SELECT id, chat_id, first_name, last_name, phone_number, username, password_hash, created_at, updated_at, locale FROM professionals
 WHERE username = $1
 `
 
@@ -177,6 +178,7 @@ func (q *Queries) GetProfessionalByUsername(ctx context.Context, username string
 		&i.PasswordHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Locale,
 	)
 	return &i, err
 }
@@ -267,18 +269,19 @@ func (q *Queries) GetProfessionals(ctx context.Context, arg *GetProfessionalsPar
 
 const UpdateProfessionalChatID = `-- name: UpdateProfessionalChatID :one
 UPDATE professionals
-SET chat_id = $2
+SET chat_id = $2, locale = $3
 WHERE id = $1
-RETURNING id, chat_id, first_name, last_name, phone_number, username, password_hash, created_at, updated_at
+RETURNING id, chat_id, first_name, last_name, phone_number, username, password_hash, created_at, updated_at, locale
 `
 
 type UpdateProfessionalChatIDParams struct {
-	ID     uuid.UUID     `json:"id"`
-	ChatID sql.NullInt64 `json:"chat_id"`
+	ID     uuid.UUID      `json:"id"`
+	ChatID sql.NullInt64  `json:"chat_id"`
+	Locale sql.NullString `json:"locale"`
 }
 
 func (q *Queries) UpdateProfessionalChatID(ctx context.Context, arg *UpdateProfessionalChatIDParams) (*Professional, error) {
-	row := q.db.QueryRowContext(ctx, UpdateProfessionalChatID, arg.ID, arg.ChatID)
+	row := q.db.QueryRowContext(ctx, UpdateProfessionalChatID, arg.ID, arg.ChatID, arg.Locale)
 	var i Professional
 	err := row.Scan(
 		&i.ID,
@@ -290,6 +293,23 @@ func (q *Queries) UpdateProfessionalChatID(ctx context.Context, arg *UpdateProfe
 		&i.PasswordHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Locale,
 	)
 	return &i, err
+}
+
+const UpdateProfessionalLocale = `-- name: UpdateProfessionalLocale :exec
+UPDATE professionals
+SET locale = $2
+WHERE id = $1
+`
+
+type UpdateProfessionalLocaleParams struct {
+	ID     uuid.UUID      `json:"id"`
+	Locale sql.NullString `json:"locale"`
+}
+
+func (q *Queries) UpdateProfessionalLocale(ctx context.Context, arg *UpdateProfessionalLocaleParams) error {
+	_, err := q.db.ExecContext(ctx, UpdateProfessionalLocale, arg.ID, arg.Locale)
+	return err
 }

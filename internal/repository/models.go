@@ -160,6 +160,7 @@ type Client struct {
 	CreatedBy   uuid.NullUUID  `json:"created_by"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
+	Locale      sql.NullString `json:"locale"`
 }
 
 type Professional struct {
@@ -172,4 +173,5 @@ type Professional struct {
 	PasswordHash sql.NullString `json:"password_hash"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
+	Locale       sql.NullString `json:"locale"`
 }

@@ -26,4 +26,5 @@ type ProfessionalsRepository interface {
 	GetProfessionalClients(ctx context.Context, professionalID uuid.UUID) ([]*db.GetProfessionalClientsRow, error)
 	GetPreviousProfessionalAppointmentsByClient(ctx context.Context, arg *db.GetPreviousProfessionalAppointmentsByClientParams) ([]*db.GetPreviousProfessionalAppointmentsByClientRow, error)
 	GetPreviousAppointmentsByClientForMonth(ctx context.Context, arg *db.GetPreviousAppointmentsByClientForMonthParams) ([]*db.GetPreviousAppointmentsByClientForMonthRow, error)
+	UpdateProfessionalLocale(ctx context.Context, arg *db.UpdateProfessionalLocaleParams) error
 }

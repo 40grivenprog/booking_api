@@ -20,6 +20,7 @@ SELECT
     last_name,
     phone_number,
     'client' as role,
+    locale,
     NULL as username
 FROM clients 
 WHERE clients.chat_id = $1
@@ -33,6 +34,7 @@ SELECT
     last_name,
     phone_number,
     'professional' as role,
+    locale,
     username
 FROM professionals 
 WHERE professionals.chat_id = $1
@@ -45,6 +47,7 @@ type GetUserByChatIDRow struct {
 	LastName    string         `json:"last_name"`
 	PhoneNumber sql.NullString `json:"phone_number"`
 	Role        string         `json:"role"`
+	Locale      sql.NullString `json:"locale"`
 	Username    interface{}    `json:"username"`
 }
 
@@ -58,6 +61,7 @@ func (q *Queries) GetUserByChatID(ctx context.Context, chatID sql.NullInt64) (*G
 		&i.LastName,
 		&i.PhoneNumber,
 		&i.Role,
+		&i.Locale,
 		&i.Username,
 	)
 	return &i, err

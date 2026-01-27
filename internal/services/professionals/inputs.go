@@ -11,6 +11,7 @@ type SignInInput struct {
 	Username string
 	Password string
 	ChatID   int64
+	Locale   string
 }
 
 // ConfirmAppointmentInput represents the input for confirming an appointment
@@ -32,4 +33,10 @@ type CreateUnavailableAppointmentInput struct {
 	StartTime      time.Time
 	EndTime        time.Time
 	Description    string
+}
+
+// UpdateLocaleInput represents the input for changing the locale
+type UpdateLocaleInput struct {
+	ProfessionalID uuid.UUID
+	Locale         string
 }

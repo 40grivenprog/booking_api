@@ -26,6 +26,7 @@ type Service interface {
 	GetClients(ctx context.Context, professionalID uuid.UUID) ([]*db.GetProfessionalClientsRow, error)
 	GetPreviousAppointmentsByClient(ctx context.Context, professionalID uuid.UUID, clientID uuid.UUID, monthFilter *time.Time) ([]*db.GetPreviousProfessionalAppointmentsByClientRow, error)
 	GenerateAvailabilitySlots(date time.Time, appointments []*db.GetAppointmentsByProfessionalAndDateWithClientRow, config AvailabilityConfig) []TimeSlot
+	UpdateLocale(ctx context.Context, input UpdateLocaleInput) error
 }
 
 type service struct {
@@ -76,6 +77,10 @@ func (s *service) SignIn(ctx context.Context, input SignInInput) (*db.Profession
 		ChatID: sql.NullInt64{
 			Int64: input.ChatID,
 			Valid: input.ChatID != 0,
+		},
+		Locale: sql.NullString{
+			String: input.Locale,
+			Valid:  input.Locale != "",
 		},
 	})
 	if err != nil {
@@ -300,5 +305,12 @@ func (s *service) GetPreviousAppointmentsByClient(ctx context.Context, professio
 			Valid: true,
 		},
 		ProfessionalID: professionalID,
+	})
+}
+
+func (s *service) UpdateLocale(ctx context.Context, input UpdateLocaleInput) error {
+	return s.repo.UpdateProfessionalLocale(ctx, &db.UpdateProfessionalLocaleParams{
+		ID:     input.ProfessionalID,
+		Locale: sql.NullString{String: input.Locale, Valid: true},
 	})
 }

@@ -14,4 +14,5 @@ type User struct {
 	LastName  string `json:"last_name"`
 	Role      string `json:"role"` // "client" or "professional"
 	Token     string `json:"token"`
+	Locale    string `json:"locale"`
 }

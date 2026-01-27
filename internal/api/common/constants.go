@@ -46,6 +46,7 @@ const (
 	ErrorMsgFailedToRetrieveProfessionals = "Failed to retrieve professionals"
 	ErrorMsgFailedToRetrieveClients       = "Failed to retrieve clients"
 	ErrorMsgFailedToGetTimetable          = "Failed to get professional timetable"
+	ErrorMsgFailedToUpdateUserLocale      = "Failed to update user locale"
 
 	// Not found errors
 	ErrorMsgUserNotFound         = "User not found"

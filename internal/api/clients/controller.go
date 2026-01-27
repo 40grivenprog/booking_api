@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -55,6 +56,7 @@ func (h *ClientsHandler) BookAppointment(c *gin.Context) {
 		StartTime:   common.FormatTimeRFC3339(result.StartTime),
 		EndTime:     common.FormatTimeRFC3339(result.EndTime),
 		Description: result.Description.String,
+		Locale:      result.ProfessionalLocale.String,
 	})
 	if err != nil {
 		common.HandleNotificationError(c, err)
@@ -76,12 +78,14 @@ func (h *ClientsHandler) RegisterClient(c *gin.Context) {
 	if req.PhoneNumber != nil {
 		phoneNumber = *req.PhoneNumber
 	}
+	fmt.Println("req.Locale", req.Locale)
 
 	client, err := h.clientsService.RegisterClient(c.Request.Context(), clients.RegisterClientInput{
 		FirstName:   req.FirstName,
 		LastName:    req.LastName,
 		PhoneNumber: phoneNumber,
 		ChatID:      req.ChatID,
+		Locale:      req.Locale,
 	})
 	if err != nil {
 		if common.IsUniqueConstraintError(err) {
@@ -162,8 +166,33 @@ func (h *ClientsHandler) CancelClientAppointment(c *gin.Context) {
 		RespondentName:     result.ClientFirstName.String + " " + result.ClientLastName.String,
 		CancellationReason: req.CancellationReason,
 		Type:               "client",
+		Locale:             result.ProfessionalLocale.String,
 	})
 
 	response := mapAppointmentToCancelClientAppointmentResponse(result)
 	c.JSON(http.StatusOK, response)
+}
+
+// UpdateLocale handles PATCH /api/clients/update_locale
+func (h *ClientsHandler) UpdateLocale(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	req, ok := common.BindAndValidate[UpdateLocaleRequest](c)
+	if !ok {
+		return
+	}
+
+	err := h.clientsService.UpdateLocale(c.Request.Context(), clients.UpdateLocaleInput{
+		ClientID: clientID,
+		Locale:   req.Locale,
+	})
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusAccepted, nil)
 }

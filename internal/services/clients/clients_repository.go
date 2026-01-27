@@ -16,4 +16,5 @@ type ClientsRepository interface {
 	CountClientAppointmentsWithStatus(ctx context.Context, arg *db.CountClientAppointmentsWithStatusParams) (int64, error)
 	GetAppointmentByID(ctx context.Context, id uuid.UUID) (*db.Appointment, error)
 	CancelAppointmentByClientWithDetails(ctx context.Context, arg *db.CancelAppointmentByClientWithDetailsParams) (*db.CancelAppointmentByClientWithDetailsRow, error)
+	UpdateClientLocale(ctx context.Context, arg *db.UpdateClientLocaleParams) error
 }

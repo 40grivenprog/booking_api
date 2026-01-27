@@ -17,6 +17,7 @@ import (
 	clientsService "github.com/vention/booking_api/internal/services/clients"
 	"github.com/vention/booking_api/internal/services/notifications"
 	professionalsService "github.com/vention/booking_api/internal/services/professionals"
+	usersService "github.com/vention/booking_api/internal/services/users"
 	"github.com/vention/booking_api/internal/token"
 )
 
@@ -64,9 +65,9 @@ func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, 
 
 	// Register users API
 	if err := usersAPI.UsersRegister(usersAPI.UsersHandlerParams{
-		Router:     router,
-		UsersRepo:  queries,
-		TokenMaker: tokenMaker,
+		Router:       router,
+		TokenMaker:   tokenMaker,
+		UsersService: usersService.NewService(queries),
 	}); err != nil {
 		return err
 	}

@@ -12,6 +12,7 @@ type RegisterClientInput struct {
 	LastName    string
 	PhoneNumber string
 	ChatID      int64
+	Locale      string
 }
 
 // CancelAppointmentInput represents the input for canceling an appointment
@@ -28,4 +29,10 @@ type CreateAppointmentInput struct {
 	StartTime      time.Time
 	EndTime        time.Time
 	Description    string
+}
+
+// UpdateLocaleInput represents the input for changing the locale
+type UpdateLocaleInput struct {
+	ClientID uuid.UUID
+	Locale   string
 }

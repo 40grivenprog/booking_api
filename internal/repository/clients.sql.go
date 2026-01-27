@@ -13,9 +13,9 @@ import (
 )
 
 const CreateClient = `-- name: CreateClient :one
-INSERT INTO clients (first_name, last_name, phone_number, chat_id, created_by)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, chat_id, first_name, last_name, phone_number, created_by, created_at, updated_at
+INSERT INTO clients (first_name, last_name, phone_number, chat_id, created_by, locale)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, chat_id, first_name, last_name, phone_number, created_by, created_at, updated_at, locale
 `
 
 type CreateClientParams struct {
@@ -24,6 +24,7 @@ type CreateClientParams struct {
 	PhoneNumber sql.NullString `json:"phone_number"`
 	ChatID      sql.NullInt64  `json:"chat_id"`
 	CreatedBy   uuid.NullUUID  `json:"created_by"`
+	Locale      sql.NullString `json:"locale"`
 }
 
 func (q *Queries) CreateClient(ctx context.Context, arg *CreateClientParams) (*Client, error) {
@@ -33,6 +34,7 @@ func (q *Queries) CreateClient(ctx context.Context, arg *CreateClientParams) (*C
 		arg.PhoneNumber,
 		arg.ChatID,
 		arg.CreatedBy,
+		arg.Locale,
 	)
 	var i Client
 	err := row.Scan(
@@ -44,6 +46,23 @@ func (q *Queries) CreateClient(ctx context.Context, arg *CreateClientParams) (*C
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Locale,
 	)
 	return &i, err
+}
+
+const UpdateClientLocale = `-- name: UpdateClientLocale :exec
+UPDATE clients
+SET locale = $2
+WHERE id = $1
+`
+
+type UpdateClientLocaleParams struct {
+	ID     uuid.UUID      `json:"id"`
+	Locale sql.NullString `json:"locale"`
+}
+
+func (q *Queries) UpdateClientLocale(ctx context.Context, arg *UpdateClientLocaleParams) error {
+	_, err := q.db.ExecContext(ctx, UpdateClientLocale, arg.ID, arg.Locale)
+	return err
 }

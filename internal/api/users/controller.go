@@ -1,26 +1,26 @@
 package api
 
 import (
-	"database/sql"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vention/booking_api/internal/api/common"
+	"github.com/vention/booking_api/internal/services/users"
 	"github.com/vention/booking_api/internal/token"
 )
 
 // UsersController handles user-related HTTP requests
 type UsersController struct {
-	usersRepo  UsersRepository
-	tokenMaker token.Maker
+	tokenMaker   token.Maker
+	usersService users.Service
 }
 
 // NewUsersController creates a new users controller
-func NewUsersController(usersRepo UsersRepository, tokenMaker token.Maker) *UsersController {
+func NewUsersController(tokenMaker token.Maker, usersService users.Service) *UsersController {
 	return &UsersController{
-		usersRepo:  usersRepo,
-		tokenMaker: tokenMaker,
+		tokenMaker:   tokenMaker,
+		usersService: usersService,
 	}
 }
 
@@ -34,8 +34,7 @@ func (c *UsersController) GetUserByChatID(ctx *gin.Context) {
 		return
 	}
 
-	// Get user from repository
-	user, err := c.usersRepo.GetUserByChatID(ctx.Request.Context(), sql.NullInt64{Int64: chatID, Valid: true})
+	user, err := c.usersService.GetUserByChatID(ctx.Request.Context(), chatID)
 	if err != nil {
 		common.HandleErrorResponse(ctx, http.StatusNotFound, common.ErrorTypeNotFound, common.ErrorMsgUserNotFound, err)
 		return
@@ -55,6 +54,7 @@ func (c *UsersController) GetUserByChatID(ctx *gin.Context) {
 			FirstName: user.FirstName,
 			LastName:  user.LastName,
 			Role:      user.Role,
+			Locale:    user.Locale.String,
 			Token:     token,
 		},
 	})

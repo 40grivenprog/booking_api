@@ -33,7 +33,8 @@ SELECT
     ua.description,
     c.first_name as client_first_name,
     c.last_name as client_last_name,
-    p.chat_id as professional_chat_id
+    p.chat_id as professional_chat_id,
+    p.locale as professional_locale
 FROM updated_appointment ua
 LEFT JOIN clients c ON c.id = ua.client_id
 LEFT JOIN professionals p ON p.id = ua.professional_id
@@ -53,6 +54,7 @@ type CancelAppointmentByClientWithDetailsRow struct {
 	ClientFirstName    sql.NullString `json:"client_first_name"`
 	ClientLastName     sql.NullString `json:"client_last_name"`
 	ProfessionalChatID sql.NullInt64  `json:"professional_chat_id"`
+	ProfessionalLocale sql.NullString `json:"professional_locale"`
 }
 
 func (q *Queries) CancelAppointmentByClientWithDetails(ctx context.Context, arg *CancelAppointmentByClientWithDetailsParams) (*CancelAppointmentByClientWithDetailsRow, error) {
@@ -66,6 +68,7 @@ func (q *Queries) CancelAppointmentByClientWithDetails(ctx context.Context, arg 
 		&i.ClientFirstName,
 		&i.ClientLastName,
 		&i.ProfessionalChatID,
+		&i.ProfessionalLocale,
 	)
 	return &i, err
 }
@@ -101,6 +104,7 @@ SELECT
     c.last_name as client_last_name,
     c.phone_number as client_phone_number,
     c.chat_id as client_chat_id,
+    c.locale as client_locale,
     p.id as professional_id_full,
     p.username as professional_username,
     p.first_name as professional_first_name,
@@ -136,6 +140,7 @@ type CancelAppointmentByProfessionalWithDetailsRow struct {
 	ClientLastName            sql.NullString        `json:"client_last_name"`
 	ClientPhoneNumber         sql.NullString        `json:"client_phone_number"`
 	ClientChatID              sql.NullInt64         `json:"client_chat_id"`
+	ClientLocale              sql.NullString        `json:"client_locale"`
 	ProfessionalIDFull        uuid.UUID             `json:"professional_id_full"`
 	ProfessionalUsername      sql.NullString        `json:"professional_username"`
 	ProfessionalFirstName     sql.NullString        `json:"professional_first_name"`
@@ -165,6 +170,7 @@ func (q *Queries) CancelAppointmentByProfessionalWithDetails(ctx context.Context
 		&i.ClientLastName,
 		&i.ClientPhoneNumber,
 		&i.ClientChatID,
+		&i.ClientLocale,
 		&i.ProfessionalIDFull,
 		&i.ProfessionalUsername,
 		&i.ProfessionalFirstName,
@@ -219,6 +225,7 @@ SELECT
     c.first_name as client_first_name,
     c.last_name as client_last_name,
     c.chat_id as client_chat_id,
+    c.locale as client_locale,
     p.id as professional_id_full,
     p.username as professional_username,
     p.first_name as professional_first_name,
@@ -247,6 +254,7 @@ type ConfirmAppointmentWithDetailsRow struct {
 	ClientFirstName       sql.NullString        `json:"client_first_name"`
 	ClientLastName        sql.NullString        `json:"client_last_name"`
 	ClientChatID          sql.NullInt64         `json:"client_chat_id"`
+	ClientLocale          sql.NullString        `json:"client_locale"`
 	ProfessionalIDFull    uuid.UUID             `json:"professional_id_full"`
 	ProfessionalUsername  sql.NullString        `json:"professional_username"`
 	ProfessionalFirstName sql.NullString        `json:"professional_first_name"`
@@ -270,6 +278,7 @@ func (q *Queries) ConfirmAppointmentWithDetails(ctx context.Context, arg *Confir
 		&i.ClientFirstName,
 		&i.ClientLastName,
 		&i.ClientChatID,
+		&i.ClientLocale,
 		&i.ProfessionalIDFull,
 		&i.ProfessionalUsername,
 		&i.ProfessionalFirstName,
@@ -311,7 +320,8 @@ SELECT
     na.description,
     c.first_name as client_first_name,
     c.last_name as client_last_name,
-    p.chat_id as professional_chat_id
+    p.chat_id as professional_chat_id,
+    p.locale as professional_locale
 FROM new_appointment na
 LEFT JOIN clients c ON c.id = na.client_id
 LEFT JOIN professionals p ON p.id = na.professional_id
@@ -332,6 +342,7 @@ type CreateAppointmentWithDetailsRow struct {
 	ClientFirstName    sql.NullString `json:"client_first_name"`
 	ClientLastName     sql.NullString `json:"client_last_name"`
 	ProfessionalChatID sql.NullInt64  `json:"professional_chat_id"`
+	ProfessionalLocale sql.NullString `json:"professional_locale"`
 }
 
 func (q *Queries) CreateAppointmentWithDetails(ctx context.Context, arg *CreateAppointmentWithDetailsParams) (*CreateAppointmentWithDetailsRow, error) {
@@ -350,6 +361,7 @@ func (q *Queries) CreateAppointmentWithDetails(ctx context.Context, arg *CreateA
 		&i.ClientFirstName,
 		&i.ClientLastName,
 		&i.ProfessionalChatID,
+		&i.ProfessionalLocale,
 	)
 	return &i, err
 }
