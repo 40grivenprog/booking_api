@@ -41,7 +41,7 @@ func Start(ctx context.Context, cfg *config.Config, logger zerolog.Logger) error
 	r.Use(middleware.Logger())    // Use our combined logger middleware
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
 		AllowHeaders:     []string{"*"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
@@ -113,7 +113,7 @@ func Start(ctx context.Context, cfg *config.Config, logger zerolog.Logger) error
 	default:
 		// Server started successfully
 		logger.Info().Msg("HTTP server started successfully")
-		}
+	}
 
 	// Wait for context cancellation
 	<-ctx.Done()
