@@ -38,7 +38,9 @@ type Querier interface {
 	GetProfessionalTimetable(ctx context.Context, arg *GetProfessionalTimetableParams) ([]*GetProfessionalTimetableRow, error)
 	GetProfessionals(ctx context.Context, arg *GetProfessionalsParams) ([]*GetProfessionalsRow, error)
 	GetUserByChatID(ctx context.Context, chatID sql.NullInt64) (*GetUserByChatIDRow, error)
+	UpdateClientLocale(ctx context.Context, arg *UpdateClientLocaleParams) error
 	UpdateProfessionalChatID(ctx context.Context, arg *UpdateProfessionalChatIDParams) (*Professional, error)
+	UpdateProfessionalLocale(ctx context.Context, arg *UpdateProfessionalLocaleParams) error
 }
 
 var _ Querier = (*Queries)(nil)

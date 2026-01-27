@@ -4,6 +4,11 @@ import (
 	common "github.com/vention/booking_api/internal/api/common"
 )
 
+// UpdateLocaleRequest represents the request to change the locale
+type UpdateLocaleRequest struct {
+	Locale string `json:"locale" binding:"required"`
+}
+
 // CreateAppointmentRequest represents the request to create an appointment
 type CreateAppointmentRequest struct {
 	ProfessionalID string `json:"professional_id" binding:"required"`
@@ -42,6 +47,7 @@ type ClientRegisterRequest struct {
 	LastName    string  `json:"last_name" binding:"required"`
 	ChatID      int64   `json:"chat_id" binding:"required"`
 	PhoneNumber *string `json:"phone_number,omitempty"`
+	Locale      string  `json:"locale" binding:"required"`
 }
 
 // ClientRegisterResponse represents the response for client registration

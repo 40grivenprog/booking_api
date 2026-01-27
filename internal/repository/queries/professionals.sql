@@ -20,7 +20,7 @@ WHERE chat_id is not null;
 
 -- name: UpdateProfessionalChatID :one
 UPDATE professionals
-SET chat_id = $2
+SET chat_id = $2, locale = $3
 WHERE id = $1
 RETURNING *;
 
@@ -62,3 +62,9 @@ WHERE id IN (
         AND status = 'confirmed'
 )
 ORDER BY first_name, last_name;
+
+
+-- name: UpdateProfessionalLocale :exec
+UPDATE professionals
+SET locale = $2
+WHERE id = $1;

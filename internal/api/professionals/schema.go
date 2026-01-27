@@ -9,6 +9,7 @@ type ProfessionalSignInRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 	ChatID   int64  `json:"chat_id" binding:"required"`
+	Locale   string `json:"locale" binding:"required"`
 }
 
 // ProfessionalSignInResponse represents the response for professional sign in
@@ -220,4 +221,9 @@ type PreviousAppointment struct {
 // GetPreviousAppointmentsByClientResponse represents the response for getting previous appointments by client
 type GetPreviousAppointmentsByClientResponse struct {
 	Appointments []PreviousAppointment `json:"appointments"`
+}
+
+// UpdateLocaleRequest represents the request to change the locale
+type UpdateLocaleRequest struct {
+	Locale string `json:"locale" binding:"required"`
 }

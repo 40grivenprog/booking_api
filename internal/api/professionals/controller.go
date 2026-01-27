@@ -45,6 +45,7 @@ func (h *ProfessionalsHandler) SignInProfessional(c *gin.Context) {
 		Username: req.Username,
 		Password: req.Password,
 		ChatID:   req.ChatID,
+		Locale:   req.Locale,
 	})
 	if err != nil {
 		common.HandleServiceError(c, err)
@@ -87,6 +88,7 @@ func (h *ProfessionalsHandler) ConfirmAppointment(c *gin.Context) {
 		StartTime:        common.FormatTimeRFC3339(result.StartTime),
 		EndTime:          common.FormatTimeRFC3339(result.EndTime),
 		ProfessionalName: result.ProfessionalFirstName.String + " " + result.ProfessionalLastName.String,
+		Locale:           result.ClientLocale.String,
 	})
 	if err != nil {
 		common.HandleNotificationError(c, err)
@@ -201,6 +203,7 @@ func (h *ProfessionalsHandler) CancelAppointment(c *gin.Context) {
 		RespondentName:     result.ProfessionalFirstName.String + " " + result.ProfessionalLastName.String,
 		CancellationReason: req.CancellationReason,
 		Type:               "professional",
+		Locale:             result.ClientLocale.String,
 	})
 	if err != nil {
 		common.HandleNotificationError(c, err)
@@ -377,4 +380,28 @@ func (h *ProfessionalsHandler) GetPreviousAppointmentsByClient(c *gin.Context) {
 
 	response := mapPreviousAppointmentsToGetPreviousAppointmentsByClientResponse(appointments)
 	c.JSON(http.StatusOK, response)
+}
+
+// UpdateLocale handles PATCH /api/professionals/update_locale
+func (h *ProfessionalsHandler) UpdateLocale(c *gin.Context) {
+	professionalID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	req, ok := common.BindAndValidate[UpdateLocaleRequest](c)
+	if !ok {
+		return
+	}
+
+	err := h.professionalsService.UpdateLocale(c.Request.Context(), professionals.UpdateLocaleInput{
+		ProfessionalID: professionalID,
+		Locale:         req.Locale,
+	})
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusAccepted, nil)
 }

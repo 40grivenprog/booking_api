@@ -14,7 +14,8 @@ SELECT
     na.description,
     c.first_name as client_first_name,
     c.last_name as client_last_name,
-    p.chat_id as professional_chat_id
+    p.chat_id as professional_chat_id,
+    p.locale as professional_locale
 FROM new_appointment na
 LEFT JOIN clients c ON c.id = na.client_id
 LEFT JOIN professionals p ON p.id = na.professional_id;
@@ -40,6 +41,7 @@ SELECT
     c.first_name as client_first_name,
     c.last_name as client_last_name,
     c.chat_id as client_chat_id,
+    c.locale as client_locale,
     p.id as professional_id_full,
     p.username as professional_username,
     p.first_name as professional_first_name,
@@ -97,6 +99,7 @@ SELECT
     c.last_name as client_last_name,
     c.phone_number as client_phone_number,
     c.chat_id as client_chat_id,
+    c.locale as client_locale,
     p.id as professional_id_full,
     p.username as professional_username,
     p.first_name as professional_first_name,
@@ -155,7 +158,8 @@ SELECT
     ua.description,
     c.first_name as client_first_name,
     c.last_name as client_last_name,
-    p.chat_id as professional_chat_id
+    p.chat_id as professional_chat_id,
+    p.locale as professional_locale
 FROM updated_appointment ua
 LEFT JOIN clients c ON c.id = ua.client_id
 LEFT JOIN professionals p ON p.id = ua.professional_id;

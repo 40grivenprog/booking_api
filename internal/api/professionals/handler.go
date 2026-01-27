@@ -62,6 +62,7 @@ func ProfessionalsRegister(p ProfessionalsHandlerParams) error {
 		professionals.GET("/timetable", h.GetProfessionalTimetable)
 		professionals.GET("/:id/clients", h.GetProfessionalClients)
 		professionals.GET("/:id/previous_appointments", h.GetPreviousAppointmentsByClient)
+		professionals.PATCH("/update_locale", h.UpdateLocale)
 	}
 
 	return nil

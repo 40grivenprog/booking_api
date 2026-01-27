@@ -59,6 +59,7 @@ func ClientsRegister(p ClientsHandlerParams) error {
 		clients.POST("/register", h.RegisterClient)
 		clients.GET("/appointments", h.GetClientAppointments)
 		clients.PATCH("/appointments/:appointment_id/cancel", h.CancelClientAppointment)
+		clients.PATCH("/update_locale", h.UpdateLocale)
 	}
 
 	return nil

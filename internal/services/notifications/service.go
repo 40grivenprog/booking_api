@@ -32,18 +32,31 @@ func (s *service) SendAppointmentRequestNotification(ctx context.Context, input 
 	// Format time for display
 	date, startTime, endTime := formatAppointmentTime(input.StartTime, input.EndTime)
 
-	// Format message (same as in booking_client)
+	// Get locale (default to "en" if not provided)
+	locale := input.Locale
+	if locale == "" {
+		locale = "en"
+	}
+	t := getTranslations(locale)
+
+	// Format localized message
 	messageText := fmt.Sprintf(
-		"🔔 New Appointment request!\n\n👤 Client: %s\n📅 Date: %s\n🕐 Time: %s - %s\n📝 Description: %s\n\nPlease confirm or cancel this appointment.",
+		"%s\n\n%s %s\n%s %s\n%s %s - %s\n%s %s\n\n%s",
+		t.AppointmentRequest.Title,
+		t.AppointmentRequest.Client,
 		input.ClientName,
+		t.AppointmentRequest.Date,
 		date,
+		t.AppointmentRequest.Time,
 		startTime,
 		endTime,
+		t.AppointmentRequest.Description,
 		input.Description,
+		t.AppointmentRequest.Action,
 	)
 
 	// Create inline keyboard with Web App button (using URL button)
-	webAppButton := tgbotapi.NewInlineKeyboardButtonURL("📱 Open App", "https://t.me/testMfiAppBot/someRandomTestApp777")
+	webAppButton := tgbotapi.NewInlineKeyboardButtonURL(t.OpenApp, "https://t.me/testMfiAppBot/someRandomTestApp777")
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(webAppButton),
 	)
@@ -64,23 +77,36 @@ func (s *service) SendAppointmentCancellationNotification(ctx context.Context, i
 	// Format time for display
 	date, startTime, endTime := formatAppointmentTime(input.StartTime, input.EndTime)
 
-	recepient := "Client"
+	// Get locale (default to "en" if not provided)
+	locale := input.Locale
+	if locale == "" {
+		locale = "en"
+	}
+	t := getTranslations(locale)
+
+	// Determine recipient label based on type
+	recipientLabel := t.AppointmentCancelled.Client
 	if input.Type == "professional" {
-		recepient = "Professional"
+		recipientLabel = t.AppointmentCancelled.Professional
 	}
 
-	// Format message
+	// Format localized message
 	messageText := fmt.Sprintf(
-		"🔔 Appointment Cancelled!\n\n👤 %s: %s\n📅 Date: %s\n🕐 Time: %s - %s\n📝 Reason: %s",
-		recepient,
+		"%s\n\n%s %s\n%s %s\n%s %s - %s\n%s %s",
+		t.AppointmentCancelled.Title,
+		recipientLabel,
 		input.RespondentName,
+		t.AppointmentCancelled.Date,
 		date,
+		t.AppointmentCancelled.Time,
 		startTime,
 		endTime,
+		t.AppointmentCancelled.Reason,
 		input.CancellationReason,
 	)
+
 	// Create inline keyboard with Web App button (using URL button)
-	webAppButton := tgbotapi.NewInlineKeyboardButtonURL("📱 Open App", "https://t.me/testMfiAppBot/someRandomTestApp777")
+	webAppButton := tgbotapi.NewInlineKeyboardButtonURL(t.OpenApp, "https://t.me/testMfiAppBot/someRandomTestApp777")
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(webAppButton),
 	)
@@ -101,16 +127,27 @@ func (s *service) SendAppointmentConfirmationNotification(ctx context.Context, i
 	// Format time for display
 	date, startTime, endTime := formatAppointmentTime(input.StartTime, input.EndTime)
 
-	// Format message (same as in booking_client)
+	locale := input.Locale
+	if locale == "" {
+		locale = "en"
+	}
+	t := getTranslations(locale)
+
+	// Format localized message
 	messageText := fmt.Sprintf(
-		"🔔 Appointment Confirmed!\n\n👤 Professional: %s\n📅 Date: %s\n🕐 Time: %s - %s",
+		"%s\n\n%s %s\n%s %s\n%s %s - %s",
+		t.AppointmentConfirmed.Title,
+		t.AppointmentConfirmed.Professional,
 		input.ProfessionalName,
+		t.AppointmentConfirmed.Date,
 		date,
+		t.AppointmentConfirmed.Time,
 		startTime,
 		endTime,
 	)
+
 	// Create inline keyboard with Web App button (using URL button)
-	webAppButton := tgbotapi.NewInlineKeyboardButtonURL("📱 Open App", "https://t.me/testMfiAppBot/someRandomTestApp777")
+	webAppButton := tgbotapi.NewInlineKeyboardButtonURL(t.OpenApp, "https://t.me/testMfiAppBot/someRandomTestApp777")
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(webAppButton),
 	)

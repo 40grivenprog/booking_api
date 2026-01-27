@@ -3,6 +3,7 @@ package clients
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/google/uuid"
 	db "github.com/vention/booking_api/internal/repository"
@@ -15,6 +16,7 @@ type Service interface {
 	RegisterClient(ctx context.Context, input RegisterClientInput) (*db.Client, error)
 	GetClientAppointments(ctx context.Context, clientID uuid.UUID, statusFilter string, page, pageSize int) ([]*db.GetAppointmentsByClientWithStatusRow, int, error)
 	CancelAppointment(ctx context.Context, input CancelAppointmentInput) (*db.CancelAppointmentByClientWithDetailsRow, error)
+	UpdateLocale(ctx context.Context, input UpdateLocaleInput) error
 }
 
 type service struct {
@@ -64,6 +66,7 @@ func (s *service) RegisterClient(ctx context.Context, input RegisterClientInput)
 	params := &db.CreateClientParams{
 		FirstName: input.FirstName,
 		LastName:  input.LastName,
+		Locale:    sql.NullString{String: input.Locale, Valid: true},
 	}
 
 	// Set optional phone number
@@ -80,6 +83,7 @@ func (s *service) RegisterClient(ctx context.Context, input RegisterClientInput)
 
 	// CreatedBy is NULL for self-registration
 	params.CreatedBy = uuid.NullUUID{}
+	fmt.Println("params.Locale", params.Locale)
 
 	client, err := s.repo.CreateClient(ctx, params)
 	if err != nil {
@@ -166,4 +170,11 @@ func (s *service) CancelAppointment(ctx context.Context, input CancelAppointment
 	}
 
 	return result, nil
+}
+
+func (s *service) UpdateLocale(ctx context.Context, input UpdateLocaleInput) error {
+	return s.repo.UpdateClientLocale(ctx, &db.UpdateClientLocaleParams{
+		ID:     input.ClientID,
+		Locale: sql.NullString{String: input.Locale, Valid: true},
+	})
 }
