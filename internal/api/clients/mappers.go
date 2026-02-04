@@ -8,15 +8,14 @@ import (
 // mapClientToClientRegisterResponse maps a client to a ClientRegisterResponse
 func mapClientToClientRegisterResponse(client *db.Client, token string) ClientRegisterResponse {
 	return ClientRegisterResponse{
-		ID:          client.ID.String(),
-		FirstName:   client.FirstName,
-		LastName:    client.LastName,
-		Role:        common.RoleClient,
-		PhoneNumber: common.FromNullString(client.PhoneNumber),
-		ChatID:      common.FromNullInt64(client.ChatID),
-		Token:       token,
-		CreatedAt:   common.FormatTimeWithTimezone(client.CreatedAt),
-		UpdatedAt:   common.FormatTimeWithTimezone(client.UpdatedAt),
+		ID:        client.ID.String(),
+		FirstName: client.FirstName,
+		LastName:  client.LastName,
+		Role:      common.RoleClient,
+		ChatID:    common.FromNullInt64(client.ChatID),
+		Token:     token,
+		CreatedAt: common.FormatTimeWithTimezone(client.CreatedAt),
+		UpdatedAt: common.FormatTimeWithTimezone(client.UpdatedAt),
 	}
 }
 
@@ -25,10 +24,9 @@ func mapAppointmentToGetClientAppointmentsResponse(appointments []*db.GetAppoint
 	var responseAppointments []ClientAppointment
 	for _, appt := range appointments {
 		appointment := ClientAppointment{
-			ID:          appt.ID.String(),
-			StartTime:   common.FormatTimeRFC3339(appt.StartTime),
-			EndTime:     common.FormatTimeRFC3339(appt.EndTime),
-			Description: appt.Description.String,
+			ID:        appt.ID.String(),
+			StartTime: common.FormatTimeRFC3339(appt.StartTime),
+			EndTime:   common.FormatTimeRFC3339(appt.EndTime),
 		}
 		professional := &ClientAppointmentProfessional{
 			FirstName: appt.ProfessionalFirstName.String,
@@ -54,41 +52,23 @@ func mapAppointmentToGetClientAppointmentsResponse(appointments []*db.GetAppoint
 	return response
 }
 
-// mapAppointmentToCancelClientAppointmentResponse maps an appointment to a CancelClientAppointmentResponse
-func mapAppointmentToCancelClientAppointmentResponse(appointment *db.CancelAppointmentByClientWithDetailsRow) CancelClientAppointmentResponse {
-	return CancelClientAppointmentResponse{
-		Appointment: CancelledAppointment{
-			StartTime:          common.FormatTimeRFC3339(appointment.StartTime),
-			EndTime:            common.FormatTimeRFC3339(appointment.EndTime),
-			CancellationReason: appointment.CancellationReason.String,
-		},
-		Client: CancelledAppointmentClient{
-			FirstName: appointment.ClientFirstName.String,
-			LastName:  appointment.ClientLastName.String,
-		},
-		Professional: CancelledAppointmentProfessional{
-			ChatID: common.FromNullInt64(appointment.ProfessionalChatID),
-		},
-	}
-}
-
-// mapAppointmentToCreateAppointmentResponse maps database result to API response
-func mapAppointmentToCreateAppointmentResponse(appointment *db.CreateAppointmentWithDetailsRow) CreateAppointmentResponse {
-	return CreateAppointmentResponse{
-		Appointment: Appointment{
-			StartTime:   common.FormatTimeRFC3339(appointment.StartTime),
-			EndTime:     common.FormatTimeRFC3339(appointment.EndTime),
-			Description: appointment.Description.String,
-		},
-		Client: Client{
-			FirstName: appointment.ClientFirstName.String,
-			LastName:  appointment.ClientLastName.String,
-		},
-		Professional: Professional{
-			ChatID: common.Int64Value(common.FromNullInt64(appointment.ProfessionalChatID)),
-		},
-	}
-}
+// // mapAppointmentToCancelClientAppointmentResponse maps an appointment to a CancelClientAppointmentResponse
+// func mapAppointmentToCancelClientAppointmentResponse(appointment *db.CancelAppointmentByClientWithDetailsRow) CancelClientAppointmentResponse {
+// 	return CancelClientAppointmentResponse{
+// 		Appointment: CancelledAppointment{
+// 			StartTime:          common.FormatTimeRFC3339(appointment.StartTime),
+// 			EndTime:            common.FormatTimeRFC3339(appointment.EndTime),
+// 			CancellationReason: appointment.CancellationReason.String,
+// 		},
+// 		Client: CancelledAppointmentClient{
+// 			FirstName: appointment.ClientFirstName.String,
+// 			LastName:  appointment.ClientLastName.String,
+// 		},
+// 		Professional: CancelledAppointmentProfessional{
+// 			ChatID: common.FromNullInt64(appointment.ProfessionalChatID),
+// 		},
+// 	}
+// }
 
 // mapProfessionalsToGetSubscribedProfessionalsResponse maps a list of professionals to a GetSubscribedProfessionalsResponse
 func mapProfessionalsToGetSubscribedProfessionalsResponse(professionals []*db.GetSubscriptionsByClientIDRow, total, page, pageSize int) GetSubscribedProfessionalsResponse {
@@ -99,6 +79,7 @@ func mapProfessionalsToGetSubscribedProfessionalsResponse(professionals []*db.Ge
 			FirstName: professional.FirstName,
 			LastName:  professional.LastName,
 			ChatID:    common.FromNullInt64(professional.ChatID),
+			Locale:    professional.Locale,
 		}
 	}
 
@@ -123,7 +104,7 @@ func mapProfessionalsToGetProfessionalsResponse(rows []*db.GetProfessionalsRow, 
 			FirstName: row.FirstName,
 			LastName:  row.LastName,
 			ChatID:    common.FromNullInt64(row.ChatID),
-			Locale:    row.Locale.String,
+			Locale:    row.Locale,
 		}
 	}
 

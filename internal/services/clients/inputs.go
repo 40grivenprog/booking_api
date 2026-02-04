@@ -8,11 +8,10 @@ import (
 
 // RegisterClientInput represents the input for registering a client
 type RegisterClientInput struct {
-	FirstName   string
-	LastName    string
-	PhoneNumber string
-	ChatID      int64
-	Locale      string
+	FirstName string
+	LastName  string
+	ChatID    int64
+	Locale    string
 }
 
 // CancelAppointmentInput represents the input for canceling an appointment

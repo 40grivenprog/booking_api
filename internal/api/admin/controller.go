@@ -16,11 +16,10 @@ func (h *AdminsHandler) CreateProfessional(c *gin.Context) {
 	}
 
 	professional, err := h.adminService.CreateProfessional(c.Request.Context(), admin.CreateProfessionalInput{
-		Username:    req.Username,
-		FirstName:   req.FirstName,
-		LastName:    req.LastName,
-		PhoneNumber: req.PhoneNumber,
-		Password:    req.Password,
+		Username:  req.Username,
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Password:  req.Password,
 	})
 	if err != nil {
 		// Check if it's a unique constraint violation

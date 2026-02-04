@@ -7,18 +7,17 @@ import (
 
 // mapProfessionalToCreateProfessionalResponse maps a professional to a CreateProfessionalResponse
 func mapProfessionalToCreateProfessionalResponse(professional *db.Professional) CreateProfessionalResponse {
-	responseUser := User{
-		ID:          professional.ID.String(),
-		Username:    professional.Username,
-		FirstName:   professional.FirstName,
-		LastName:    professional.LastName,
-		UserType:    common.UserTypeProfessional,
-		PhoneNumber: common.FromNullString(professional.PhoneNumber),
-		CreatedAt:   common.FormatTimeWithTimezone(professional.CreatedAt),
-		UpdatedAt:   common.FormatTimeWithTimezone(professional.UpdatedAt),
+	responseUser := CreateProfessionalResponseItem{
+		ID:        professional.ID.String(),
+		Username:  professional.Username,
+		FirstName: professional.FirstName,
+		LastName:  professional.LastName,
+		UserType:  common.UserTypeProfessional,
+		CreatedAt: common.FormatTimeWithTimezone(professional.CreatedAt),
+		UpdatedAt: common.FormatTimeWithTimezone(professional.UpdatedAt),
 	}
 
 	return CreateProfessionalResponse{
-		User: responseUser,
+		CreateProfessionalResponseItem: responseUser,
 	}
 }

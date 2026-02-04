@@ -1,7 +1,21 @@
 -- name: CreateProfessional :one
-INSERT INTO professionals (username, first_name, last_name, phone_number, password_hash, chat_id)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO professionals (username, first_name, last_name, password_hash, chat_id)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
+
+
+-- name: GetProfessionalInfoForNotification :one
+SELECT chat_id, locale
+FROM professionals
+WHERE id = $1;
+
+-- name: GetProfessionalInfoForNotificationByAppointmentID :one
+SELECT chat_id, locale
+FROM professionals
+WHERE id = (
+    SELECT professional_id FROM appointments a WHERE a.id = $1
+);
+
 
 -- name: GetProfessionalByUsername :one
 SELECT * FROM professionals
@@ -40,18 +54,24 @@ SELECT
     a.id,
     a.start_time,
     a.end_time,
-    a.description,
-    c.first_name as client_first_name,
-    c.last_name as client_last_name
+    a.type,
+    COALESCE(
+        ARRAY_AGG(
+            c.first_name || ' ' || c.last_name
+            ORDER BY c.last_name
+        ) FILTER (WHERE c.id IS NOT NULL),
+        ARRAY[]::text[]
+    )::text[] AS clients
 FROM appointments a
-LEFT JOIN clients c ON a.client_id = c.id
+LEFT JOIN client_appointments ca ON ca.appointment_id = a.id
+LEFT JOIN clients c ON c.id = ca.client_id
 WHERE a.professional_id = $1
-    AND ($2 = '' OR a.status = $2::appointment_status)
-    AND ($3 = '' OR DATE(a.start_time) = $3::date)
-    AND a.start_time > NOW()
-    AND a.type = 'appointment'
+  AND ($2::appointment_status IS NULL OR a.status = $2)
+  AND a.start_time > NOW()
+  AND a.type != 'unavailable'
+GROUP BY a.id, a.start_time, a.end_time
 ORDER BY a.start_time ASC
-LIMIT $4 OFFSET $5;
+LIMIT $3 OFFSET $4;
 
 -- name: CountProfessionalAppointmentsWithStatusAndDate :one
 SELECT COUNT(*)
@@ -60,7 +80,7 @@ WHERE a.professional_id = $1
     AND ($2 = '' OR a.status = $2::appointment_status)
     AND ($3 = '' OR DATE(a.start_time) = $3::date)
     AND a.start_time > NOW()
-    AND a.type = 'appointment';
+    AND a.type != 'unavailable';
 
 -- name: GetProfessionalClients :many
 SELECT id, first_name, last_name
@@ -79,3 +99,7 @@ ORDER BY first_name, last_name;
 UPDATE professionals
 SET locale = $2
 WHERE id = $1;
+
+-- name: CreateGroupVisitAppointment :exec
+INSERT INTO appointments (type, professional_id, start_time, end_time, status, description)
+VALUES ('group', $1, $2, $3, 'confirmed', $4);

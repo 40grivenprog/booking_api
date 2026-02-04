@@ -7,40 +7,153 @@ package db
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/google/uuid"
 )
 
 type Querier interface {
-	CancelAppointmentByClientWithDetails(ctx context.Context, arg *CancelAppointmentByClientWithDetailsParams) (*CancelAppointmentByClientWithDetailsRow, error)
-	CancelAppointmentByProfessionalWithDetails(ctx context.Context, arg *CancelAppointmentByProfessionalWithDetailsParams) (*CancelAppointmentByProfessionalWithDetailsRow, error)
+	// -- name: GetAppointmentsByProfessionalAndDate :many
+	// SELECT * FROM appointments
+	// WHERE professional_id = $1
+	//   AND DATE(start_time) = $2
+	//   AND type = 'appointment' or type = 'unavailable'
+	//   AND status not in ('cancelled', 'pending')
+	// ORDER BY start_time ASC;
 	CheckClientAppointmentConflict(ctx context.Context, arg *CheckClientAppointmentConflictParams) (bool, error)
-	ConfirmAppointmentWithDetails(ctx context.Context, arg *ConfirmAppointmentWithDetailsParams) (*ConfirmAppointmentWithDetailsRow, error)
+	// -- name: CreateAppointmentWithDetails :one
+	// WITH new_appointment AS (
+	//     INSERT INTO appointments (type, professional_id, start_time, end_time, status, description)
+	//     VALUES ('appointment', $1, $2, $3, $4, 'pending', $5)
+	//     RETURNING *
+	// )
+	// SELECT
+	//     na.start_time,
+	//     na.end_time,
+	//     na.description,
+	//     c.first_name as client_first_name,
+	//     c.last_name as client_last_name,
+	//     p.chat_id as professional_chat_id,
+	//     p.locale as professional_locale
+	// FROM new_appointment na
+	// LEFT JOIN clients c ON c.id = na.client_id
+	// LEFT JOIN professionals p ON p.id = na.professional_id;
+	ConfirmAppointmentById(ctx context.Context, id uuid.UUID) error
 	CountClientAppointmentsWithStatus(ctx context.Context, arg *CountClientAppointmentsWithStatusParams) (int64, error)
 	CountProfessionalAppointmentsWithStatusAndDate(ctx context.Context, arg *CountProfessionalAppointmentsWithStatusAndDateParams) (int64, error)
 	CountProfessionals(ctx context.Context, clientID uuid.UUID) (int64, error)
 	CountSubscriptionsByClientID(ctx context.Context, clientID uuid.UUID) (int64, error)
-	CreateAppointmentWithDetails(ctx context.Context, arg *CreateAppointmentWithDetailsParams) (*CreateAppointmentWithDetailsRow, error)
 	CreateClient(ctx context.Context, arg *CreateClientParams) (*Client, error)
+	CreateClientAppointment(ctx context.Context, arg *CreateClientAppointmentParams) error
+	CreateGroupVisitAppointment(ctx context.Context, arg *CreateGroupVisitAppointmentParams) error
+	CreatePersonalAppointment(ctx context.Context, arg *CreatePersonalAppointmentParams) (*CreatePersonalAppointmentRow, error)
 	CreateProfessional(ctx context.Context, arg *CreateProfessionalParams) (*Professional, error)
 	CreateSubscription(ctx context.Context, arg *CreateSubscriptionParams) error
-	CreateUnavailableAppointment(ctx context.Context, arg *CreateUnavailableAppointmentParams) (*Appointment, error)
+	// -- name: CancelAppointmentByClientWithDetails :one
+	// WITH updated_appointment AS (
+	//     UPDATE appointments
+	//     SET
+	//         status = 'cancelled',
+	//         cancellation_reason = $3,
+	//         cancelled_by_client_id = $2,
+	//         updated_at = NOW()
+	//     WHERE appointments.id = $1
+	//     AND client_id = $2
+	//     AND status IN ('pending', 'confirmed')
+	//     RETURNING *
+	// )
+	// SELECT
+	//     ua.start_time,
+	//     ua.end_time,
+	//     ua.cancellation_reason,
+	//     ua.description,
+	//     c.first_name as client_first_name,
+	//     c.last_name as client_last_name,
+	//     p.chat_id as professional_chat_id,
+	//     p.locale as professional_locale
+	// FROM updated_appointment ua
+	// LEFT JOIN clients c ON c.id = ua.client_id
+	// LEFT JOIN professionals p ON p.id = ua.professional_id;
+	CreateUnavailableAppointment(ctx context.Context, arg *CreateUnavailableAppointmentParams) error
+	DeleteAppointmentById(ctx context.Context, id uuid.UUID) error
 	DeleteSubscription(ctx context.Context, arg *DeleteSubscriptionParams) error
 	GetAppointmentByID(ctx context.Context, id uuid.UUID) (*Appointment, error)
+	GetAppointmentClientsByAppointmentID(ctx context.Context, appointmentID uuid.UUID) ([]*GetAppointmentClientsByAppointmentIDRow, error)
+	GetAppointmentInfoByAppointmentID(ctx context.Context, id uuid.UUID) (*GetAppointmentInfoByAppointmentIDRow, error)
+	GetAppointmentWithDetails(ctx context.Context, id uuid.UUID) (*GetAppointmentWithDetailsRow, error)
+	// -- name: GetAppointmentsByProfessionalWithStatus :many
+	// SELECT
+	//     a.*,
+	//     c.id AS client_id,
+	//     c.first_name AS client_first_name,
+	//     c.last_name AS client_last_name,
+	//     c.chat_id AS client_chat_id
+	// FROM appointments a
+	// LEFT JOIN clients c ON c.id = a.client_id
+	// WHERE a.professional_id = $1
+	//   AND a.status = $2
+	//   AND a.start_time > NOW()
+	//   AND a.type = 'appointment'
+	// ORDER BY a.start_time DESC;
+	// -- name: CancelAppointmentByProfessionalWithDetails :one
+	// WITH updated_appointment AS (
+	//     UPDATE appointments
+	//     SET
+	//         status = 'cancelled',
+	//         cancellation_reason = $3,
+	//         cancelled_by_professional_id = $2,
+	//         updated_at = NOW()
+	//     WHERE appointments.id = $1
+	//     AND professional_id = $2
+	//     AND status IN ('pending', 'confirmed')
+	//     RETURNING *
+	// )
+	// SELECT
+	//     ua.id,
+	//     ua.type,
+	//     ua.professional_id,
+	//     ua.start_time,
+	//     ua.end_time,
+	//     ua.status,
+	//     ua.cancellation_reason,
+	//     ua.cancelled_by_professional_id,
+	//     ua.cancelled_by_client_id,
+	//     ua.created_at,
+	//     ua.updated_at,
+	//     c.id as client_id_full,
+	//     c.first_name as client_first_name,
+	//     c.last_name as client_last_name,
+	//     c.phone_number as client_phone_number,
+	//     c.chat_id as client_chat_id,
+	//     c.locale as client_locale,
+	//     p.id as professional_id_full,
+	//     p.username as professional_username,
+	//     p.first_name as professional_first_name,
+	//     p.last_name as professional_last_name,
+	//     p.phone_number as professional_phone_number,
+	//     p.chat_id as professional_chat_id
+	// FROM updated_appointment ua
+	// LEFT JOIN clients c ON c.id = ua.client_id
+	// LEFT JOIN professionals p ON p.id = ua.professional_id;
 	GetAppointmentsByClientWithStatus(ctx context.Context, arg *GetAppointmentsByClientWithStatusParams) ([]*GetAppointmentsByClientWithStatusRow, error)
-	GetAppointmentsByProfessionalAndDate(ctx context.Context, arg *GetAppointmentsByProfessionalAndDateParams) ([]*Appointment, error)
-	GetAppointmentsByProfessionalAndDateWithClient(ctx context.Context, arg *GetAppointmentsByProfessionalAndDateWithClientParams) ([]*GetAppointmentsByProfessionalAndDateWithClientRow, error)
-	GetAppointmentsByProfessionalWithStatus(ctx context.Context, arg *GetAppointmentsByProfessionalWithStatusParams) ([]*GetAppointmentsByProfessionalWithStatusRow, error)
+	GetAppointmentsByProfessionalByDate(ctx context.Context, arg *GetAppointmentsByProfessionalByDateParams) ([]*GetAppointmentsByProfessionalByDateRow, error)
 	GetAppointmentsByProfessionalWithStatusAndDate(ctx context.Context, arg *GetAppointmentsByProfessionalWithStatusAndDateParams) ([]*GetAppointmentsByProfessionalWithStatusAndDateRow, error)
-	GetPreviousAppointmentsByClientForMonth(ctx context.Context, arg *GetPreviousAppointmentsByClientForMonthParams) ([]*GetPreviousAppointmentsByClientForMonthRow, error)
-	GetPreviousProfessionalAppointmentsByClient(ctx context.Context, arg *GetPreviousProfessionalAppointmentsByClientParams) ([]*GetPreviousProfessionalAppointmentsByClientRow, error)
-	GetProfessionalAppointmentDates(ctx context.Context, arg *GetProfessionalAppointmentDatesParams) ([]time.Time, error)
 	GetProfessionalByUsername(ctx context.Context, username string) (*Professional, error)
 	GetProfessionalClients(ctx context.Context, professionalID uuid.UUID) ([]*GetProfessionalClientsRow, error)
+	GetProfessionalInfoForNotification(ctx context.Context, id uuid.UUID) (*GetProfessionalInfoForNotificationRow, error)
+	GetProfessionalInfoForNotificationByAppointmentID(ctx context.Context, id uuid.UUID) (*GetProfessionalInfoForNotificationByAppointmentIDRow, error)
+	// -- name: GetProfessionalAppointmentDates :many
+	// SELECT DISTINCT DATE(start_time) AS appointment_date
+	// FROM appointments
+	// WHERE professional_id = $1
+	//   AND type = 'appointment'
+	//   AND status = 'confirmed'
+	//   AND start_time >= $2
+	//   AND start_time < $3
+	// ORDER BY appointment_date ASC;
 	GetProfessionalTimetable(ctx context.Context, arg *GetProfessionalTimetableParams) ([]*GetProfessionalTimetableRow, error)
 	GetProfessionals(ctx context.Context, arg *GetProfessionalsParams) ([]*GetProfessionalsRow, error)
 	GetSubscriptionsByClientID(ctx context.Context, arg *GetSubscriptionsByClientIDParams) ([]*GetSubscriptionsByClientIDRow, error)
+	GetSubscriptionsByProfessionalID(ctx context.Context, professionalID uuid.UUID) ([]*GetSubscriptionsByProfessionalIDRow, error)
 	GetUserByChatID(ctx context.Context, chatID sql.NullInt64) (*GetUserByChatIDRow, error)
 	UpdateClientLocale(ctx context.Context, arg *UpdateClientLocaleParams) error
 	UpdateProfessionalChatID(ctx context.Context, arg *UpdateProfessionalChatIDParams) (*Professional, error)

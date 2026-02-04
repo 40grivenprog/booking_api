@@ -55,7 +55,7 @@ func (q *Queries) DeleteSubscription(ctx context.Context, arg *DeleteSubscriptio
 }
 
 const GetSubscriptionsByClientID = `-- name: GetSubscriptionsByClientID :many
-SELECT p.id, p.first_name, p.last_name, p.chat_id FROM subscriptions s
+SELECT p.id, p.first_name, p.last_name, p.chat_id, p.locale FROM subscriptions s
 JOIN professionals p ON s.professional_id = p.id
 WHERE s.client_id = $1
 ORDER BY p.first_name, p.last_name
@@ -73,6 +73,7 @@ type GetSubscriptionsByClientIDRow struct {
 	FirstName string        `json:"first_name"`
 	LastName  string        `json:"last_name"`
 	ChatID    sql.NullInt64 `json:"chat_id"`
+	Locale    string        `json:"locale"`
 }
 
 func (q *Queries) GetSubscriptionsByClientID(ctx context.Context, arg *GetSubscriptionsByClientIDParams) ([]*GetSubscriptionsByClientIDRow, error) {
@@ -89,7 +90,43 @@ func (q *Queries) GetSubscriptionsByClientID(ctx context.Context, arg *GetSubscr
 			&i.FirstName,
 			&i.LastName,
 			&i.ChatID,
+			&i.Locale,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const GetSubscriptionsByProfessionalID = `-- name: GetSubscriptionsByProfessionalID :many
+SELECT c.chat_id, c.locale FROM subscriptions s
+JOIN clients c ON s.client_id = c.id
+WHERE s.professional_id = $1
+ORDER BY c.first_name, c.last_name
+`
+
+type GetSubscriptionsByProfessionalIDRow struct {
+	ChatID sql.NullInt64 `json:"chat_id"`
+	Locale string        `json:"locale"`
+}
+
+func (q *Queries) GetSubscriptionsByProfessionalID(ctx context.Context, professionalID uuid.UUID) ([]*GetSubscriptionsByProfessionalIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, GetSubscriptionsByProfessionalID, professionalID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetSubscriptionsByProfessionalIDRow{}
+	for rows.Next() {
+		var i GetSubscriptionsByProfessionalIDRow
+		if err := rows.Scan(&i.ChatID, &i.Locale); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)

@@ -40,3 +40,11 @@ type UpdateLocaleInput struct {
 	ProfessionalID uuid.UUID
 	Locale         string
 }
+
+// CreateGroupVisitAppointmentInput represents the input for creating a group visit appointment
+type CreateGroupVisitAppointmentInput struct {
+	ProfessionalID uuid.UUID
+	StartTime      time.Time
+	EndTime        time.Time
+	Description    string
+}

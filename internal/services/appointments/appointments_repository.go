@@ -1,12 +1,12 @@
 package appointments
 
-import (
-	"context"
+// import (
+// 	"context"
 
-	db "github.com/vention/booking_api/internal/repository"
-)
+// 	db "github.com/vention/booking_api/internal/repository"
+// )
 
-type AppointmentsRepository interface {
-	CreateAppointmentWithDetails(ctx context.Context, arg *db.CreateAppointmentWithDetailsParams) (*db.CreateAppointmentWithDetailsRow, error)
-	CheckClientAppointmentConflict(ctx context.Context, arg *db.CheckClientAppointmentConflictParams) (bool, error)
-}
+// type AppointmentsRepository interface {
+// 	CreateAppointmentWithDetails(ctx context.Context, arg *db.CreateAppointmentWithDetailsParams) (*db.CreateAppointmentWithDetailsRow, error)
+// 	CheckClientAppointmentConflict(ctx context.Context, arg *db.CheckClientAppointmentConflictParams) (bool, error)
+// }

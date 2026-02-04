@@ -32,3 +32,12 @@ type SendSubscriptionNotificationInput struct {
 	ClientName string `json:"client_name" binding:"required"`
 	Locale     string `json:"locale,omitempty"`
 }
+
+type SendGroupVisitAppointmentNotificationInput struct {
+	Description      string `json:"description,omitempty"`
+	ChatID           int64  `json:"chat_id" binding:"required"`
+	StartTime        string `json:"start_time" binding:"required"`
+	EndTime          string `json:"end_time" binding:"required"`
+	ProfessionalName string `json:"professional_name" binding:"required"`
+	Locale           string `json:"locale,omitempty"`
+}

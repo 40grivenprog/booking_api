@@ -28,6 +28,13 @@ type NotificationTranslations struct {
 		Title  string
 		Client string
 	}
+	GroupVisitAppointment struct {
+		Professional string
+		Message      string
+		Date         string
+		Time         string
+		Description  string
+	}
 	OpenApp string
 }
 
@@ -82,6 +89,19 @@ var translations = map[string]NotificationTranslations{
 			Title:  "🔔 New client subscription!",
 			Client: "👤 Client:",
 		},
+		GroupVisitAppointment: struct {
+			Professional string
+			Message      string
+			Date         string
+			Time         string
+			Description  string
+		}{
+			Professional: "👤 Trainer:",
+			Message:      "📋 Posted a slot for a group visit",
+			Date:         "📅 Date:",
+			Time:         "🕐 Time:",
+			Description:  "📝 Description:",
+		},
 	},
 	"ru": {
 		AppointmentRequest: struct {
@@ -132,6 +152,19 @@ var translations = map[string]NotificationTranslations{
 		}{
 			Title:  "🔔 Новая подписка клиента!",
 			Client: "👤 Клиент:",
+		},
+		GroupVisitAppointment: struct {
+			Professional string
+			Message      string
+			Date         string
+			Time         string
+			Description  string
+		}{
+			Professional: "👤 Тренер:",
+			Message:      "📋 Выложил слот для группового визита",
+			Date:         "📅 Дата:",
+			Time:         "🕐 Время:",
+			Description:  "📝 Описание:",
 		},
 	},
 	"uk": {
@@ -184,6 +217,19 @@ var translations = map[string]NotificationTranslations{
 			Title:  "🔔 Нова підписка клієнта!",
 			Client: "👤 Клієнт:",
 		},
+		GroupVisitAppointment: struct {
+			Professional string
+			Message      string
+			Date         string
+			Time         string
+			Description  string
+		}{
+			Professional: "👤 Тренер:",
+			Message:      "📋 Виклав слот для групового візиту",
+			Date:         "📅 Дата:",
+			Time:         "🕐 Час:",
+			Description:  "📝 Опис:",
+		},
 	},
 	"pl": {
 		AppointmentRequest: struct {
@@ -234,6 +280,19 @@ var translations = map[string]NotificationTranslations{
 		}{
 			Title:  "🔔 Nowa subskrypcja klienta!",
 			Client: "👤 Klient:",
+		},
+		GroupVisitAppointment: struct {
+			Professional string
+			Message      string
+			Date         string
+			Time         string
+			Description  string
+		}{
+			Professional: "👤 Trener:",
+			Message:      "📋 Opublikował slot na wizytę grupową",
+			Date:         "📅 Data:",
+			Time:         "🕐 Godzina:",
+			Description:  "📝 Opis:",
 		},
 	},
 }

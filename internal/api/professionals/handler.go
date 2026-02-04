@@ -53,14 +53,15 @@ func ProfessionalsRegister(p ProfessionalsHandlerParams) error {
 	{
 		professionals.POST("/sign_in", h.SignInProfessional)
 		professionals.GET("/appointments", h.GetProfessionalAppointments)
-		professionals.GET("/:id/appointment_dates", h.GetProfessionalAppointmentDates)
+		// professionals.GET("/:id/appointment_dates", h.GetProfessionalAppointmentDates)
 		professionals.PATCH("/appointments/:appointment_id/confirm", h.ConfirmAppointment)
 		professionals.PATCH("/appointments/:appointment_id/cancel", h.CancelAppointment)
 		professionals.POST("/unavailable_appointments", h.CreateUnavailableAppointment)
 		professionals.GET("/:id/availability", h.GetProfessionalAvailability)
 		professionals.GET("/timetable", h.GetProfessionalTimetable)
-		professionals.GET("/:id/clients", h.GetProfessionalClients)
-		professionals.GET("/:id/previous_appointments", h.GetPreviousAppointmentsByClient)
+		professionals.POST("/group_visit_appointments", h.CreateGroupVisitAppointment)
+		// professionals.GET("/:id/clients", h.GetProfessionalClients)
+		// professionals.GET("/:id/previous_appointments", h.GetPreviousAppointmentsByClient)
 		professionals.PATCH("/update_locale", h.UpdateLocale)
 	}
 

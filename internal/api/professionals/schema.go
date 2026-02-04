@@ -32,40 +32,6 @@ type User struct {
 	UpdatedAt   string  `json:"updated_at"`
 }
 
-// ConfirmAppointmentResponse represents the response for confirming an appointment
-type ConfirmAppointmentResponse struct {
-	Appointment  ConfirmAppointmentResponseAppointmentItem  `json:"appointment"`
-	Client       ConfirmAppointmentResponseClientItem       `json:"client"`
-	Professional ConfirmAppointmentResponseProfessionalItem `json:"professional"`
-}
-
-// ConfirmAppointmentResponseAppointmentItem represents an appointment in the confirm response
-type ConfirmAppointmentResponseAppointmentItem struct {
-	ID          string `json:"id"`
-	Status      string `json:"status"`
-	StartTime   string `json:"start_time"`
-	EndTime     string `json:"end_time"`
-	Description string `json:"description,omitempty"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
-}
-
-// ConfirmAppointmentResponseClientItem represents a client in the confirm response
-type ConfirmAppointmentResponseClientItem struct {
-	ID        string `json:"id"`
-	ChatID    int64  `json:"chat_id,omitempty"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-}
-
-// ConfirmAppointmentResponseProfessionalItem represents a professional in the confirm response
-type ConfirmAppointmentResponseProfessionalItem struct {
-	ID        string `json:"id"`
-	Username  string `json:"username"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-}
-
 // GetProfessionalAppointmentsResponse represents the response for getting professional appointments
 type GetProfessionalAppointmentsResponse struct {
 	Appointments []GetProfessionalAppointmentsResponseItem `json:"appointments"`
@@ -74,17 +40,11 @@ type GetProfessionalAppointmentsResponse struct {
 
 // GetProfessionalAppointmentsResponseItem represents an appointment with client details in professional context
 type GetProfessionalAppointmentsResponseItem struct {
-	ID          string                                     `json:"id"`
-	StartTime   string                                     `json:"start_time"`
-	EndTime     string                                     `json:"end_time"`
-	Description string                                     `json:"description,omitempty"`
-	Client      *GetProfessionalAppointmentsResponseClient `json:"client,omitempty"`
-}
-
-// ProfessionalAppointmentClient represents client details in appointment context
-type GetProfessionalAppointmentsResponseClient struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	ID        string   `json:"id"`
+	StartTime string   `json:"start_time"`
+	EndTime   string   `json:"end_time"`
+	Type      string   `json:"type"`
+	Clients   []string `json:"clients"`
 }
 
 // CancelAppointmentRequest represents the request to cancel an appointment
@@ -92,64 +52,11 @@ type CancelAppointmentRequest struct {
 	CancellationReason string `json:"cancellation_reason" binding:"required"`
 }
 
-// CancelAppointmentResponse represents the response after cancelling an appointment
-type CancelAppointmentResponse struct {
-	Appointment  CancelledAppointment          `json:"appointment"`
-	Client       ProfessionalAppointmentClient `json:"client"`
-	Professional ProfessionalInfo              `json:"professional"`
-}
-
-// ProfessionalAppointmentClient
-type ProfessionalAppointmentClient struct {
-	ID        string `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	ChatID    *int64 `json:"chat_id,omitempty"`
-}
-
-// CancelledAppointment represents a cancelled appointment
-type CancelledAppointment struct {
-	ID                 string `json:"id"`
-	Type               string `json:"type"`
-	StartTime          string `json:"start_time"`
-	EndTime            string `json:"end_time"`
-	Status             string `json:"status"`
-	Description        string `json:"description,omitempty"`
-	CancellationReason string `json:"cancellation_reason"`
-	CancelledBy        string `json:"cancelled_by"`
-	CreatedAt          string `json:"created_at"`
-	UpdatedAt          string `json:"updated_at"`
-}
-
-// ProfessionalInfo represents professional details in appointment context
-type ProfessionalInfo struct {
-	ID          string  `json:"id"`
-	Username    string  `json:"username"`
-	FirstName   string  `json:"first_name"`
-	LastName    string  `json:"last_name"`
-	PhoneNumber *string `json:"phone_number,omitempty"`
-	ChatID      *int64  `json:"chat_id,omitempty"`
-}
-
 // CreateUnavailableAppointmentRequest represents the request to create an unavailable appointment
 type CreateUnavailableAppointmentRequest struct {
 	Description string `json:"description,omitempty" binding:"required"`
 	StartAt     string `json:"start_at" binding:"required"`
 	EndAt       string `json:"end_at" binding:"required"`
-}
-
-// CreateUnavailableAppointmentResponse represents the response after creating an unavailable appointment
-type CreateUnavailableAppointmentResponse struct {
-	Appointment UnavailableAppointment `json:"appointment"`
-}
-
-// UnavailableAppointment represents an unavailable appointment
-type UnavailableAppointment struct {
-	Type        string `json:"type"`
-	StartTime   string `json:"start_time"`
-	EndTime     string `json:"end_time"`
-	Status      string `json:"status"`
-	Description string `json:"description,omitempty"`
 }
 
 // GetProfessionalAvailabilityResponse represents the response for professional availability
@@ -173,10 +80,12 @@ type GetProfessionalAppointmentDatesResponse struct {
 
 // TimetableAppointment represents an appointment in the timetable
 type TimetableAppointment struct {
-	ID          string `json:"id"`
-	StartTime   string `json:"start_time"`
-	EndTime     string `json:"end_time"`
-	Description string `json:"description"`
+	ID          string   `json:"id"`
+	StartTime   string   `json:"start_time"`
+	EndTime     string   `json:"end_time"`
+	Description string   `json:"description"`
+	Type        string   `json:"type"`
+	Clients     []string `json:"clients"`
 }
 
 // GetProfessionalTimetableResponse represents the response for getting professional timetable
@@ -212,5 +121,18 @@ type GetPreviousAppointmentsByClientResponse struct {
 
 // UpdateLocaleRequest represents the request to change the locale
 type UpdateLocaleRequest struct {
+	Locale string `json:"locale" binding:"required"`
+}
+
+// CreateGroupVisitAppointmentRequest represents the request to create a group visit appointment
+type CreateGroupVisitAppointmentRequest struct {
+	Description string                              `json:"description,omitempty" binding:"required"`
+	StartAt     string                              `json:"start_at" binding:"required"`
+	EndAt       string                              `json:"end_at" binding:"required"`
+	Clients     []CreateGroupVisitAppointmentClient `json:"clients"`
+}
+
+type CreateGroupVisitAppointmentClient struct {
+	ChatID int64  `json:"chat_id" binding:"required"`
 	Locale string `json:"locale" binding:"required"`
 }

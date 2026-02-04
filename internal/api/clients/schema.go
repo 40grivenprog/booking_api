@@ -11,9 +11,11 @@ type UpdateLocaleRequest struct {
 
 // CreateAppointmentRequest represents the request to create an appointment
 type CreateAppointmentRequest struct {
-	ProfessionalID string `json:"professional_id" binding:"required"`
-	StartTime      string `json:"start_time" binding:"required"`
-	EndTime        string `json:"end_time" binding:"required"`
+	ProfessionalID     string `json:"professional_id" binding:"required"`
+	ProfessionalChatID int64  `json:"professional_chat_id" binding:"required"`
+	ProfessionalLocale string `json:"professional_locale" binding:"required"`
+	StartTime          string `json:"start_time" binding:"required"`
+	EndTime            string `json:"end_time" binding:"required"`
 }
 
 // CreateAppointmentResponse represents the response after creating an appointment
@@ -43,24 +45,22 @@ type Professional struct {
 
 // ClientRegisterRequest represents the request body for client registration
 type ClientRegisterRequest struct {
-	FirstName   string  `json:"first_name" binding:"required"`
-	LastName    string  `json:"last_name" binding:"required"`
-	ChatID      int64   `json:"chat_id" binding:"required"`
-	PhoneNumber *string `json:"phone_number,omitempty"`
-	Locale      string  `json:"locale" binding:"required"`
+	FirstName string `json:"first_name" binding:"required"`
+	LastName  string `json:"last_name" binding:"required"`
+	ChatID    int64  `json:"chat_id" binding:"required"`
+	Locale    string `json:"locale" binding:"required"`
 }
 
 // ClientRegisterResponse represents the response for client registration
 type ClientRegisterResponse struct {
-	ID          string  `json:"id"`
-	ChatID      *int64  `json:"chat_id,omitempty"`
-	FirstName   string  `json:"first_name"`
-	LastName    string  `json:"last_name"`
-	PhoneNumber *string `json:"phone_number,omitempty"`
-	CreatedAt   string  `json:"created_at"`
-	UpdatedAt   string  `json:"updated_at"`
-	Role        string  `json:"role"`
-	Token       string  `json:"token"`
+	ID        string `json:"id"`
+	ChatID    *int64 `json:"chat_id,omitempty"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+	Role      string `json:"role"`
+	Token     string `json:"token"`
 }
 
 // GetClientAppointmentsResponse represents the response for getting client appointments
@@ -74,7 +74,6 @@ type ClientAppointment struct {
 	ID           string                         `json:"id"`
 	StartTime    string                         `json:"start_time"`
 	EndTime      string                         `json:"end_time"`
-	Description  string                         `json:"description,omitempty"`
 	Professional *ClientAppointmentProfessional `json:"professional,omitempty"`
 }
 
@@ -90,32 +89,6 @@ type CancelClientAppointmentRequest struct {
 	CancellationReason string `json:"cancellation_reason" binding:"required"`
 }
 
-// CancelClientAppointmentResponse represents the response after cancelling an appointment by client
-type CancelClientAppointmentResponse struct {
-	Appointment  CancelledAppointment             `json:"appointment"`
-	Client       CancelledAppointmentClient       `json:"client"`
-	Professional CancelledAppointmentProfessional `json:"professional"`
-}
-
-// ClientAppointmentClient represents client details in appointment context
-type CancelledAppointmentClient struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-}
-
-// CancelledAppointmentProfessional represents professional details in appointment context
-type CancelledAppointmentProfessional struct {
-	ChatID *int64 `json:"chat_id,omitempty"`
-}
-
-// CancelledAppointment represents a cancelled appointment
-type CancelledAppointment struct {
-	StartTime          string `json:"start_time"`
-	EndTime            string `json:"end_time"`
-	Description        string `json:"description,omitempty"`
-	CancellationReason string `json:"cancellation_reason"`
-}
-
 // GetSubscribedProfessionalsResponse represents the response for getting subscribed professionals
 type GetSubscribedProfessionalsResponse struct {
 	Professionals []GetSubscribedProfessionalsResponseItem `json:"professionals"`
@@ -128,6 +101,7 @@ type GetSubscribedProfessionalsResponseItem struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	ChatID    *int64 `json:"chat_id,omitempty"`
+	Locale    string `json:"locale"`
 }
 
 // GetProfessionalsResponse represents the response for getting all professionals

@@ -11,13 +11,8 @@ import (
 
 // validatePassword validates the professional's password
 func (s *service) validatePassword(professional *db.Professional, password string) error {
-	// Check if password hash exists
-	if !professional.PasswordHash.Valid {
-		return svcCommon.ErrInvalidCredentials
-	}
-
 	// Compare password with hash
-	if err := bcrypt.CompareHashAndPassword([]byte(professional.PasswordHash.String), []byte(password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(professional.PasswordHash), []byte(password)); err != nil {
 		return svcCommon.ErrInvalidCredentials
 	}
 
@@ -34,7 +29,7 @@ func (s *service) validateAppointmentOwnership(appointment *db.Appointment, prof
 
 // validateAppointmentPending validates that the appointment is in pending status
 func (s *service) validateAppointmentPending(appointment *db.Appointment) error {
-	if appointment.Status.AppointmentStatus != db.AppointmentStatusPending {
+	if appointment.Status != "pending" {
 		return svcCommon.ErrAppointmentNotPending
 	}
 	return nil
@@ -42,8 +37,8 @@ func (s *service) validateAppointmentPending(appointment *db.Appointment) error 
 
 // validateAppointmentCancellable validates that the appointment can be cancelled
 func (s *service) validateAppointmentCancellable(appointment *db.Appointment) error {
-	if appointment.Status.AppointmentStatus != db.AppointmentStatusPending &&
-		appointment.Status.AppointmentStatus != db.AppointmentStatusConfirmed {
+	if appointment.Status != "pending" &&
+		appointment.Status != "confirmed" {
 		return svcCommon.ErrAppointmentNotPendingOrConfirmed
 	}
 	return nil

@@ -4,7 +4,6 @@ SELECT
     chat_id,
     first_name,
     last_name,
-    phone_number,
     'client' as role,
     locale,
     NULL as username
@@ -18,7 +17,6 @@ SELECT
     chat_id,
     first_name,
     last_name,
-    phone_number,
     'professional' as role,
     locale,
     username

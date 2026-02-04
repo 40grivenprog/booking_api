@@ -1,43 +1,43 @@
 package api
 
-import (
-	"errors"
+// import (
+// 	"errors"
 
-	"github.com/gin-gonic/gin"
-	"github.com/vention/booking_api/internal/services/appointments"
-)
+// 	"github.com/gin-gonic/gin"
+// 	"github.com/vention/booking_api/internal/services/appointments"
+// )
 
-// AppointmentsHandler handles HTTP requests for appointments
-type AppointmentsHandler struct {
-	appointmentsService appointments.Service
-}
+// // AppointmentsHandler handles HTTP requests for appointments
+// type AppointmentsHandler struct {
+// 	appointmentsService appointments.Service
+// }
 
-// NewAppointmentsHandler creates a new handler with dependency injection
-func NewAppointmentsHandler(service appointments.Service) *AppointmentsHandler {
-	return &AppointmentsHandler{
-		appointmentsService: service,
-	}
-}
+// // NewAppointmentsHandler creates a new handler with dependency injection
+// func NewAppointmentsHandler(service appointments.Service) *AppointmentsHandler {
+// 	return &AppointmentsHandler{
+// 		appointmentsService: service,
+// 	}
+// }
 
-type AppointmentsHandlerParams struct {
-	Router              *gin.RouterGroup
-	AppointmentsService appointments.Service
-}
+// type AppointmentsHandlerParams struct {
+// 	Router              *gin.RouterGroup
+// 	AppointmentsService appointments.Service
+// }
 
-func AppointmentsRegister(p AppointmentsHandlerParams) error {
-	if p.Router == nil {
-		return errors.New("missing router")
-	}
+// func AppointmentsRegister(p AppointmentsHandlerParams) error {
+// 	if p.Router == nil {
+// 		return errors.New("missing router")
+// 	}
 
-	if p.AppointmentsService == nil {
-		return errors.New("missing appointments service")
-	}
+// 	if p.AppointmentsService == nil {
+// 		return errors.New("missing appointments service")
+// 	}
 
-	h := NewAppointmentsHandler(p.AppointmentsService)
+// 	h := NewAppointmentsHandler(p.AppointmentsService)
 
-	appointments := p.Router.Group("/appointments")
-	{
-		appointments.POST("/", h.CreateAppointment)
-	}
-	return nil
-}
+// 	appointments := p.Router.Group("/appointments")
+// 	{
+// 		appointments.POST("/", h.CreateAppointment)
+// 	}
+// 	return nil
+// }

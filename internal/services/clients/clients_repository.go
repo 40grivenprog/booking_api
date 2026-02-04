@@ -9,18 +9,21 @@ import (
 
 // ClientsRepository defines the database operations needed by the clients service
 type ClientsRepository interface {
-	CreateAppointmentWithDetails(ctx context.Context, arg *db.CreateAppointmentWithDetailsParams) (*db.CreateAppointmentWithDetailsRow, error)
+	CreatePersonalAppointment(ctx context.Context, arg *db.CreatePersonalAppointmentParams) (*db.CreatePersonalAppointmentRow, error)
+	CreateClientAppointment(ctx context.Context, arg *db.CreateClientAppointmentParams) error
+	GetAppointmentWithDetails(ctx context.Context, id uuid.UUID) (*db.GetAppointmentWithDetailsRow, error)
 	CheckClientAppointmentConflict(ctx context.Context, arg *db.CheckClientAppointmentConflictParams) (bool, error)
 	CreateClient(ctx context.Context, arg *db.CreateClientParams) (*db.Client, error)
 	GetAppointmentsByClientWithStatus(ctx context.Context, arg *db.GetAppointmentsByClientWithStatusParams) ([]*db.GetAppointmentsByClientWithStatusRow, error)
 	CountClientAppointmentsWithStatus(ctx context.Context, arg *db.CountClientAppointmentsWithStatusParams) (int64, error)
-	GetAppointmentByID(ctx context.Context, id uuid.UUID) (*db.Appointment, error)
-	CancelAppointmentByClientWithDetails(ctx context.Context, arg *db.CancelAppointmentByClientWithDetailsParams) (*db.CancelAppointmentByClientWithDetailsRow, error)
 	UpdateClientLocale(ctx context.Context, arg *db.UpdateClientLocaleParams) error
+	GetProfessionalInfoForNotificationByAppointmentID(ctx context.Context, id uuid.UUID) (*db.GetProfessionalInfoForNotificationByAppointmentIDRow, error)
 	CreateSubscription(ctx context.Context, arg *db.CreateSubscriptionParams) error
 	DeleteSubscription(ctx context.Context, arg *db.DeleteSubscriptionParams) error
 	GetSubscriptionsByClientID(ctx context.Context, arg *db.GetSubscriptionsByClientIDParams) ([]*db.GetSubscriptionsByClientIDRow, error)
 	CountSubscriptionsByClientID(ctx context.Context, clientID uuid.UUID) (int64, error)
 	GetProfessionals(ctx context.Context, arg *db.GetProfessionalsParams) ([]*db.GetProfessionalsRow, error)
 	CountProfessionals(ctx context.Context, clientID uuid.UUID) (int64, error)
+	DeleteAppointmentById(ctx context.Context, id uuid.UUID) error
+	GetAppointmentInfoByAppointmentID(ctx context.Context, id uuid.UUID) (*db.GetAppointmentInfoByAppointmentIDRow, error)
 }
