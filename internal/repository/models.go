@@ -175,3 +175,11 @@ type Professional struct {
 	UpdatedAt    time.Time      `json:"updated_at"`
 	Locale       sql.NullString `json:"locale"`
 }
+
+type Subscription struct {
+	ID             uuid.UUID `json:"id"`
+	ClientID       uuid.UUID `json:"client_id"`
+	ProfessionalID uuid.UUID `json:"professional_id"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}

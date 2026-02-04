@@ -89,3 +89,53 @@ func mapAppointmentToCreateAppointmentResponse(appointment *db.CreateAppointment
 		},
 	}
 }
+
+// mapProfessionalsToGetSubscribedProfessionalsResponse maps a list of professionals to a GetSubscribedProfessionalsResponse
+func mapProfessionalsToGetSubscribedProfessionalsResponse(professionals []*db.GetSubscriptionsByClientIDRow, total, page, pageSize int) GetSubscribedProfessionalsResponse {
+	responseProfessionals := make([]GetSubscribedProfessionalsResponseItem, len(professionals))
+	for i, professional := range professionals {
+		responseProfessionals[i] = GetSubscribedProfessionalsResponseItem{
+			ID:        professional.ID.String(),
+			FirstName: professional.FirstName,
+			LastName:  professional.LastName,
+			ChatID:    common.FromNullInt64(professional.ChatID),
+		}
+	}
+
+	offset := (page - 1) * pageSize
+	hasNextPage := offset+pageSize < total
+
+	return GetSubscribedProfessionalsResponse{
+		Professionals: responseProfessionals,
+		Pagination: common.PaginationResponse{
+			HasNextPage: hasNextPage,
+			Page:        page,
+			PageSize:    pageSize,
+		},
+	}
+}
+
+func mapProfessionalsToGetProfessionalsResponse(rows []*db.GetProfessionalsRow, total, page, pageSize int) GetProfessionalsResponse {
+	responseItems := make([]GetProfessionalsResponseItem, len(rows))
+	for i, row := range rows {
+		responseItems[i] = GetProfessionalsResponseItem{
+			ID:        row.ID.String(),
+			FirstName: row.FirstName,
+			LastName:  row.LastName,
+			ChatID:    common.FromNullInt64(row.ChatID),
+			Locale:    row.Locale.String,
+		}
+	}
+
+	offset := (page - 1) * pageSize
+	hasNextPage := offset+pageSize < total
+
+	return GetProfessionalsResponse{
+		Professionals: responseItems,
+		Pagination: common.PaginationResponse{
+			HasNextPage: hasNextPage,
+			Page:        page,
+			PageSize:    pageSize,
+		},
+	}
+}

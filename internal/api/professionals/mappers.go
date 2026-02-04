@@ -7,29 +7,6 @@ import (
 	db "github.com/vention/booking_api/internal/repository"
 )
 
-func mapProfessionalsToGetProfessionalsResponse(rows []*db.GetProfessionalsRow, total, page, pageSize int) GetProfessionalsResponse {
-	responseItems := make([]GetProfessionalsResponseItem, len(rows))
-	for i, row := range rows {
-		responseItems[i] = GetProfessionalsResponseItem{
-			ID:        row.ID.String(),
-			FirstName: row.FirstName,
-			LastName:  row.LastName,
-		}
-	}
-
-	offset := (page - 1) * pageSize
-	hasNextPage := offset+pageSize < total
-
-	return GetProfessionalsResponse{
-		Professionals: responseItems,
-		Pagination: common.PaginationResponse{
-			HasNextPage: hasNextPage,
-			Page:        page,
-			PageSize:    pageSize,
-		},
-	}
-}
-
 func mapProfessionalToProfessionalSignInResponse(professional *db.Professional, token string) ProfessionalSignInResponse {
 	responseUser := User{
 		ID:          professional.ID.String(),

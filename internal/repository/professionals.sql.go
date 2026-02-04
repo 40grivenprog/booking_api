@@ -37,12 +37,17 @@ func (q *Queries) CountProfessionalAppointmentsWithStatusAndDate(ctx context.Con
 }
 
 const CountProfessionals = `-- name: CountProfessionals :one
-SELECT COUNT(*) FROM professionals
-WHERE chat_id is not null
+SELECT COUNT(*) FROM professionals p
+WHERE p.chat_id is not null
+AND p.id NOT IN (
+    SELECT DISTINCT(professional_id)
+    FROM subscriptions
+    WHERE client_id = $1
+)
 `
 
-func (q *Queries) CountProfessionals(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, CountProfessionals)
+func (q *Queries) CountProfessionals(ctx context.Context, clientID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, CountProfessionals, clientID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -226,26 +231,34 @@ func (q *Queries) GetProfessionalClients(ctx context.Context, professionalID uui
 }
 
 const GetProfessionals = `-- name: GetProfessionals :many
-SELECT id, first_name, last_name
-FROM professionals
-WHERE chat_id is not null
-ORDER BY first_name, last_name
-LIMIT $1 OFFSET $2
+SELECT id, first_name, last_name, chat_id, locale
+FROM professionals p
+WHERE p.chat_id is not null
+AND p.id NOT IN (
+    SELECT DISTINCT(professional_id)
+    FROM subscriptions
+    WHERE client_id = $1
+)
+ORDER BY p.first_name, p.last_name
+LIMIT $2 OFFSET $3
 `
 
 type GetProfessionalsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	ClientID uuid.UUID `json:"client_id"`
+	Limit    int32     `json:"limit"`
+	Offset   int32     `json:"offset"`
 }
 
 type GetProfessionalsRow struct {
-	ID        uuid.UUID `json:"id"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
+	ID        uuid.UUID      `json:"id"`
+	FirstName string         `json:"first_name"`
+	LastName  string         `json:"last_name"`
+	ChatID    sql.NullInt64  `json:"chat_id"`
+	Locale    sql.NullString `json:"locale"`
 }
 
 func (q *Queries) GetProfessionals(ctx context.Context, arg *GetProfessionalsParams) ([]*GetProfessionalsRow, error) {
-	rows, err := q.db.QueryContext(ctx, GetProfessionals, arg.Limit, arg.Offset)
+	rows, err := q.db.QueryContext(ctx, GetProfessionals, arg.ClientID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +266,13 @@ func (q *Queries) GetProfessionals(ctx context.Context, arg *GetProfessionalsPar
 	items := []*GetProfessionalsRow{}
 	for rows.Next() {
 		var i GetProfessionalsRow
-		if err := rows.Scan(&i.ID, &i.FirstName, &i.LastName); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.FirstName,
+			&i.LastName,
+			&i.ChatID,
+			&i.Locale,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)

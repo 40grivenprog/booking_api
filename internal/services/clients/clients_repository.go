@@ -17,4 +17,10 @@ type ClientsRepository interface {
 	GetAppointmentByID(ctx context.Context, id uuid.UUID) (*db.Appointment, error)
 	CancelAppointmentByClientWithDetails(ctx context.Context, arg *db.CancelAppointmentByClientWithDetailsParams) (*db.CancelAppointmentByClientWithDetailsRow, error)
 	UpdateClientLocale(ctx context.Context, arg *db.UpdateClientLocaleParams) error
+	CreateSubscription(ctx context.Context, arg *db.CreateSubscriptionParams) error
+	DeleteSubscription(ctx context.Context, arg *db.DeleteSubscriptionParams) error
+	GetSubscriptionsByClientID(ctx context.Context, arg *db.GetSubscriptionsByClientIDParams) ([]*db.GetSubscriptionsByClientIDRow, error)
+	CountSubscriptionsByClientID(ctx context.Context, clientID uuid.UUID) (int64, error)
+	GetProfessionals(ctx context.Context, arg *db.GetProfessionalsParams) ([]*db.GetProfessionalsRow, error)
+	CountProfessionals(ctx context.Context, clientID uuid.UUID) (int64, error)
 }

@@ -17,19 +17,6 @@ type ProfessionalSignInResponse struct {
 	User User `json:"user"`
 }
 
-// GetProfessionalsResponse represents the response for getting all professionals
-type GetProfessionalsResponse struct {
-	Professionals []GetProfessionalsResponseItem `json:"professionals"`
-	Pagination    common.PaginationResponse      `json:"pagination"`
-}
-
-// GetProfessionalsResponseItem represents a professional in the response
-type GetProfessionalsResponseItem struct {
-	ID        string `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-}
-
 // User represents a user in API responses (using SQLC generated model)
 type User struct {
 	ID          string  `json:"id"`

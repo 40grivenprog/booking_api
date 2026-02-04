@@ -8,15 +8,26 @@ SELECT * FROM professionals
 WHERE username = $1;
 
 -- name: GetProfessionals :many
-SELECT id, first_name, last_name
-FROM professionals
-WHERE chat_id is not null
-ORDER BY first_name, last_name
-LIMIT $1 OFFSET $2;
+SELECT id, first_name, last_name, chat_id, locale
+FROM professionals p
+WHERE p.chat_id is not null
+AND p.id NOT IN (
+    SELECT DISTINCT(professional_id)
+    FROM subscriptions
+    WHERE client_id = $1
+)
+ORDER BY p.first_name, p.last_name
+LIMIT $2 OFFSET $3;
 
 -- name: CountProfessionals :one
-SELECT COUNT(*) FROM professionals
-WHERE chat_id is not null;
+SELECT COUNT(*) FROM professionals p
+WHERE p.chat_id is not null
+AND p.id NOT IN (
+    SELECT DISTINCT(professional_id)
+    FROM subscriptions
+    WHERE client_id = $1
+)
+;
 
 -- name: UpdateProfessionalChatID :one
 UPDATE professionals

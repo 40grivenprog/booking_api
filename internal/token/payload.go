@@ -12,7 +12,7 @@ var (
 	ErrInvalidToken = errors.New("invalid token")
 )
 
-func NewPayload(id uuid.UUID, duration time.Duration) (*Payload, error) {
+func NewPayload(id uuid.UUID, userName string, duration time.Duration) (*Payload, error) {
 	tokenId, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
@@ -21,6 +21,7 @@ func NewPayload(id uuid.UUID, duration time.Duration) (*Payload, error) {
 	payload := &Payload{
 		ID:        tokenId,
 		UserID:    id,
+		UserName:  userName,
 		IssuedAt:  time.Now(),
 		ExpiredAt: time.Now().Add(duration),
 	}
@@ -32,6 +33,7 @@ func NewPayload(id uuid.UUID, duration time.Duration) (*Payload, error) {
 type Payload struct {
 	ID        uuid.UUID `json:"id"`
 	UserID    uuid.UUID `json:"user_id"`
+	UserName  string    `json:"user_name"`
 	Service   string    `json:"service"`
 	IssuedAt  time.Time `json:"issued_at"`
 	ExpiredAt time.Time `json:"expired_at"`

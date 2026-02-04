@@ -36,3 +36,15 @@ type UpdateLocaleInput struct {
 	ClientID uuid.UUID
 	Locale   string
 }
+
+// SubscribeToProfessionalInput represents the input for subscribing to a professional
+type SubscribeToProfessionalInput struct {
+	ClientID       uuid.UUID
+	ProfessionalID uuid.UUID
+}
+
+// UnsubscribeFromProfessionalInput represents the input for unsubscribing from a professional
+type UnsubscribeFromProfessionalInput struct {
+	ClientID       uuid.UUID
+	ProfessionalID uuid.UUID
+}

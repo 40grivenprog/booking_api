@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -40,7 +41,7 @@ func (c *UsersController) GetUserByChatID(ctx *gin.Context) {
 		return
 	}
 
-	token, err := c.tokenMaker.CreateToken(user.ID)
+	token, err := c.tokenMaker.CreateToken(user.ID, fmt.Sprintf("%s %s", user.FirstName, user.LastName))
 	if err != nil {
 		common.HandleErrorResponse(ctx, http.StatusInternalServerError, common.ErrorTypeInternal, common.ErrorMsgFailedToCreateToken, err)
 		return

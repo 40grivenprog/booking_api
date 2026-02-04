@@ -51,7 +51,6 @@ func ProfessionalsRegister(p ProfessionalsHandlerParams) error {
 
 	professionals := p.Router.Group("/professionals")
 	{
-		professionals.GET("", h.GetProfessionals)
 		professionals.POST("/sign_in", h.SignInProfessional)
 		professionals.GET("/appointments", h.GetProfessionalAppointments)
 		professionals.GET("/:id/appointment_dates", h.GetProfessionalAppointmentDates)

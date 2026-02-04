@@ -19,11 +19,14 @@ type Querier interface {
 	ConfirmAppointmentWithDetails(ctx context.Context, arg *ConfirmAppointmentWithDetailsParams) (*ConfirmAppointmentWithDetailsRow, error)
 	CountClientAppointmentsWithStatus(ctx context.Context, arg *CountClientAppointmentsWithStatusParams) (int64, error)
 	CountProfessionalAppointmentsWithStatusAndDate(ctx context.Context, arg *CountProfessionalAppointmentsWithStatusAndDateParams) (int64, error)
-	CountProfessionals(ctx context.Context) (int64, error)
+	CountProfessionals(ctx context.Context, clientID uuid.UUID) (int64, error)
+	CountSubscriptionsByClientID(ctx context.Context, clientID uuid.UUID) (int64, error)
 	CreateAppointmentWithDetails(ctx context.Context, arg *CreateAppointmentWithDetailsParams) (*CreateAppointmentWithDetailsRow, error)
 	CreateClient(ctx context.Context, arg *CreateClientParams) (*Client, error)
 	CreateProfessional(ctx context.Context, arg *CreateProfessionalParams) (*Professional, error)
+	CreateSubscription(ctx context.Context, arg *CreateSubscriptionParams) error
 	CreateUnavailableAppointment(ctx context.Context, arg *CreateUnavailableAppointmentParams) (*Appointment, error)
+	DeleteSubscription(ctx context.Context, arg *DeleteSubscriptionParams) error
 	GetAppointmentByID(ctx context.Context, id uuid.UUID) (*Appointment, error)
 	GetAppointmentsByClientWithStatus(ctx context.Context, arg *GetAppointmentsByClientWithStatusParams) ([]*GetAppointmentsByClientWithStatusRow, error)
 	GetAppointmentsByProfessionalAndDate(ctx context.Context, arg *GetAppointmentsByProfessionalAndDateParams) ([]*Appointment, error)
@@ -37,6 +40,7 @@ type Querier interface {
 	GetProfessionalClients(ctx context.Context, professionalID uuid.UUID) ([]*GetProfessionalClientsRow, error)
 	GetProfessionalTimetable(ctx context.Context, arg *GetProfessionalTimetableParams) ([]*GetProfessionalTimetableRow, error)
 	GetProfessionals(ctx context.Context, arg *GetProfessionalsParams) ([]*GetProfessionalsRow, error)
+	GetSubscriptionsByClientID(ctx context.Context, arg *GetSubscriptionsByClientIDParams) ([]*GetSubscriptionsByClientIDRow, error)
 	GetUserByChatID(ctx context.Context, chatID sql.NullInt64) (*GetUserByChatIDRow, error)
 	UpdateClientLocale(ctx context.Context, arg *UpdateClientLocaleParams) error
 	UpdateProfessionalChatID(ctx context.Context, arg *UpdateProfessionalChatIDParams) (*Professional, error)

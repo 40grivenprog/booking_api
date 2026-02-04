@@ -1,38 +1,16 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	common "github.com/vention/booking_api/internal/api/common"
-	db "github.com/vention/booking_api/internal/repository"
 	"github.com/vention/booking_api/internal/services/notifications"
 	"github.com/vention/booking_api/internal/services/professionals"
 	"github.com/vention/booking_api/internal/util"
 )
-
-// GetProfessionals handles GET /api/professionals
-func (h *ProfessionalsHandler) GetProfessionals(c *gin.Context) {
-	page := common.ParseIntQuery(c, "page", 1, 1, 10000)
-	pageSize := common.ParseIntQuery(c, "pageSize", 15, 1, 100)
-
-	offset := (page - 1) * pageSize
-
-	dbParams := &db.GetProfessionalsParams{
-		Limit:  int32(pageSize),
-		Offset: int32(offset),
-	}
-
-	professionals, total, err := h.professionalsService.GetProfessionals(c.Request.Context(), dbParams)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToRetrieveProfessionals, err)
-		return
-	}
-
-	response := mapProfessionalsToGetProfessionalsResponse(professionals, total, page, pageSize)
-	c.JSON(http.StatusOK, response)
-}
 
 // SignInProfessional handles POST /api/professionals/sign_in
 func (h *ProfessionalsHandler) SignInProfessional(c *gin.Context) {
@@ -52,7 +30,7 @@ func (h *ProfessionalsHandler) SignInProfessional(c *gin.Context) {
 		return
 	}
 
-	token, err := h.tokenMaker.CreateToken(professional.ID)
+	token, err := h.tokenMaker.CreateToken(professional.ID, fmt.Sprintf("%s %s", professional.FirstName, professional.LastName))
 	if err != nil {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeInternal, common.ErrorMsgFailedToCreateToken, err)
 		return

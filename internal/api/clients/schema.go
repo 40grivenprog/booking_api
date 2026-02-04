@@ -115,3 +115,39 @@ type CancelledAppointment struct {
 	Description        string `json:"description,omitempty"`
 	CancellationReason string `json:"cancellation_reason"`
 }
+
+// GetSubscribedProfessionalsResponse represents the response for getting subscribed professionals
+type GetSubscribedProfessionalsResponse struct {
+	Professionals []GetSubscribedProfessionalsResponseItem `json:"professionals"`
+	Pagination    common.PaginationResponse                `json:"pagination"`
+}
+
+// SubscribedProfessional represents a subscribed professional in the response
+type GetSubscribedProfessionalsResponseItem struct {
+	ID        string `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	ChatID    *int64 `json:"chat_id,omitempty"`
+}
+
+// GetProfessionalsResponse represents the response for getting all professionals
+type GetProfessionalsResponse struct {
+	Professionals []GetProfessionalsResponseItem `json:"professionals"`
+	Pagination    common.PaginationResponse      `json:"pagination"`
+}
+
+// GetProfessionalsResponseItem represents a professional in the response
+type GetProfessionalsResponseItem struct {
+	ID        string `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	ChatID    *int64 `json:"chat_id,omitempty"`
+	Locale    string `json:"locale"`
+}
+
+// SubscribedProfessionalRequest represents the request to subscribe to a professional
+type SubscribedProfessionalRequest struct {
+	ProfessionalID string `json:"professional_id" binding:"required"`
+	ChatID         int64  `json:"chat_id" binding:"required"`
+	Locale         string `json:"locale" binding:"required"`
+}

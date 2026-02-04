@@ -11,6 +11,7 @@ type Service interface {
 	SendAppointmentRequestNotification(ctx context.Context, input SendAppointmentRequestNotificationInput) error
 	SendAppointmentCancellationNotification(ctx context.Context, input SendAppointmentCancellationNotificationInput) error
 	SendAppointmentConfirmationNotification(ctx context.Context, input SendAppointmentConfirmationNotificationInput) error
+	SendSubscriptionNotification(ctx context.Context, input SendSubscriptionNotificationInput) error
 }
 
 type service struct {
@@ -155,6 +156,40 @@ func (s *service) SendAppointmentConfirmationNotification(ctx context.Context, i
 	// Send message via Telegram Bot API
 	msg := tgbotapi.NewMessage(input.ChatID, messageText)
 	msg.ReplyMarkup = keyboard
+	_, err := s.bot.Send(msg)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *service) SendSubscriptionNotification(ctx context.Context, input SendSubscriptionNotificationInput) error {
+	// Get locale (default to "en" if not provided)
+	locale := input.Locale
+	if locale == "" {
+		locale = "en"
+	}
+	t := getTranslations(locale)
+
+	// Format localized message
+	messageText := fmt.Sprintf(
+		"%s\n\n%s %s",
+		t.Subscription.Title,
+		t.Subscription.Client,
+		input.ClientName,
+	)
+
+	// Create inline keyboard with Web App button (using URL button)
+	webAppButton := tgbotapi.NewInlineKeyboardButtonURL(t.OpenApp, "https://t.me/testMfiAppBot/someRandomTestApp777")
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(webAppButton),
+	)
+
+	// Send message via Telegram Bot API
+	msg := tgbotapi.NewMessage(input.ChatID, messageText)
+	msg.ReplyMarkup = keyboard
+
 	_, err := s.bot.Send(msg)
 	if err != nil {
 		return err

@@ -26,3 +26,9 @@ type SendAppointmentConfirmationNotificationInput struct {
 	ProfessionalName string `json:"professional_name" binding:"required"`
 	Locale           string `json:"locale,omitempty"` // Optional locale, defaults to "en"
 }
+
+type SendSubscriptionNotificationInput struct {
+	ChatID     int64  `json:"chat_id" binding:"required"`
+	ClientName string `json:"client_name" binding:"required"`
+	Locale     string `json:"locale,omitempty"`
+}

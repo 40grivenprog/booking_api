@@ -57,6 +57,7 @@ func AuthMiddleware(tokenMaker token.Maker) gin.HandlerFunc {
 			return
 		}
 		c.Set(common.UserIDKey, payload.UserID)
+		c.Set(common.UserNameKey, payload.UserName)
 
 		c.Next()
 	}

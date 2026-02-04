@@ -60,6 +60,10 @@ func ClientsRegister(p ClientsHandlerParams) error {
 		clients.GET("/appointments", h.GetClientAppointments)
 		clients.PATCH("/appointments/:appointment_id/cancel", h.CancelClientAppointment)
 		clients.PATCH("/update_locale", h.UpdateLocale)
+		clients.POST("/subscribe", h.SubscribeToProfessional)
+		clients.DELETE("/unsubscribe/:professional_id", h.UnsubscribeFromProfessional)
+		clients.GET("/professionals/all", h.GetAllProfessionals)
+		clients.GET("/professionals", h.GetSubscribedProfessionals)
 	}
 
 	return nil

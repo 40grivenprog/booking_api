@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	common "github.com/vention/booking_api/internal/api/common"
+	db "github.com/vention/booking_api/internal/repository"
 	"github.com/vention/booking_api/internal/services/clients"
 	"github.com/vention/booking_api/internal/services/notifications"
 )
@@ -96,7 +97,7 @@ func (h *ClientsHandler) RegisterClient(c *gin.Context) {
 		return
 	}
 
-	token, err := h.tokenMaker.CreateToken(client.ID)
+	token, err := h.tokenMaker.CreateToken(client.ID, fmt.Sprintf("%s %s", client.FirstName, client.LastName))
 	if err != nil {
 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeInternal, common.ErrorMsgFailedToCreateToken, err)
 		return
@@ -195,4 +196,116 @@ func (h *ClientsHandler) UpdateLocale(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusAccepted, nil)
+}
+
+// SubscribeToProfessional handles POST /api/clients/subscribe
+func (h *ClientsHandler) SubscribeToProfessional(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+	clientName := common.GetUserName(c)
+
+	req, ok := common.BindAndValidate[SubscribedProfessionalRequest](c)
+	if !ok {
+		return
+	}
+
+	professionalID, ok := common.ParseProfessionalID(c, req.ProfessionalID)
+	if !ok {
+		return
+	}
+
+	err := h.clientsService.SubscribeToProfessional(c.Request.Context(), clients.SubscribeToProfessionalInput{
+		ClientID:       clientID,
+		ProfessionalID: professionalID,
+	})
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+	err = h.notificationsService.SendSubscriptionNotification(c.Request.Context(), notifications.SendSubscriptionNotificationInput{
+		ChatID:     req.ChatID,
+		ClientName: clientName,
+		Locale:     req.Locale,
+	})
+	if err != nil {
+		common.HandleNotificationError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusAccepted, nil)
+}
+
+// UnsubscribeFromProfessional handles DELETE /api/clients/unsubscribe/{professional_id}
+func (h *ClientsHandler) UnsubscribeFromProfessional(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	professionalID, ok := common.ParseProfessionalID(c, c.Param("professional_id"))
+	if !ok {
+		return
+	}
+
+	err := h.clientsService.UnsubscribeFromProfessional(c.Request.Context(), clients.UnsubscribeFromProfessionalInput{
+		ClientID:       clientID,
+		ProfessionalID: professionalID,
+	})
+
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusAccepted, nil)
+}
+
+// GetSubscribedProfessionals handles GET /api/clients/professionals
+func (h *ClientsHandler) GetSubscribedProfessionals(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	page := common.ParseIntQuery(c, "page", 1, 1, 10000)
+	pageSize := common.ParseIntQuery(c, "pageSize", 15, 1, 100)
+
+	professionals, total, err := h.clientsService.GetSubscribedProfessionals(c.Request.Context(), clientID, page, pageSize)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+	response := mapProfessionalsToGetSubscribedProfessionalsResponse(professionals, total, page, pageSize)
+
+	c.JSON(http.StatusOK, response)
+}
+
+// GetAllProfessionals handles GET /api/clients/professionals/all
+func (h *ClientsHandler) GetAllProfessionals(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+	page := common.ParseIntQuery(c, "page", 1, 1, 10000)
+	pageSize := common.ParseIntQuery(c, "pageSize", 15, 1, 100)
+
+	offset := (page - 1) * pageSize
+
+	dbParams := &db.GetProfessionalsParams{
+		ClientID: clientID,
+		Limit:    int32(pageSize),
+		Offset:   int32(offset),
+	}
+
+	professionals, total, err := h.clientsService.GetAllProfessionals(c.Request.Context(), dbParams)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	response := mapProfessionalsToGetProfessionalsResponse(professionals, total, page, pageSize)
+
+	c.JSON(http.StatusOK, response)
 }

@@ -17,6 +17,10 @@ type Service interface {
 	GetClientAppointments(ctx context.Context, clientID uuid.UUID, statusFilter string, page, pageSize int) ([]*db.GetAppointmentsByClientWithStatusRow, int, error)
 	CancelAppointment(ctx context.Context, input CancelAppointmentInput) (*db.CancelAppointmentByClientWithDetailsRow, error)
 	UpdateLocale(ctx context.Context, input UpdateLocaleInput) error
+	SubscribeToProfessional(ctx context.Context, input SubscribeToProfessionalInput) error
+	UnsubscribeFromProfessional(ctx context.Context, input UnsubscribeFromProfessionalInput) error
+	GetSubscribedProfessionals(ctx context.Context, clientID uuid.UUID, page, pageSize int) ([]*db.GetSubscriptionsByClientIDRow, int, error)
+	GetAllProfessionals(ctx context.Context, dbParams *db.GetProfessionalsParams) ([]*db.GetProfessionalsRow, int, error)
 }
 
 type service struct {
@@ -177,4 +181,52 @@ func (s *service) UpdateLocale(ctx context.Context, input UpdateLocaleInput) err
 		ID:     input.ClientID,
 		Locale: sql.NullString{String: input.Locale, Valid: true},
 	})
+}
+
+func (s *service) SubscribeToProfessional(ctx context.Context, input SubscribeToProfessionalInput) error {
+	return s.repo.CreateSubscription(ctx, &db.CreateSubscriptionParams{
+		ClientID:       input.ClientID,
+		ProfessionalID: input.ProfessionalID,
+	})
+}
+
+func (s *service) UnsubscribeFromProfessional(ctx context.Context, input UnsubscribeFromProfessionalInput) error {
+	return s.repo.DeleteSubscription(ctx, &db.DeleteSubscriptionParams{
+		ClientID:       input.ClientID,
+		ProfessionalID: input.ProfessionalID,
+	})
+}
+
+func (s *service) GetSubscribedProfessionals(ctx context.Context, clientID uuid.UUID, page, pageSize int) ([]*db.GetSubscriptionsByClientIDRow, int, error) {
+	offset := (page - 1) * pageSize
+
+	professionals, err := s.repo.GetSubscriptionsByClientID(ctx, &db.GetSubscriptionsByClientIDParams{
+		ClientID: clientID,
+		Limit:    int32(pageSize),
+		Offset:   int32(offset),
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err := s.repo.CountSubscriptionsByClientID(ctx, clientID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return professionals, int(total), nil
+}
+
+func (s *service) GetAllProfessionals(ctx context.Context, dbParams *db.GetProfessionalsParams) ([]*db.GetProfessionalsRow, int, error) {
+	professionals, err := s.repo.GetProfessionals(ctx, dbParams)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err := s.repo.CountProfessionals(ctx, dbParams.ClientID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return professionals, int(total), nil
 }

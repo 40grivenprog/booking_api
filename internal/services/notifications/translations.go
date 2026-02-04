@@ -24,6 +24,10 @@ type NotificationTranslations struct {
 		Date         string
 		Time         string
 	}
+	Subscription struct {
+		Title  string
+		Client string
+	}
 	OpenApp string
 }
 
@@ -71,6 +75,13 @@ var translations = map[string]NotificationTranslations{
 			Time:         "🕐 Time:",
 		},
 		OpenApp: "📱 Open App",
+		Subscription: struct {
+			Title  string
+			Client string
+		}{
+			Title:  "🔔 New client subscription!",
+			Client: "👤 Client:",
+		},
 	},
 	"ru": {
 		AppointmentRequest: struct {
@@ -115,6 +126,13 @@ var translations = map[string]NotificationTranslations{
 			Time:         "🕐 Время:",
 		},
 		OpenApp: "📱 Открыть приложение",
+		Subscription: struct {
+			Title  string
+			Client string
+		}{
+			Title:  "🔔 Новая подписка клиента!",
+			Client: "👤 Клиент:",
+		},
 	},
 	"uk": {
 		AppointmentRequest: struct {
@@ -159,6 +177,13 @@ var translations = map[string]NotificationTranslations{
 			Time:         "🕐 Час:",
 		},
 		OpenApp: "📱 Відкрити додаток",
+		Subscription: struct {
+			Title  string
+			Client string
+		}{
+			Title:  "🔔 Нова підписка клієнта!",
+			Client: "👤 Клієнт:",
+		},
 	},
 	"pl": {
 		AppointmentRequest: struct {
@@ -203,6 +228,13 @@ var translations = map[string]NotificationTranslations{
 			Time:         "🕐 Godzina:",
 		},
 		OpenApp: "📱 Otwórz aplikację",
+		Subscription: struct {
+			Title  string
+			Client string
+		}{
+			Title:  "🔔 Nowa subskrypcja klienta!",
+			Client: "👤 Klient:",
+		},
 	},
 }
 
