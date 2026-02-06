@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/vention/booking_api/internal/services/notifications"
 )
 
 // RegisterClientInput represents the input for registering a client
@@ -46,4 +47,14 @@ type SubscribeToProfessionalInput struct {
 type UnsubscribeFromProfessionalInput struct {
 	ClientID       uuid.UUID
 	ProfessionalID uuid.UUID
+}
+
+// AcceptClientInviteInput represents the input for accepting a client invite
+type AcceptClientInviteInput struct {
+	ClientID            uuid.UUID
+	InviteID            uuid.UUID
+	AppointmentID       uuid.UUID
+	ClientName          string
+	NotificationService notifications.Service
+	Type                string
 }

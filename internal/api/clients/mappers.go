@@ -120,3 +120,61 @@ func mapProfessionalsToGetProfessionalsResponse(rows []*db.GetProfessionalsRow, 
 		},
 	}
 }
+
+func mapInvitesToGetClientInvitesResponse(invites []*db.GetClientInvitesRow) GetClientInvitesResponse {
+	responseInvites := make([]GetClientInvitesResponseItem, len(invites))
+	for i, invite := range invites {
+		responseInvites[i] = GetClientInvitesResponseItem{
+			ID:               invite.ID.String(),
+			AppointmentID:    invite.AppointmentID.String(),
+			StartTime:        common.FormatTimeRFC3339(invite.StartTime),
+			EndTime:          common.FormatTimeRFC3339(invite.EndTime),
+			Description:      invite.Description,
+			Type:             invite.Type,
+			ProfessionalName: invite.ProfessionalName,
+			ClientID:         invite.ClientID.String(),
+		}
+	}
+	return GetClientInvitesResponse{
+		Invites: responseInvites,
+	}
+}
+
+func mapInviteToGetClientInviteResponse(invite *db.GetInviteByIDRow) GetClientInviteResponse {
+	return GetClientInviteResponse{
+		ID:               invite.ID.String(),
+		AppointmentID:    invite.AppointmentID.String(),
+		StartTime:        common.FormatTimeRFC3339(invite.StartTime),
+		EndTime:          common.FormatTimeRFC3339(invite.EndTime),
+		Description:      invite.Description,
+		Type:             invite.Type,
+		ProfessionalName: invite.ProfessionalName,
+	}
+}
+
+// mapPreviousAppointmentsToGetClientPreviousAppointmentsResponse maps a list of previous appointments to a GetClientPreviousAppointmentsResponse
+func mapPreviousAppointmentsToGetClientPreviousAppointmentsResponse(appointments []*db.GetPreviousAppointmentsByClientIDRow, total, page, pageSize int) GetClientPreviousAppointmentsResponse {
+	responseAppointments := make([]GetClientPreviousAppointmentsResponseItem, len(appointments))
+	for i, appt := range appointments {
+		responseAppointments[i] = GetClientPreviousAppointmentsResponseItem{
+			ID:        appt.ID.String(),
+			StartTime: common.FormatTimeRFC3339(appt.StartTime),
+			EndTime:   common.FormatTimeRFC3339(appt.EndTime),
+			Type:      appt.Type,
+			FirstName: appt.FirstName,
+			LastName:  appt.LastName,
+		}
+	}
+
+	offset := (page - 1) * pageSize
+	hasNextPage := offset+pageSize < total
+
+	return GetClientPreviousAppointmentsResponse{
+		Appointments: responseAppointments,
+		Pagination: common.PaginationResponse{
+			HasNextPage: hasNextPage,
+			Page:        page,
+			PageSize:    pageSize,
+		},
+	}
+}

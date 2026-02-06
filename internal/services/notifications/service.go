@@ -14,6 +14,7 @@ type Service interface {
 	SendAppointmentConfirmationNotification(ctx context.Context, input SendAppointmentConfirmationNotificationInput) error
 	SendSubscriptionNotification(ctx context.Context, input SendSubscriptionNotificationInput) error
 	SendGroupVisitAppointmentNotification(ctx context.Context, input SendGroupVisitAppointmentNotificationInput) error
+	SendAcceptInviteNotification(ctx context.Context, input SendAcceptInviteNotificationInput) error
 }
 
 type service struct {
@@ -226,9 +227,9 @@ func (s *service) SendGroupVisitAppointmentNotification(ctx context.Context, inp
 		t.GroupVisitAppointment.Description,
 		input.Description,
 	)
-
 	// Create inline keyboard with Web App button (using URL button)
-	webAppButton := tgbotapi.NewInlineKeyboardButtonURL(t.OpenApp, "https://t.me/testMfiAppBot/someRandomTestApp777?some_query_param=some_value")
+	payload := "invite_" + input.InviteID.String()
+	webAppButton := tgbotapi.NewInlineKeyboardButtonURL(t.OpenApp, "https://t.me/testMfiAppBot/someRandomTestApp777?startapp="+url.QueryEscape(payload))
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(webAppButton),
 	)
@@ -236,6 +237,54 @@ func (s *service) SendGroupVisitAppointmentNotification(ctx context.Context, inp
 	// Send message via Telegram Bot API
 	msg := tgbotapi.NewMessage(input.ChatID, messageText)
 	msg.ReplyMarkup = keyboard
+	_, err := s.bot.Send(msg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *service) SendAcceptInviteNotification(ctx context.Context, input SendAcceptInviteNotificationInput) error {
+	// Format time for display
+	date, startTime, endTime := formatAppointmentTime(input.StartTime, input.EndTime)
+
+	// Get locale (default to "en" if not provided)
+	locale := input.Locale
+	if locale == "" {
+		locale = "en"
+	}
+	t := getTranslations(locale)
+
+	// Format type for display
+	typeDisplay := input.Type
+	switch typeDisplay {
+	case "split":
+		typeDisplay = "Split"
+	case "group":
+		typeDisplay = "Group"
+	default:
+		typeDisplay = "Unknown"
+	}
+
+	// Format localized message
+	messageText := fmt.Sprintf(
+		"%s\n\n%s\n%s %s\n%s %s\n%s %s\n%s %s\n%s %s",
+		fmt.Sprintf(t.AcceptInvite.JoinedMessage, input.ClientName),
+		t.AcceptInvite.DetailsTitle,
+		t.AcceptInvite.Date,
+		date,
+		t.AcceptInvite.StartTime,
+		startTime,
+		t.AcceptInvite.EndTime,
+		endTime,
+		t.AcceptInvite.Type,
+		typeDisplay,
+		t.AcceptInvite.Description,
+		input.Description,
+	)
+
+	// Send message via Telegram Bot API
+	msg := tgbotapi.NewMessage(input.ChatID, messageText)
 	_, err := s.bot.Send(msg)
 	if err != nil {
 		return err

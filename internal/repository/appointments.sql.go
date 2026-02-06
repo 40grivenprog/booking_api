@@ -81,6 +81,19 @@ func (q *Queries) ConfirmAppointmentById(ctx context.Context, id uuid.UUID) erro
 	return err
 }
 
+const CountClientAppointmentsByAppointmentID = `-- name: CountClientAppointmentsByAppointmentID :one
+SELECT COUNT(*)
+FROM client_appointments
+WHERE appointment_id = $1
+`
+
+func (q *Queries) CountClientAppointmentsByAppointmentID(ctx context.Context, appointmentID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, CountClientAppointmentsByAppointmentID, appointmentID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const CountClientAppointmentsWithStatus = `-- name: CountClientAppointmentsWithStatus :one
 SELECT COUNT(*)
 FROM appointments a
@@ -100,6 +113,25 @@ type CountClientAppointmentsWithStatusParams struct {
 
 func (q *Queries) CountClientAppointmentsWithStatus(ctx context.Context, arg *CountClientAppointmentsWithStatusParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, CountClientAppointmentsWithStatus, arg.ClientID, arg.Status)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const CountPreviousAppointmentsByClientID = `-- name: CountPreviousAppointmentsByClientID :one
+SELECT COUNT(DISTINCT a.id)
+FROM appointments a
+WHERE a.id IN (
+    SELECT DISTINCT(appointment_id)
+    FROM client_appointments ca
+    WHERE ca.client_id = $1
+)
+  AND a.status = 'confirmed'
+  AND a.end_time < NOW()
+`
+
+func (q *Queries) CountPreviousAppointmentsByClientID(ctx context.Context, clientID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, CountPreviousAppointmentsByClientID, clientID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -528,6 +560,96 @@ func (q *Queries) GetAppointmentsByProfessionalByDate(ctx context.Context, arg *
 	for rows.Next() {
 		var i GetAppointmentsByProfessionalByDateRow
 		if err := rows.Scan(&i.StartTime, &i.EndTime); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const GetPreviousAppointmentsByClientID = `-- name: GetPreviousAppointmentsByClientID :many
+
+
+
+SELECT 
+    a.id, 
+    a.start_time, 
+    a.end_time, 
+    a.type, 
+    p.first_name,
+    p.last_name
+FROM appointments a
+JOIN professionals p ON p.id = a.professional_id
+WHERE a.id IN (
+    SELECT DISTINCT(appointment_id)
+    FROM client_appointments ca
+    WHERE ca.client_id = $1
+)
+  AND a.status = 'confirmed'
+  AND a.end_time < NOW()
+ORDER BY a.start_time DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetPreviousAppointmentsByClientIDParams struct {
+	ClientID uuid.UUID `json:"client_id"`
+	Limit    int32     `json:"limit"`
+	Offset   int32     `json:"offset"`
+}
+
+type GetPreviousAppointmentsByClientIDRow struct {
+	ID        uuid.UUID `json:"id"`
+	StartTime time.Time `json:"start_time"`
+	EndTime   time.Time `json:"end_time"`
+	Type      string    `json:"type"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+}
+
+// -- name: GetPreviousProfessionalAppointmentsByClient :many
+// SELECT id, start_time, end_time, description
+// FROM appointments
+// WHERE client_id = $1
+//
+//	AND professional_id = $2
+//	AND status = 'confirmed'
+//	AND end_time < NOW()
+//
+// ORDER BY start_time DESC;
+// -- name: GetPreviousAppointmentsByClientForMonth :many
+// SELECT id, start_time, end_time, description
+// FROM appointments
+// WHERE client_id = sqlc.arg(client_id)
+//
+//	AND professional_id = sqlc.arg(professional_id)
+//	AND status = 'confirmed'
+//	AND end_time < NOW()
+//	AND DATE_TRUNC('month', start_time) = DATE_TRUNC('month', sqlc.arg(month_date)::date)
+//
+// ORDER BY start_time DESC;
+func (q *Queries) GetPreviousAppointmentsByClientID(ctx context.Context, arg *GetPreviousAppointmentsByClientIDParams) ([]*GetPreviousAppointmentsByClientIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, GetPreviousAppointmentsByClientID, arg.ClientID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetPreviousAppointmentsByClientIDRow{}
+	for rows.Next() {
+		var i GetPreviousAppointmentsByClientIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Type,
+			&i.FirstName,
+			&i.LastName,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)

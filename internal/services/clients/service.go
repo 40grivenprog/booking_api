@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	db "github.com/vention/booking_api/internal/repository"
+	svcCommon "github.com/vention/booking_api/internal/services/common"
 	"github.com/vention/booking_api/internal/util"
 )
 
@@ -20,6 +21,11 @@ type Service interface {
 	UnsubscribeFromProfessional(ctx context.Context, input UnsubscribeFromProfessionalInput) error
 	GetSubscribedProfessionals(ctx context.Context, clientID uuid.UUID, page, pageSize int) ([]*db.GetSubscriptionsByClientIDRow, int, error)
 	GetAllProfessionals(ctx context.Context, dbParams *db.GetProfessionalsParams) ([]*db.GetProfessionalsRow, int, error)
+	GetClientInvites(ctx context.Context, clientID uuid.UUID) ([]*db.GetClientInvitesRow, error)
+	GetClientInvite(ctx context.Context, clientID uuid.UUID, inviteID uuid.UUID) (*db.GetInviteByIDRow, error)
+	DeleteClientInvite(ctx context.Context, clientID uuid.UUID, inviteID uuid.UUID) error
+	AcceptClientInvite(ctx context.Context, input AcceptClientInviteInput) (*db.GetInfoForAcceptInviteNotificationRow, error)
+	GetPreviosAppointments(ctx context.Context, clientID uuid.UUID, page, pageSize int) ([]*db.GetPreviousAppointmentsByClientIDRow, int, error)
 }
 
 type service struct {
@@ -164,6 +170,7 @@ func (s *service) CancelAppointment(ctx context.Context, input CancelAppointment
 	return result, nil
 }
 
+// UpdateLocale updates the locale for a client
 func (s *service) UpdateLocale(ctx context.Context, input UpdateLocaleInput) error {
 	return s.repo.UpdateClientLocale(ctx, &db.UpdateClientLocaleParams{
 		ID:     input.ClientID,
@@ -171,6 +178,7 @@ func (s *service) UpdateLocale(ctx context.Context, input UpdateLocaleInput) err
 	})
 }
 
+// SubscribeToProfessional subscribes a client to a professional
 func (s *service) SubscribeToProfessional(ctx context.Context, input SubscribeToProfessionalInput) error {
 	return s.repo.CreateSubscription(ctx, &db.CreateSubscriptionParams{
 		ClientID:       input.ClientID,
@@ -178,6 +186,7 @@ func (s *service) SubscribeToProfessional(ctx context.Context, input SubscribeTo
 	})
 }
 
+// UnsubscribeFromProfessional unsubscribes a client from a professional
 func (s *service) UnsubscribeFromProfessional(ctx context.Context, input UnsubscribeFromProfessionalInput) error {
 	return s.repo.DeleteSubscription(ctx, &db.DeleteSubscriptionParams{
 		ClientID:       input.ClientID,
@@ -185,6 +194,7 @@ func (s *service) UnsubscribeFromProfessional(ctx context.Context, input Unsubsc
 	})
 }
 
+// GetSubscribedProfessionals gets the professionals a client is subscribed to
 func (s *service) GetSubscribedProfessionals(ctx context.Context, clientID uuid.UUID, page, pageSize int) ([]*db.GetSubscriptionsByClientIDRow, int, error) {
 	offset := (page - 1) * pageSize
 
@@ -205,6 +215,7 @@ func (s *service) GetSubscribedProfessionals(ctx context.Context, clientID uuid.
 	return professionals, int(total), nil
 }
 
+// GetAllProfessionals gets all professionals
 func (s *service) GetAllProfessionals(ctx context.Context, dbParams *db.GetProfessionalsParams) ([]*db.GetProfessionalsRow, int, error) {
 	professionals, err := s.repo.GetProfessionals(ctx, dbParams)
 	if err != nil {
@@ -217,4 +228,110 @@ func (s *service) GetAllProfessionals(ctx context.Context, dbParams *db.GetProfe
 	}
 
 	return professionals, int(total), nil
+}
+
+// GetClientInvites gets the invites for a client
+func (s *service) GetClientInvites(ctx context.Context, clientID uuid.UUID) ([]*db.GetClientInvitesRow, error) {
+	invites, err := s.repo.GetClientInvites(ctx, clientID)
+	if err != nil {
+		return nil, err
+	}
+	return invites, nil
+}
+
+// GetClientInvite gets an invite for a client
+func (s *service) GetClientInvite(ctx context.Context, clientID uuid.UUID, inviteID uuid.UUID) (*db.GetInviteByIDRow, error) {
+	invite, err := s.repo.GetInviteByID(ctx, &db.GetInviteByIDParams{
+		ID:       inviteID,
+		ClientID: clientID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return invite, nil
+}
+
+// DeleteClientInvite deletes an invite for a client
+func (s *service) DeleteClientInvite(ctx context.Context, clientID uuid.UUID, inviteID uuid.UUID) error {
+	return s.repo.DeleteInviteByID(ctx, &db.DeleteInviteByIDParams{
+		ID:       inviteID,
+		ClientID: clientID,
+	})
+}
+
+// AcceptClientInvite accepts a client invite
+func (s *service) AcceptClientInvite(ctx context.Context, input AcceptClientInviteInput) (*db.GetInfoForAcceptInviteNotificationRow, error) {
+	var resultErr error
+	err := db.WithTransaction(ctx, s.database, func(q *db.Queries) error {
+		// If type is "split", check if appointment is already fully booked (>= 2 clients)
+		if input.Type == "split" {
+			// Get all clients for this appointment
+			clients, err := q.GetAppointmentClientsByAppointmentID(ctx, input.AppointmentID)
+			if err != nil {
+				return err
+			}
+
+			// If already 2 or more clients, appointment is fully booked
+			if len(clients) >= 2 {
+				// Delete invite
+				if err := q.DeleteInviteByID(ctx, &db.DeleteInviteByIDParams{
+					ID:       input.InviteID,
+					ClientID: input.ClientID,
+				}); err != nil {
+					return err
+				}
+				resultErr = svcCommon.ErrAppointmentFullyBooked
+				return resultErr
+			}
+		}
+
+		// Create client_appointments link
+		if err := q.CreateClientAppointment(ctx, &db.CreateClientAppointmentParams{
+			ClientID:      input.ClientID,
+			AppointmentID: input.AppointmentID,
+		}); err != nil {
+			return err
+		}
+
+		// Delete invite
+		if err := q.DeleteInviteByID(ctx, &db.DeleteInviteByIDParams{
+			ID:       input.InviteID,
+			ClientID: input.ClientID,
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	// Get appointment info first to check type
+	notificationInfo, err := s.repo.GetInfoForAcceptInviteNotification(ctx, input.AppointmentID)
+	if err != nil {
+		return nil, err
+	}
+
+	return notificationInfo, nil
+}
+
+// GetPreviosAppointments gets the previous appointments for a client
+func (s *service) GetPreviosAppointments(ctx context.Context, clientID uuid.UUID, page, pageSize int) ([]*db.GetPreviousAppointmentsByClientIDRow, int, error) {
+	offset := (page - 1) * pageSize
+
+	appointments, err := s.repo.GetPreviousAppointmentsByClientID(ctx, &db.GetPreviousAppointmentsByClientIDParams{
+		ClientID: clientID,
+		Limit:    int32(pageSize),
+		Offset:   int32(offset),
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err := s.repo.CountPreviousAppointmentsByClientID(ctx, clientID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return appointments, int(total), nil
 }

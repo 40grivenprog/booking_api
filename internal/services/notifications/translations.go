@@ -35,6 +35,15 @@ type NotificationTranslations struct {
 		Time         string
 		Description  string
 	}
+	AcceptInvite struct {
+		JoinedMessage string
+		DetailsTitle  string
+		Date          string
+		StartTime     string
+		EndTime       string
+		Type          string
+		Description   string
+	}
 	OpenApp string
 }
 
@@ -102,6 +111,23 @@ var translations = map[string]NotificationTranslations{
 			Time:         "🕐 Time:",
 			Description:  "📝 Description:",
 		},
+		AcceptInvite: struct {
+			JoinedMessage string
+			DetailsTitle  string
+			Date          string
+			StartTime     string
+			EndTime       string
+			Type          string
+			Description   string
+		}{
+			JoinedMessage: "%s joined the training",
+			DetailsTitle:  "Training Details",
+			Date:          "📅 Date:",
+			StartTime:     "🕐 Start:",
+			EndTime:       "🕐 End:",
+			Type:          "📋 Type:",
+			Description:   "📝 Description:",
+		},
 	},
 	"ru": {
 		AppointmentRequest: struct {
@@ -165,6 +191,23 @@ var translations = map[string]NotificationTranslations{
 			Date:         "📅 Дата:",
 			Time:         "🕐 Время:",
 			Description:  "📝 Описание:",
+		},
+		AcceptInvite: struct {
+			JoinedMessage string
+			DetailsTitle  string
+			Date          string
+			StartTime     string
+			EndTime       string
+			Type          string
+			Description   string
+		}{
+			JoinedMessage: "%s присоединился к тренировке",
+			DetailsTitle:  "Детали тренировки",
+			Date:          "📅 Дата:",
+			StartTime:     "🕐 Начало:",
+			EndTime:       "🕐 Конец:",
+			Type:          "📋 Тип:",
+			Description:   "📝 Описание:",
 		},
 	},
 	"uk": {
@@ -230,6 +273,23 @@ var translations = map[string]NotificationTranslations{
 			Time:         "🕐 Час:",
 			Description:  "📝 Опис:",
 		},
+		AcceptInvite: struct {
+			JoinedMessage string
+			DetailsTitle  string
+			Date          string
+			StartTime     string
+			EndTime       string
+			Type          string
+			Description   string
+		}{
+			JoinedMessage: "%s приєднався до тренування",
+			DetailsTitle:  "Деталі тренування",
+			Date:          "📅 Дата:",
+			StartTime:     "🕐 Початок:",
+			EndTime:       "🕐 Кінець:",
+			Type:          "📋 Тип:",
+			Description:   "📝 Опис:",
+		},
 	},
 	"pl": {
 		AppointmentRequest: struct {
@@ -293,6 +353,23 @@ var translations = map[string]NotificationTranslations{
 			Date:         "📅 Data:",
 			Time:         "🕐 Godzina:",
 			Description:  "📝 Opis:",
+		},
+		AcceptInvite: struct {
+			JoinedMessage string
+			DetailsTitle  string
+			Date          string
+			StartTime     string
+			EndTime       string
+			Type          string
+			Description   string
+		}{
+			JoinedMessage: "%s dołączył do treningu",
+			DetailsTitle:  "Szczegóły treningu",
+			Date:          "📅 Data:",
+			StartTime:     "🕐 Początek:",
+			EndTime:       "🕐 Koniec:",
+			Type:          "📋 Typ:",
+			Description:   "📝 Opis:",
 		},
 	},
 }

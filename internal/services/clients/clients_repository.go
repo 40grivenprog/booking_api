@@ -26,4 +26,10 @@ type ClientsRepository interface {
 	CountProfessionals(ctx context.Context, clientID uuid.UUID) (int64, error)
 	DeleteAppointmentById(ctx context.Context, id uuid.UUID) error
 	GetAppointmentInfoByAppointmentID(ctx context.Context, id uuid.UUID) (*db.GetAppointmentInfoByAppointmentIDRow, error)
+	GetClientInvites(ctx context.Context, clientID uuid.UUID) ([]*db.GetClientInvitesRow, error)
+	GetInviteByID(ctx context.Context, arg *db.GetInviteByIDParams) (*db.GetInviteByIDRow, error)
+	DeleteInviteByID(ctx context.Context, arg *db.DeleteInviteByIDParams) error
+	GetInfoForAcceptInviteNotification(ctx context.Context, appointmentID uuid.UUID) (*db.GetInfoForAcceptInviteNotificationRow, error)
+	GetPreviousAppointmentsByClientID(ctx context.Context, arg *db.GetPreviousAppointmentsByClientIDParams) ([]*db.GetPreviousAppointmentsByClientIDRow, error)
+	CountPreviousAppointmentsByClientID(ctx context.Context, clientID uuid.UUID) (int64, error)
 }

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
@@ -113,4 +114,9 @@ func Int64Value(i *int64) int64 {
 		return 0
 	}
 	return *i
+}
+
+// ParseInviteID parses invite ID from string and handles error response automatically
+func ParseInviteID(c *gin.Context, idStr string) (uuid.UUID, bool) {
+	return ParseUUID(c, idStr, ErrorMsgInvalidInviteID)
 }

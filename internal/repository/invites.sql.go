@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -76,15 +77,34 @@ func (q *Queries) CreateInvites(ctx context.Context, arg *CreateInvitesParams) e
 	return err
 }
 
+const DeleteInviteByID = `-- name: DeleteInviteByID :exec
+DELETE FROM invites
+WHERE id = $1
+AND client_id = $2
+`
+
+type DeleteInviteByIDParams struct {
+	ID       uuid.UUID `json:"id"`
+	ClientID uuid.UUID `json:"client_id"`
+}
+
+func (q *Queries) DeleteInviteByID(ctx context.Context, arg *DeleteInviteByIDParams) error {
+	_, err := q.db.ExecContext(ctx, DeleteInviteByID, arg.ID, arg.ClientID)
+	return err
+}
+
 const GetClientInvites = `-- name: GetClientInvites :many
-SELECT id, appointment_id, start_time, client_id, description, type, professional_name FROM invites
+SELECT id, appointment_id, start_time, end_time, client_id, description, type, professional_name FROM invites
 WHERE client_id = $1
+AND start_time > NOW()
+ORDER BY start_time DESC
 `
 
 type GetClientInvitesRow struct {
 	ID               uuid.UUID `json:"id"`
 	AppointmentID    uuid.UUID `json:"appointment_id"`
 	StartTime        time.Time `json:"start_time"`
+	EndTime          time.Time `json:"end_time"`
 	ClientID         uuid.UUID `json:"client_id"`
 	Description      string    `json:"description"`
 	Type             string    `json:"type"`
@@ -104,6 +124,7 @@ func (q *Queries) GetClientInvites(ctx context.Context, clientID uuid.UUID) ([]*
 			&i.ID,
 			&i.AppointmentID,
 			&i.StartTime,
+			&i.EndTime,
 			&i.ClientID,
 			&i.Description,
 			&i.Type,
@@ -120,6 +141,75 @@ func (q *Queries) GetClientInvites(ctx context.Context, clientID uuid.UUID) ([]*
 		return nil, err
 	}
 	return items, nil
+}
+
+const GetInfoForAcceptInviteNotification = `-- name: GetInfoForAcceptInviteNotification :one
+select a.id, a.description, a.type, a.start_time, a.end_time, p.chat_id, p.locale from appointments a
+left join professionals p on p.id = a.professional_id
+where a.id = $1
+`
+
+type GetInfoForAcceptInviteNotificationRow struct {
+	ID          uuid.UUID      `json:"id"`
+	Description sql.NullString `json:"description"`
+	Type        string         `json:"type"`
+	StartTime   time.Time      `json:"start_time"`
+	EndTime     time.Time      `json:"end_time"`
+	ChatID      sql.NullInt64  `json:"chat_id"`
+	Locale      sql.NullString `json:"locale"`
+}
+
+func (q *Queries) GetInfoForAcceptInviteNotification(ctx context.Context, id uuid.UUID) (*GetInfoForAcceptInviteNotificationRow, error) {
+	row := q.db.QueryRowContext(ctx, GetInfoForAcceptInviteNotification, id)
+	var i GetInfoForAcceptInviteNotificationRow
+	err := row.Scan(
+		&i.ID,
+		&i.Description,
+		&i.Type,
+		&i.StartTime,
+		&i.EndTime,
+		&i.ChatID,
+		&i.Locale,
+	)
+	return &i, err
+}
+
+const GetInviteByID = `-- name: GetInviteByID :one
+SELECT id, appointment_id, start_time, end_time, client_id, description, type, professional_name FROM invites
+WHERE id = $1
+AND client_id = $2
+`
+
+type GetInviteByIDParams struct {
+	ID       uuid.UUID `json:"id"`
+	ClientID uuid.UUID `json:"client_id"`
+}
+
+type GetInviteByIDRow struct {
+	ID               uuid.UUID `json:"id"`
+	AppointmentID    uuid.UUID `json:"appointment_id"`
+	StartTime        time.Time `json:"start_time"`
+	EndTime          time.Time `json:"end_time"`
+	ClientID         uuid.UUID `json:"client_id"`
+	Description      string    `json:"description"`
+	Type             string    `json:"type"`
+	ProfessionalName string    `json:"professional_name"`
+}
+
+func (q *Queries) GetInviteByID(ctx context.Context, arg *GetInviteByIDParams) (*GetInviteByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, GetInviteByID, arg.ID, arg.ClientID)
+	var i GetInviteByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.AppointmentID,
+		&i.StartTime,
+		&i.EndTime,
+		&i.ClientID,
+		&i.Description,
+		&i.Type,
+		&i.ProfessionalName,
+	)
+	return &i, err
 }
 
 const GetInvitesByAppointmentIDAndClientIs = `-- name: GetInvitesByAppointmentIDAndClientIs :many

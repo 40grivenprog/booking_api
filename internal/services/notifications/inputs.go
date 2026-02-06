@@ -45,3 +45,13 @@ type SendGroupVisitAppointmentNotificationInput struct {
 	Locale           string    `json:"locale,omitempty"`
 	InviteID         uuid.UUID `json:"invite_id" binding:"required"`
 }
+
+type SendAcceptInviteNotificationInput struct {
+	ChatID      int64  `json:"chat_id" binding:"required"`
+	StartTime   string `json:"start_time" binding:"required"`
+	EndTime     string `json:"end_time" binding:"required"`
+	Description string `json:"description,omitempty"`
+	Type        string `json:"type" binding:"required"`
+	ClientName  string `json:"client_name" binding:"required"`
+	Locale      string `json:"locale,omitempty"`
+}

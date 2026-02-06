@@ -67,6 +67,11 @@ FROM client_appointments ca
 JOIN clients c ON c.id = ca.client_id
 WHERE ca.appointment_id = $1;
 
+-- name: CountClientAppointmentsByAppointmentID :one
+SELECT COUNT(*)
+FROM client_appointments
+WHERE appointment_id = $1;
+
 
 -- -- name: GetAppointmentsByProfessionalWithStatus :many
 -- SELECT 
@@ -268,3 +273,35 @@ ORDER BY a.start_time ASC;
 --   AND end_time < NOW()
 --   AND DATE_TRUNC('month', start_time) = DATE_TRUNC('month', sqlc.arg(month_date)::date)
 -- ORDER BY start_time DESC;
+
+
+-- name: GetPreviousAppointmentsByClientID :many
+SELECT 
+    a.id, 
+    a.start_time, 
+    a.end_time, 
+    a.type, 
+    p.first_name,
+    p.last_name
+FROM appointments a
+JOIN professionals p ON p.id = a.professional_id
+WHERE a.id IN (
+    SELECT DISTINCT(appointment_id)
+    FROM client_appointments ca
+    WHERE ca.client_id = $1
+)
+  AND a.status = 'confirmed'
+  AND a.end_time < NOW()
+ORDER BY a.start_time DESC
+LIMIT $2 OFFSET $3;
+
+-- name: CountPreviousAppointmentsByClientID :one
+SELECT COUNT(DISTINCT a.id)
+FROM appointments a
+WHERE a.id IN (
+    SELECT DISTINCT(appointment_id)
+    FROM client_appointments ca
+    WHERE ca.client_id = $1
+)
+  AND a.status = 'confirmed'
+  AND a.end_time < NOW();

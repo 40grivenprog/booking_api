@@ -38,7 +38,9 @@ type Querier interface {
 	// LEFT JOIN clients c ON c.id = na.client_id
 	// LEFT JOIN professionals p ON p.id = na.professional_id;
 	ConfirmAppointmentById(ctx context.Context, id uuid.UUID) error
+	CountClientAppointmentsByAppointmentID(ctx context.Context, appointmentID uuid.UUID) (int64, error)
 	CountClientAppointmentsWithStatus(ctx context.Context, arg *CountClientAppointmentsWithStatusParams) (int64, error)
+	CountPreviousAppointmentsByClientID(ctx context.Context, clientID uuid.UUID) (int64, error)
 	CountPreviousAppointmentsByProfessionalID(ctx context.Context, professionalID uuid.UUID) (int64, error)
 	CountPreviousAppointmentsByProfessionalIDAndClientID(ctx context.Context, arg *CountPreviousAppointmentsByProfessionalIDAndClientIDParams) (int64, error)
 	CountProfessionalAppointmentsWithStatusAndDate(ctx context.Context, arg *CountProfessionalAppointmentsWithStatusAndDateParams) (int64, error)
@@ -78,6 +80,7 @@ type Querier interface {
 	// LEFT JOIN professionals p ON p.id = ua.professional_id;
 	CreateUnavailableAppointment(ctx context.Context, arg *CreateUnavailableAppointmentParams) error
 	DeleteAppointmentById(ctx context.Context, id uuid.UUID) error
+	DeleteInviteByID(ctx context.Context, arg *DeleteInviteByIDParams) error
 	DeleteSubscription(ctx context.Context, arg *DeleteSubscriptionParams) error
 	GetAppointmentByID(ctx context.Context, id uuid.UUID) (*Appointment, error)
 	GetAppointmentClientsByAppointmentID(ctx context.Context, appointmentID uuid.UUID) ([]*GetAppointmentClientsByAppointmentIDRow, error)
@@ -142,7 +145,27 @@ type Querier interface {
 	GetAppointmentsByProfessionalByDate(ctx context.Context, arg *GetAppointmentsByProfessionalByDateParams) ([]*GetAppointmentsByProfessionalByDateRow, error)
 	GetAppointmentsByProfessionalWithStatusAndDate(ctx context.Context, arg *GetAppointmentsByProfessionalWithStatusAndDateParams) ([]*GetAppointmentsByProfessionalWithStatusAndDateRow, error)
 	GetClientInvites(ctx context.Context, clientID uuid.UUID) ([]*GetClientInvitesRow, error)
+	GetInfoForAcceptInviteNotification(ctx context.Context, id uuid.UUID) (*GetInfoForAcceptInviteNotificationRow, error)
+	GetInviteByID(ctx context.Context, arg *GetInviteByIDParams) (*GetInviteByIDRow, error)
 	GetInvitesByAppointmentIDAndClientIs(ctx context.Context, arg *GetInvitesByAppointmentIDAndClientIsParams) ([]*GetInvitesByAppointmentIDAndClientIsRow, error)
+	// -- name: GetPreviousProfessionalAppointmentsByClient :many
+	// SELECT id, start_time, end_time, description
+	// FROM appointments
+	// WHERE client_id = $1
+	//   AND professional_id = $2
+	//   AND status = 'confirmed'
+	//   AND end_time < NOW()
+	// ORDER BY start_time DESC;
+	// -- name: GetPreviousAppointmentsByClientForMonth :many
+	// SELECT id, start_time, end_time, description
+	// FROM appointments
+	// WHERE client_id = sqlc.arg(client_id)
+	//   AND professional_id = sqlc.arg(professional_id)
+	//   AND status = 'confirmed'
+	//   AND end_time < NOW()
+	//   AND DATE_TRUNC('month', start_time) = DATE_TRUNC('month', sqlc.arg(month_date)::date)
+	// ORDER BY start_time DESC;
+	GetPreviousAppointmentsByClientID(ctx context.Context, arg *GetPreviousAppointmentsByClientIDParams) ([]*GetPreviousAppointmentsByClientIDRow, error)
 	GetPreviousAppointmentsByProfessionalID(ctx context.Context, arg *GetPreviousAppointmentsByProfessionalIDParams) ([]*GetPreviousAppointmentsByProfessionalIDRow, error)
 	GetPreviousAppointmentsByProfessionalIDAndClientID(ctx context.Context, arg *GetPreviousAppointmentsByProfessionalIDAndClientIDParams) ([]*GetPreviousAppointmentsByProfessionalIDAndClientIDRow, error)
 	GetProfessionalByUsername(ctx context.Context, username string) (*Professional, error)

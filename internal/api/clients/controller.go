@@ -314,6 +314,121 @@ func (h *ClientsHandler) GetClientInvites(c *gin.Context) {
 		common.HandleServiceError(c, err)
 		return
 	}
+	response := mapInvitesToGetClientInvitesResponse(invites)
+	c.JSON(http.StatusOK, response)
 }
 
+// GetClientInvite handles GET /api/clients/invites/{invite_id}
+func (h *ClientsHandler) GetClientInvite(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
 
+	inviteID, ok := common.ParseInviteID(c, c.Param("invite_id"))
+	if !ok {
+		return
+	}
+
+	invite, err := h.clientsService.GetClientInvite(c.Request.Context(), clientID, inviteID)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	response := mapInviteToGetClientInviteResponse(invite)
+
+	c.JSON(http.StatusOK, response)
+}
+
+// DeleteClientInvite handles DELETE /api/clients/invites/{invite_id}
+func (h *ClientsHandler) DeleteClientInvite(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	inviteID, ok := common.ParseInviteID(c, c.Param("invite_id"))
+	if !ok {
+		return
+	}
+
+	err := h.clientsService.DeleteClientInvite(c.Request.Context(), clientID, inviteID)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusAccepted, nil)
+}
+
+// AcceptClientInvite handles POST /api/clients/invites/{invite_id}/accept
+func (h *ClientsHandler) AcceptClientInvite(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+	clientName := common.GetUserName(c)
+
+	inviteID, ok := common.ParseInviteID(c, c.Param("invite_id"))
+	if !ok {
+		return
+	}
+
+	req, ok := common.BindAndValidate[AcceptClientInviteRequest](c)
+	if !ok {
+		return
+	}
+
+	appointmentID, ok := common.ParseAppointmentID(c, req.AppointmentID)
+	if !ok {
+		return
+	}
+
+	notificationInfo, err := h.clientsService.AcceptClientInvite(c.Request.Context(), clients.AcceptClientInviteInput{
+		ClientID:      clientID,
+		InviteID:      inviteID,
+		AppointmentID: appointmentID,
+		Type:          req.Type,
+	})
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+	err = h.notificationsService.SendAcceptInviteNotification(c.Request.Context(), notifications.SendAcceptInviteNotificationInput{
+		ChatID:      common.Int64Value(common.FromNullInt64(notificationInfo.ChatID)),
+		StartTime:   common.FormatTimeRFC3339(notificationInfo.StartTime),
+		EndTime:     common.FormatTimeRFC3339(notificationInfo.EndTime),
+		Description: common.StringValue(common.FromNullString(notificationInfo.Description)),
+		Type:        notificationInfo.Type,
+		ClientName:  clientName,
+		Locale:      common.StringValue(common.FromNullString(notificationInfo.Locale)),
+	})
+	if err != nil {
+		common.HandleNotificationError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusAccepted, nil)
+}
+
+// GetPreviosAppointments handles GET /api/clients/previous_appointments
+func (h *ClientsHandler) GetPreviosAppointments(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	// Parse pagination parameters: page (min 1, default 1) and pageSize (min 1, default 15)
+	page := common.ParseIntQuery(c, "page", 1, 1, 10000)
+	pageSize := common.ParseIntQuery(c, "pageSize", 15, 1, 100)
+
+	appointments, total, err := h.clientsService.GetPreviosAppointments(c.Request.Context(), clientID, page, pageSize)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	response := mapPreviousAppointmentsToGetClientPreviousAppointmentsResponse(appointments, total, page, pageSize)
+	c.JSON(http.StatusOK, response)
+}

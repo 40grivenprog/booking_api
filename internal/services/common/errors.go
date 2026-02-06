@@ -19,6 +19,7 @@ var (
 	ErrAppointmentNotPending            = errors.New("appointment is not pending")
 	ErrAppointmentNotPendingOrConfirmed = errors.New("appointment is not pending or confirmed")
 	ErrAppointmentTimeConflict          = errors.New("you already have an appointment for this time. please cancel it first or wait for approval")
+	ErrAppointmentFullyBooked           = errors.New("sorry. this appointment is fully booked")
 
 	ErrProfessionalNotFound = errors.New("professional with such username not found")
 )

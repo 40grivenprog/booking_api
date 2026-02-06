@@ -125,3 +125,53 @@ type SubscribedProfessionalRequest struct {
 	ChatID         int64  `json:"chat_id" binding:"required"`
 	Locale         string `json:"locale" binding:"required"`
 }
+
+// GetClientInvitesResponse represents the response for getting client invites
+type GetClientInvitesResponse struct {
+	Invites []GetClientInvitesResponseItem `json:"invites"`
+}
+
+// GetClientInvitesResponseItem represents an invite in the response
+type GetClientInvitesResponseItem struct {
+	ID               string `json:"id"`
+	AppointmentID    string `json:"appointment_id"`
+	StartTime        string `json:"start_time"`
+	EndTime          string `json:"end_time"`
+	Description      string `json:"description"`
+	Type             string `json:"type"`
+	ProfessionalName string `json:"professional_name"`
+	ClientID         string `json:"client_id"`
+}
+
+// GetClientInviteResponse represents the response for getting a client invite
+type GetClientInviteResponse struct {
+	ID               string `json:"id"`
+	AppointmentID    string `json:"appointment_id"`
+	StartTime        string `json:"start_time"`
+	EndTime          string `json:"end_time"`
+	Description      string `json:"description"`
+	Type             string `json:"type"`
+	ProfessionalName string `json:"professional_name"`
+}
+
+// AcceptClientInviteRequest represents the request to accept a client invite
+type AcceptClientInviteRequest struct {
+	AppointmentID string `json:"appointment_id" binding:"required"`
+	Type          string `json:"type" binding:"required"`
+}
+
+// GetClientPreviousAppointmentsResponse represents the response for getting client previous appointments
+type GetClientPreviousAppointmentsResponse struct {
+	Appointments []GetClientPreviousAppointmentsResponseItem `json:"appointments"`
+	Pagination   common.PaginationResponse                   `json:"pagination"`
+}
+
+// GetClientPreviousAppointmentsResponseItem represents a previous appointment
+type GetClientPreviousAppointmentsResponseItem struct {
+	ID        string `json:"id"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+	Type      string `json:"type"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}

@@ -44,5 +44,23 @@ WHERE appointment_id = $1
 AND client_id = ANY($2::uuid[]);
 
 -- name: GetClientInvites :many
-SELECT id, appointment_id, start_time, client_id, description, type, professional_name FROM invites
-WHERE client_id = $1;
+SELECT id, appointment_id, start_time, end_time, client_id, description, type, professional_name FROM invites
+WHERE client_id = $1
+AND start_time > NOW()
+ORDER BY start_time DESC;
+
+-- name: GetInviteByID :one
+SELECT id, appointment_id, start_time, end_time, client_id, description, type, professional_name FROM invites
+WHERE id = $1
+AND client_id = $2;
+
+-- name: DeleteInviteByID :exec
+DELETE FROM invites
+WHERE id = $1
+AND client_id = $2;
+
+
+-- name: GetInfoForAcceptInviteNotification :one
+select a.id, a.description, a.type, a.start_time, a.end_time, p.chat_id, p.locale from appointments a
+left join professionals p on p.id = a.professional_id
+where a.id = $1;
