@@ -229,13 +229,16 @@ func (q *Queries) GetAppointmentByID(ctx context.Context, id uuid.UUID) (*Appoin
 }
 
 const GetAppointmentClientsByAppointmentID = `-- name: GetAppointmentClientsByAppointmentID :many
-SELECT c.chat_id as client_chat_id, c.locale as client_locale
+SELECT c.id, c.first_name, c.last_name, c.chat_id as client_chat_id, c.locale as client_locale
 FROM client_appointments ca
 JOIN clients c ON c.id = ca.client_id
 WHERE ca.appointment_id = $1
 `
 
 type GetAppointmentClientsByAppointmentIDRow struct {
+	ID           uuid.UUID     `json:"id"`
+	FirstName    string        `json:"first_name"`
+	LastName     string        `json:"last_name"`
 	ClientChatID sql.NullInt64 `json:"client_chat_id"`
 	ClientLocale string        `json:"client_locale"`
 }
@@ -249,7 +252,13 @@ func (q *Queries) GetAppointmentClientsByAppointmentID(ctx context.Context, appo
 	items := []*GetAppointmentClientsByAppointmentIDRow{}
 	for rows.Next() {
 		var i GetAppointmentClientsByAppointmentIDRow
-		if err := rows.Scan(&i.ClientChatID, &i.ClientLocale); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.FirstName,
+			&i.LastName,
+			&i.ClientChatID,
+			&i.ClientLocale,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)

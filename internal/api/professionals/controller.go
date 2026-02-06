@@ -108,43 +108,6 @@ func (h *ProfessionalsHandler) GetProfessionalAppointments(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// // GetProfessionalAppointmentDates handles GET /api/professionals/{id}/appointment-dates
-// func (h *ProfessionalsHandler) GetProfessionalAppointmentDates(c *gin.Context) {
-// 	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
-// 	if !ok {
-// 		return
-// 	}
-
-// 	monthStr := c.Query("month")
-// 	var targetMonth time.Time
-// 	if monthStr == "" {
-// 		targetMonth = time.Now()
-// 	} else {
-// 		var ok bool
-// 		targetMonth, ok = common.ParseMonth(c, monthStr)
-// 		if !ok {
-// 			return
-// 		}
-// 	}
-
-// 	appointmentDates, err := h.professionalsService.GetAppointmentDates(c.Request.Context(), professionalID, targetMonth)
-// 	if err != nil {
-// 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToRetrieveAppointments, err)
-// 		return
-// 	}
-
-// 	var dates []string
-// 	for _, appointmentDate := range appointmentDates {
-// 		dates = append(dates, common.FormatDate(appointmentDate))
-// 	}
-
-// 	response := GetProfessionalAppointmentDatesResponse{
-// 		Month: monthStr,
-// 		Dates: dates,
-// 	}
-// 	c.JSON(http.StatusOK, response)
-// }
-
 // CancelAppointment handles PATCH /api/professionals/appointments/{appointment_id}/cancel
 func (h *ProfessionalsHandler) CancelAppointment(c *gin.Context) {
 	professionalID, ok := common.GetUserID(c)
@@ -173,14 +136,16 @@ func (h *ProfessionalsHandler) CancelAppointment(c *gin.Context) {
 		return
 	}
 
-	for _, client := range result.CancelAppointmentClients {
-		err = h.notificationsService.SendAppointmentCancellationNotification(c.Request.Context(), notifications.SendAppointmentCancellationNotificationInput{
-			ChatID:         common.Int64Value(common.FromNullInt64(client.ClientChatID)),
-			StartTime:      common.FormatTimeRFC3339(result.StartTime),
-			EndTime:        common.FormatTimeRFC3339(result.EndTime),
-			RespondentName: userName,
-			Locale:         client.ClientLocale,
-		})
+	if result.StartTime.After(time.Now()) {
+		for _, client := range result.CancelAppointmentClients {
+			err = h.notificationsService.SendAppointmentCancellationNotification(c.Request.Context(), notifications.SendAppointmentCancellationNotificationInput{
+				ChatID:         common.Int64Value(common.FromNullInt64(client.ClientChatID)),
+				StartTime:      common.FormatTimeRFC3339(result.StartTime),
+				EndTime:        common.FormatTimeRFC3339(result.EndTime),
+				RespondentName: userName,
+				Locale:         client.ClientLocale,
+			})
+		}
 	}
 
 	c.JSON(http.StatusAccepted, nil)
@@ -322,92 +287,45 @@ func (h *ProfessionalsHandler) CreateGroupVisitAppointment(c *gin.Context) {
 		return
 	}
 
-	err := h.professionalsService.CreateGroupVisitAppointment(c.Request.Context(), professionals.CreateGroupVisitAppointmentInput{
+	appointmentID, err := h.professionalsService.CreateGroupVisitAppointment(c.Request.Context(), professionals.CreateGroupVisitAppointmentInput{
 		ProfessionalID: professionalID,
 		StartTime:      startTime,
 		EndTime:        endTime,
 		Description:    req.Description,
+		Type:           req.Type,
 	})
 	if err != nil {
 		common.HandleServiceError(c, err)
 		return
 	}
 
-	if len(req.Clients) == 0 {
-		clients, err := h.professionalsService.GetSubscriptionsByProfessionalID(c.Request.Context(), professionalID)
-		if err != nil {
-			common.HandleServiceError(c, err)
-			return
-		}
-		for _, client := range clients {
-			err = h.notificationsService.SendGroupVisitAppointmentNotification(c.Request.Context(), notifications.SendGroupVisitAppointmentNotificationInput{
-				ChatID:           common.Int64Value(common.FromNullInt64(client.ChatID)),
-				StartTime:        common.FormatTimeRFC3339(startTime),
-				EndTime:          common.FormatTimeRFC3339(endTime),
-				ProfessionalName: userName,
-				Locale:           client.Locale,
-				Description:      req.Description,
-			})
-		}
-
+	if req.ClientsSelected == "all" {
+		h.professionalsService.InviteAllClients(c.Request.Context(), professionals.InviteAllClientsInput{
+			ProfessionalID:       professionalID,
+			AppointmentID:        appointmentID,
+			StartTime:            startTime,
+			EndTime:              endTime,
+			Description:          req.Description,
+			Type:                 req.Type,
+			ProfessionalName:     userName,
+			NotificationsService: h.notificationsService,
+		})
+	} else {
+		clientsInput := ConvertCreateGroupVisitAppointmentClientToInput(req.Clients)
+		h.professionalsService.InvitePartiallySelectedClients(c.Request.Context(), professionals.InvitePartiallySelectedClientsInput{
+			AppointmentID:        appointmentID,
+			StartTime:            startTime,
+			EndTime:              endTime,
+			Description:          req.Description,
+			Type:                 req.Type,
+			Clients:              clientsInput,
+			ProfessionalName:     userName,
+			NotificationsService: h.notificationsService,
+		})
 	}
 
 	c.JSON(http.StatusAccepted, nil)
 }
-
-// // GetProfessionalClients handles GET /api/professionals/:id/clients
-// func (h *ProfessionalsHandler) GetProfessionalClients(c *gin.Context) {
-// 	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
-// 	if !ok {
-// 		return
-// 	}
-
-// 	clients, err := h.professionalsService.GetClients(c.Request.Context(), professionalID)
-// 	if err != nil {
-// 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToRetrieveClients, err)
-// 		return
-// 	}
-
-// 	response := mapClientsToGetProfessionalClientsResponse(clients)
-// 	c.JSON(http.StatusOK, response)
-// }
-
-// // GetPreviousAppointmentsByClient handles GET /api/professionals/:id/previous_appointments?client_id=?&month=?
-// func (h *ProfessionalsHandler) GetPreviousAppointmentsByClient(c *gin.Context) {
-// 	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
-// 	if !ok {
-// 		return
-// 	}
-
-// 	clientIDStr, ok := common.RequireQueryParam(c, "client_id")
-// 	if !ok {
-// 		return
-// 	}
-
-// 	clientID, ok := common.ParseClientID(c, clientIDStr)
-// 	if !ok {
-// 		return
-// 	}
-
-// 	// Parse optional month filter
-// 	var monthFilter *time.Time
-// 	if monthStr := c.Query("month"); monthStr != "" {
-// 		month, ok := common.ParseMonth(c, monthStr)
-// 		if !ok {
-// 			return
-// 		}
-// 		monthFilter = &month
-// 	}
-
-// 	appointments, err := h.professionalsService.GetPreviousAppointmentsByClient(c.Request.Context(), professionalID, clientID, monthFilter)
-// 	if err != nil {
-// 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToRetrieveAppointments, err)
-// 		return
-// 	}
-
-// 	response := mapPreviousAppointmentsToGetPreviousAppointmentsByClientResponse(appointments)
-// 	c.JSON(http.StatusOK, response)
-// }
 
 // UpdateLocale handles PATCH /api/professionals/update_locale
 func (h *ProfessionalsHandler) UpdateLocale(c *gin.Context) {
@@ -432,3 +350,116 @@ func (h *ProfessionalsHandler) UpdateLocale(c *gin.Context) {
 
 	c.JSON(http.StatusAccepted, nil)
 }
+
+// GetProfessionalSubscriptions handles GET /api/professionals/subscriptions
+func (h *ProfessionalsHandler) GetProfessionalSubscriptions(c *gin.Context) {
+	professionalID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+	subscriptions, err := h.professionalsService.GetSubscriptionsByProfessionalID(c.Request.Context(), professionalID)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	response := mapSubscriptionsToGetProfessionalSubscriptionsResponse(subscriptions)
+	c.JSON(http.StatusOK, response)
+}
+
+// GetPreviousAppointments handles GET /api/professionals/previous_appointments
+func (h *ProfessionalsHandler) GetPreviousAppointments(c *gin.Context) {
+	professionalID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	// Parse pagination parameters: page (min 1, default 1) and pageSize (min 1, default 15)
+	page := common.ParseIntQuery(c, "page", 1, 1, 10000)
+	pageSize := common.ParseIntQuery(c, "pageSize", 15, 1, 100)
+
+	clientIDStr := c.Query("client_id")
+	var response GetPreviousAppointmentsResponse
+
+	if clientIDStr != "" {
+		clientID, ok := common.ParseClientID(c, clientIDStr)
+		if !ok {
+			return
+		}
+
+		previousAppointments, total, err := h.professionalsService.GetPreviousAppointmentsByClientID(c.Request.Context(), professionalID, clientID, page, pageSize)
+		if err != nil {
+			common.HandleServiceError(c, err)
+			return
+		}
+		response = mapPreviousAppointmentsByClientIDToGetPreviousAppointmentsResponse(previousAppointments, total, page, pageSize)
+	} else {
+		previousAppointments, total, err := h.professionalsService.GetPreviousAppointments(c.Request.Context(), professionalID, page, pageSize)
+		if err != nil {
+			common.HandleServiceError(c, err)
+			return
+		}
+		response = mapPreviousAppointmentsToGetPreviousAppointmentsResponse(previousAppointments, total, page, pageSize)
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// GetAppointmentDetails handles GET /api/professionals/appointments/{appointment_id}
+func (h *ProfessionalsHandler) GetAppointmentDetails(c *gin.Context) {
+	professionalID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	appointmentID, ok := common.ParseAppointmentID(c, c.Param("appointment_id"))
+	if !ok {
+		return
+	}
+
+	appointmentDetails, err := h.professionalsService.GetAppointmentDetailsByProfessionalIDAndAppointmentID(c.Request.Context(), professionalID, appointmentID)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	response := mapAppointmentDetailsToGetAppointmentDetailsResponse(appointmentDetails)
+	c.JSON(http.StatusOK, response)
+}
+
+// // GetProfessionalAppointmentDates handles GET /api/professionals/{id}/appointment-dates
+// func (h *ProfessionalsHandler) GetProfessionalAppointmentDates(c *gin.Context) {
+// 	professionalID, ok := common.ParseProfessionalID(c, c.Param("id"))
+// 	if !ok {
+// 		return
+// 	}
+
+// 	monthStr := c.Query("month")
+// 	var targetMonth time.Time
+// 	if monthStr == "" {
+// 		targetMonth = time.Now()
+// 	} else {
+// 		var ok bool
+// 		targetMonth, ok = common.ParseMonth(c, monthStr)
+// 		if !ok {
+// 			return
+// 		}
+// 	}
+
+// 	appointmentDates, err := h.professionalsService.GetAppointmentDates(c.Request.Context(), professionalID, targetMonth)
+// 	if err != nil {
+// 		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToRetrieveAppointments, err)
+// 		return
+// 	}
+
+// 	var dates []string
+// 	for _, appointmentDate := range appointmentDates {
+// 		dates = append(dates, common.FormatDate(appointmentDate))
+// 	}
+
+// 	response := GetProfessionalAppointmentDatesResponse{
+// 		Month: monthStr,
+// 		Dates: dates,
+// 	}
+// 	c.JSON(http.StatusOK, response)
+// }

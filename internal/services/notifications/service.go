@@ -3,6 +3,7 @@ package notifications
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -58,7 +59,10 @@ func (s *service) SendAppointmentRequestNotification(ctx context.Context, input 
 	)
 
 	// Create inline keyboard with Web App button (using URL button)
-	webAppButton := tgbotapi.NewInlineKeyboardButtonURL(t.OpenApp, "https://t.me/testMfiAppBot/someRandomTestApp777")
+	payload := "appointment_" + input.AppointmentID.String() // или "appointment_"+id
+	link := "https://t.me/testMfiAppBot/someRandomTestApp777?startapp=" + url.QueryEscape(payload)
+
+	webAppButton := tgbotapi.NewInlineKeyboardButtonURL(t.OpenApp, link)
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(webAppButton),
 	)
@@ -224,7 +228,7 @@ func (s *service) SendGroupVisitAppointmentNotification(ctx context.Context, inp
 	)
 
 	// Create inline keyboard with Web App button (using URL button)
-	webAppButton := tgbotapi.NewInlineKeyboardButtonURL(t.OpenApp, "https://t.me/testMfiAppBot/someRandomTestApp777")
+	webAppButton := tgbotapi.NewInlineKeyboardButtonURL(t.OpenApp, "https://t.me/testMfiAppBot/someRandomTestApp777?some_query_param=some_value")
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(webAppButton),
 	)

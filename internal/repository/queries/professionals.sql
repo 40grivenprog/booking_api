@@ -100,6 +100,71 @@ UPDATE professionals
 SET locale = $2
 WHERE id = $1;
 
--- name: CreateGroupVisitAppointment :exec
+-- name: CreateGroupVisitAppointment :one
 INSERT INTO appointments (type, professional_id, start_time, end_time, status, description)
-VALUES ('group', $1, $2, $3, 'confirmed', $4);
+VALUES ($1, $2, $3, $4, 'confirmed', $5)
+RETURNING id;
+
+
+-- name: GetPreviousAppointmentsByProfessionalID :many
+SELECT 
+    a.id, 
+    a.start_time, 
+    a.end_time, 
+    a.description, 
+    a.type, 
+    COUNT(DISTINCT ca.client_id) AS users_count
+FROM appointments a
+LEFT JOIN client_appointments ca ON ca.appointment_id = a.id
+WHERE a.professional_id = $1
+  AND a.status = 'confirmed'
+  and a.type != 'unavailable'
+  AND a.end_time < NOW()
+GROUP BY a.id, a.start_time, a.end_time, a.description, a.type
+ORDER BY a.start_time DESC
+LIMIT $2 OFFSET $3;
+
+-- name: CountPreviousAppointmentsByProfessionalID :one
+SELECT COUNT(DISTINCT a.id)
+FROM appointments a
+WHERE a.professional_id = $1
+  AND a.status = 'confirmed'
+  and a.type != 'unavailable'
+  AND a.end_time < NOW();
+
+-- name: GetPreviousAppointmentsByProfessionalIDAndClientID :many
+SELECT a.id, a.start_time, a.end_time, a.description, a.type, COUNT(DISTINCT ca.client_id) AS users_count
+FROM appointments a
+LEFT JOIN client_appointments ca ON ca.appointment_id = a.id
+WHERE a.professional_id = $1
+  AND a.status = 'confirmed'
+  and a.type != 'unavailable'
+  AND a.end_time < NOW()
+  AND a.id IN (
+    SELECT DISTINCT(appointment_id)
+    FROM client_appointments ca
+    WHERE ca.client_id = $2
+  )
+GROUP BY a.id, a.start_time, a.end_time, a.description, a.type
+ORDER BY a.start_time DESC
+LIMIT $3 OFFSET $4;
+
+-- name: CountPreviousAppointmentsByProfessionalIDAndClientID :one
+SELECT COUNT(DISTINCT a.id)
+FROM appointments a
+WHERE a.professional_id = $1
+  AND a.status = 'confirmed'
+  AND a.type != 'unavailable'
+  AND a.end_time < NOW()
+  AND a.id IN (
+    SELECT DISTINCT(appointment_id)
+    FROM client_appointments ca
+    WHERE ca.client_id = $2
+  );
+
+
+-- name: GetAppointmentDetailsByProfessionalIDAndAppointmentID :one
+SELECT a.id, a.start_time, a.end_time, a.description, a.type
+FROM appointments a
+WHERE a.professional_id = $1
+AND a.id = $2;

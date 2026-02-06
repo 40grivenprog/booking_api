@@ -41,6 +41,19 @@ type ClientAppointment struct {
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 
+type Invite struct {
+	ID               uuid.UUID `json:"id"`
+	AppointmentID    uuid.UUID `json:"appointment_id"`
+	StartTime        time.Time `json:"start_time"`
+	EndTime          time.Time `json:"end_time"`
+	ClientID         uuid.UUID `json:"client_id"`
+	Description      string    `json:"description"`
+	Type             string    `json:"type"`
+	ProfessionalName string    `json:"professional_name"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
 type Professional struct {
 	ID           uuid.UUID     `json:"id"`
 	ChatID       sql.NullInt64 `json:"chat_id"`

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/vention/booking_api/internal/services/notifications"
 )
 
 // SignInInput represents the input for professional sign-in
@@ -47,4 +48,37 @@ type CreateGroupVisitAppointmentInput struct {
 	StartTime      time.Time
 	EndTime        time.Time
 	Description    string
+	Type           string
+}
+
+// InviteAllClientsInput represents the input for inviting all clients
+type InviteAllClientsInput struct {
+	ProfessionalID       uuid.UUID
+	AppointmentID        uuid.UUID
+	StartTime            time.Time
+	EndTime              time.Time
+	Description          string
+	Type                 string
+	ProfessionalName     string
+	ClientIDs            []uuid.UUID
+	NotificationsService notifications.Service
+}
+
+// InvitePartiallySelectedClientsInput represents the input for inviting partially selected clients
+type InvitePartiallySelectedClientsInput struct {
+	AppointmentID        uuid.UUID
+	StartTime            time.Time
+	EndTime              time.Time
+	Description          string
+	Type                 string
+	ProfessionalName     string
+	Clients              []InvitePartiallySelectedClientsClientInput
+	NotificationsService notifications.Service
+}
+
+// InvitePartiallySelectedClientsClientInput represents the input for inviting a partially selected client
+type InvitePartiallySelectedClientsClientInput struct {
+	ID     uuid.UUID
+	ChatID int64
+	Locale string
 }

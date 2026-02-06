@@ -18,7 +18,7 @@ SELECT COUNT(*) FROM subscriptions
 WHERE client_id = $1;
 
 -- name: GetSubscriptionsByProfessionalID :many
-SELECT c.chat_id, c.locale FROM subscriptions s
+SELECT c.id, c.first_name, c.last_name, c.chat_id, c.locale FROM subscriptions s
 JOIN clients c ON s.client_id = c.id
 WHERE s.professional_id = $1
 ORDER BY c.first_name, c.last_name;

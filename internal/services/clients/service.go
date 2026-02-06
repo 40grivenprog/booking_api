@@ -11,7 +11,7 @@ import (
 
 // Service defines the business logic operations for clients
 type Service interface {
-	CreateAppointment(ctx context.Context, input CreateAppointmentInput) error
+	CreateAppointment(ctx context.Context, input CreateAppointmentInput) (uuid.UUID, error)
 	RegisterClient(ctx context.Context, input RegisterClientInput) (*db.Client, error)
 	GetClientAppointments(ctx context.Context, clientID uuid.UUID, statusFilter string, page, pageSize int) ([]*db.GetAppointmentsByClientWithStatusRow, int, error)
 	CancelAppointment(ctx context.Context, input CancelAppointmentInput) (*CancelAppointmentOutput, error)
@@ -37,20 +37,22 @@ func NewService(repo ClientsRepository, database *sql.DB) Service {
 
 // CreateAppointment creates a new personal appointment with business logic validation
 // It creates both the appointment and client_appointments record in a transaction
-func (s *service) CreateAppointment(ctx context.Context, input CreateAppointmentInput) error {
+func (s *service) CreateAppointment(ctx context.Context, input CreateAppointmentInput) (uuid.UUID, error) {
 	// Convert times to application timezone (business rule)
 	startTime := util.ConvertToAppTimezone(input.StartTime)
 	endTime := util.ConvertToAppTimezone(input.EndTime)
 
 	// Validate appointment time
 	if err := s.validateAppointmentTime(startTime, endTime); err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
 	// Check for appointment conflicts
 	if err := s.validateAppointmentConflict(ctx, input.ClientID, input.ProfessionalID, startTime); err != nil {
-		return err
+		return uuid.Nil, err
 	}
+
+	var appointmentID uuid.UUID
 
 	// Use transaction to create appointment and client_appointments atomically
 	err := db.WithTransaction(ctx, s.database, func(q *db.Queries) error {
@@ -72,14 +74,16 @@ func (s *service) CreateAppointment(ctx context.Context, input CreateAppointment
 			return err
 		}
 
+		appointmentID = createdAppointment.ID
+
 		return nil
 	})
 
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
-	return nil
+	return appointmentID, nil
 }
 
 // RegisterClient registers a new client

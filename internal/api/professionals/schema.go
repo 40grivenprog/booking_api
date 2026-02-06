@@ -126,13 +126,63 @@ type UpdateLocaleRequest struct {
 
 // CreateGroupVisitAppointmentRequest represents the request to create a group visit appointment
 type CreateGroupVisitAppointmentRequest struct {
-	Description string                              `json:"description,omitempty" binding:"required"`
-	StartAt     string                              `json:"start_at" binding:"required"`
-	EndAt       string                              `json:"end_at" binding:"required"`
-	Clients     []CreateGroupVisitAppointmentClient `json:"clients"`
+	Description     string                              `json:"description,omitempty" binding:"required"`
+	StartAt         string                              `json:"start_at" binding:"required"`
+	EndAt           string                              `json:"end_at" binding:"required"`
+	Clients         []CreateGroupVisitAppointmentClient `json:"clients"`
+	Type            string                              `json:"type" binding:"required"`
+	ClientsSelected string                              `json:"clients_selected" binding:"required,oneof=all partially_selected"`
 }
 
 type CreateGroupVisitAppointmentClient struct {
+	ID     string `json:"id" binding:"required"`
 	ChatID int64  `json:"chat_id" binding:"required"`
 	Locale string `json:"locale" binding:"required"`
+}
+
+// GetProfessionalSubscriptionsResponse represents the response for getting professional subscriptions
+type GetProfessionalSubscriptionsResponse struct {
+	Subscriptions []ProfessionalSubscription `json:"subscriptions"`
+}
+
+// ProfessionalSubscription represents a subscription in the response
+type ProfessionalSubscription struct {
+	ID        string `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	ChatID    *int64 `json:"chat_id,omitempty"`
+	Locale    string `json:"locale"`
+}
+
+// GetPreviousAppointmentsResponse represents the response for getting previous appointments
+type GetPreviousAppointmentsResponse struct {
+	Appointments []GetPreviousAppointmentsResponseItem `json:"appointments"`
+	Pagination   common.PaginationResponse             `json:"pagination"`
+}
+
+// GetPreviousAppointmentsResponseItem represents a previous appointment
+type GetPreviousAppointmentsResponseItem struct {
+	ID          string `json:"id"`
+	StartTime   string `json:"start_time"`
+	EndTime     string `json:"end_time"`
+	Description string `json:"description"`
+	Type        string `json:"type"`
+	UsersCount  int64  `json:"users_count"`
+}
+
+// GetAppointmentDetailsResponse represents the response for getting appointment details
+type GetAppointmentDetailsResponse struct {
+	ID          string                                `json:"id"`
+	StartTime   string                                `json:"start_time"`
+	EndTime     string                                `json:"end_time"`
+	Description string                                `json:"description"`
+	Type        string                                `json:"type"`
+	Clients     []GetAppointmentDetailsResponseClient `json:"clients"`
+}
+
+// GetAppointmentDetailsResponseClient represents a client in the response
+type GetAppointmentDetailsResponseClient struct {
+	ID        string `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
 }

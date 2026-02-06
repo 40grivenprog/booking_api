@@ -106,15 +106,18 @@ func (q *Queries) GetSubscriptionsByClientID(ctx context.Context, arg *GetSubscr
 }
 
 const GetSubscriptionsByProfessionalID = `-- name: GetSubscriptionsByProfessionalID :many
-SELECT c.chat_id, c.locale FROM subscriptions s
+SELECT c.id, c.first_name, c.last_name, c.chat_id, c.locale FROM subscriptions s
 JOIN clients c ON s.client_id = c.id
 WHERE s.professional_id = $1
 ORDER BY c.first_name, c.last_name
 `
 
 type GetSubscriptionsByProfessionalIDRow struct {
-	ChatID sql.NullInt64 `json:"chat_id"`
-	Locale string        `json:"locale"`
+	ID        uuid.UUID     `json:"id"`
+	FirstName string        `json:"first_name"`
+	LastName  string        `json:"last_name"`
+	ChatID    sql.NullInt64 `json:"chat_id"`
+	Locale    string        `json:"locale"`
 }
 
 func (q *Queries) GetSubscriptionsByProfessionalID(ctx context.Context, professionalID uuid.UUID) ([]*GetSubscriptionsByProfessionalIDRow, error) {
@@ -126,7 +129,13 @@ func (q *Queries) GetSubscriptionsByProfessionalID(ctx context.Context, professi
 	items := []*GetSubscriptionsByProfessionalIDRow{}
 	for rows.Next() {
 		var i GetSubscriptionsByProfessionalIDRow
-		if err := rows.Scan(&i.ChatID, &i.Locale); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.FirstName,
+			&i.LastName,
+			&i.ChatID,
+			&i.Locale,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, &i)

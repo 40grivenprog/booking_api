@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	apiCommon "github.com/vention/booking_api/internal/api/common"
 	db "github.com/vention/booking_api/internal/repository"
 	"github.com/vention/booking_api/internal/services/common"
+	"github.com/vention/booking_api/internal/services/notifications"
 )
 
 // Service defines the business logic operations for professionals
@@ -26,8 +28,13 @@ type Service interface {
 	// GetPreviousAppointmentsByClient(ctx context.Context, professionalID uuid.UUID, clientID uuid.UUID, monthFilter *time.Time) ([]*db.GetPreviousProfessionalAppointmentsByClientRow, error)
 	GenerateAvailabilitySlots(date time.Time, appointments []*db.GetAppointmentsByProfessionalByDateRow, config AvailabilityConfig) []TimeSlot
 	UpdateLocale(ctx context.Context, input UpdateLocaleInput) error
-	CreateGroupVisitAppointment(ctx context.Context, input CreateGroupVisitAppointmentInput) error
+	CreateGroupVisitAppointment(ctx context.Context, input CreateGroupVisitAppointmentInput) (uuid.UUID, error)
 	GetSubscriptionsByProfessionalID(ctx context.Context, professionalID uuid.UUID) ([]*db.GetSubscriptionsByProfessionalIDRow, error)
+	GetPreviousAppointments(ctx context.Context, professionalID uuid.UUID, page, pageSize int) ([]*db.GetPreviousAppointmentsByProfessionalIDRow, int, error)
+	GetPreviousAppointmentsByClientID(ctx context.Context, professionalID uuid.UUID, clientID uuid.UUID, page, pageSize int) ([]*db.GetPreviousAppointmentsByProfessionalIDAndClientIDRow, int, error)
+	GetAppointmentDetailsByProfessionalIDAndAppointmentID(ctx context.Context, professionalID uuid.UUID, appointmentID uuid.UUID) (*GetAppointmentDetailsOutput, error)
+	InviteAllClients(ctx context.Context, input InviteAllClientsInput) error
+	InvitePartiallySelectedClients(ctx context.Context, input InvitePartiallySelectedClientsInput) error
 }
 
 type service struct {
@@ -191,11 +198,6 @@ func (s *service) CancelAppointment(ctx context.Context, input CancelAppointment
 		return nil, err
 	}
 
-	// Validate appointment is not in the past
-	if err := s.validateAppointmentNotInPast(appointment); err != nil {
-		return nil, err
-	}
-
 	// Get clients by appointment ID
 	clients, err := s.repo.GetAppointmentClientsByAppointmentID(ctx, input.AppointmentID)
 	if err != nil {
@@ -302,11 +304,12 @@ func (s *service) GetTimetable(ctx context.Context, professionalID uuid.UUID, da
 // }
 
 // CreateGroupVisitAppointment creates a group visit appointment
-func (s *service) CreateGroupVisitAppointment(ctx context.Context, input CreateGroupVisitAppointmentInput) error {
+func (s *service) CreateGroupVisitAppointment(ctx context.Context, input CreateGroupVisitAppointmentInput) (uuid.UUID, error) {
 	return s.repo.CreateGroupVisitAppointment(ctx, &db.CreateGroupVisitAppointmentParams{
 		ProfessionalID: input.ProfessionalID,
 		StartTime:      input.StartTime,
 		EndTime:        input.EndTime,
+		Type:           input.Type,
 	})
 }
 
@@ -321,4 +324,195 @@ func (s *service) UpdateLocale(ctx context.Context, input UpdateLocaleInput) err
 // GetSubscriptionsByProfessionalID retrieves all subscriptions by professional ID
 func (s *service) GetSubscriptionsByProfessionalID(ctx context.Context, professionalID uuid.UUID) ([]*db.GetSubscriptionsByProfessionalIDRow, error) {
 	return s.repo.GetSubscriptionsByProfessionalID(ctx, professionalID)
+}
+
+// GetPreviousAppointments retrieves previous appointments by professional ID
+func (s *service) GetPreviousAppointments(ctx context.Context, professionalID uuid.UUID, page, pageSize int) ([]*db.GetPreviousAppointmentsByProfessionalIDRow, int, error) {
+	offset := (page - 1) * pageSize
+
+	appointments, err := s.repo.GetPreviousAppointmentsByProfessionalID(ctx, &db.GetPreviousAppointmentsByProfessionalIDParams{
+		ProfessionalID: professionalID,
+		Limit:          int32(pageSize),
+		Offset:         int32(offset),
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err := s.repo.CountPreviousAppointmentsByProfessionalID(ctx, professionalID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return appointments, int(total), nil
+}
+
+// GetPreviousAppointmentsByClientID retrieves previous appointments by professional ID and client ID
+func (s *service) GetPreviousAppointmentsByClientID(ctx context.Context, professionalID uuid.UUID, clientID uuid.UUID, page, pageSize int) ([]*db.GetPreviousAppointmentsByProfessionalIDAndClientIDRow, int, error) {
+	offset := (page - 1) * pageSize
+
+	appointments, err := s.repo.GetPreviousAppointmentsByProfessionalIDAndClientID(ctx, &db.GetPreviousAppointmentsByProfessionalIDAndClientIDParams{
+		ProfessionalID: professionalID,
+		ClientID:       clientID,
+		Limit:          int32(pageSize),
+		Offset:         int32(offset),
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err := s.repo.CountPreviousAppointmentsByProfessionalIDAndClientID(ctx, &db.CountPreviousAppointmentsByProfessionalIDAndClientIDParams{
+		ProfessionalID: professionalID,
+		ClientID:       clientID,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return appointments, int(total), nil
+}
+
+// GetAppointmentDetailsByProfessionalIDAndAppointmentID retrieves appointment details by professional ID and appointment ID
+func (s *service) GetAppointmentDetailsByProfessionalIDAndAppointmentID(ctx context.Context, professionalID uuid.UUID, appointmentID uuid.UUID) (*GetAppointmentDetailsOutput, error) {
+	appointmentDetails, err := s.repo.GetAppointmentDetailsByProfessionalIDAndAppointmentID(ctx, &db.GetAppointmentDetailsByProfessionalIDAndAppointmentIDParams{
+		ProfessionalID: professionalID,
+		ID:             appointmentID,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	clients, err := s.repo.GetAppointmentClientsByAppointmentID(ctx, appointmentID)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &GetAppointmentDetailsOutput{
+		ID:          appointmentDetails.ID,
+		StartTime:   appointmentDetails.StartTime,
+		EndTime:     appointmentDetails.EndTime,
+		Description: appointmentDetails.Description,
+		Type:        appointmentDetails.Type,
+		Clients:     clients,
+	}
+
+	return result, nil
+}
+
+// CreateInvite creates an invite
+func (s *service) InviteAllClients(ctx context.Context, input InviteAllClientsInput) error {
+	clients, err := s.GetSubscriptionsByProfessionalID(ctx, input.ProfessionalID)
+	if err != nil {
+		return err
+	}
+
+	appointmentIDs := make([]uuid.UUID, len(clients))
+	startTime := make([]time.Time, len(clients))
+	endTime := make([]time.Time, len(clients))
+	professionalNames := make([]string, len(clients))
+	types := make([]string, len(clients))
+	descriptions := make([]string, len(clients))
+	clientIDs := make([]uuid.UUID, len(clients))
+
+	for i, client := range clients {
+		appointmentIDs[i] = input.AppointmentID
+		startTime[i] = input.StartTime
+		endTime[i] = input.EndTime
+		professionalNames[i] = input.ProfessionalName
+		types[i] = input.Type
+		descriptions[i] = input.Description
+		clientIDs[i] = client.ID
+	}
+	err = s.repo.CreateInvites(ctx, &db.CreateInvitesParams{
+		Column1: appointmentIDs,
+		Column2: startTime,
+		Column3: endTime,
+		Column4: clientIDs,
+		Column5: descriptions,
+		Column6: types,
+		Column7: professionalNames,
+	})
+	if err != nil {
+		return err
+	}
+
+	invites, err := s.repo.GetInvitesByAppointmentIDAndClientIs(ctx, &db.GetInvitesByAppointmentIDAndClientIsParams{
+		AppointmentID: input.AppointmentID,
+		Column2:       clientIDs,
+	})
+	if err != nil {
+		return err
+	}
+
+	mapClientIdInviteID := buildMapClientIdInviteID(invites)
+
+	for _, client := range clients {
+		err = input.NotificationsService.SendGroupVisitAppointmentNotification(ctx, notifications.SendGroupVisitAppointmentNotificationInput{
+			ChatID:           apiCommon.Int64Value(apiCommon.FromNullInt64(client.ChatID)),
+			StartTime:        apiCommon.FormatTimeRFC3339(input.StartTime),
+			EndTime:          apiCommon.FormatTimeRFC3339(input.EndTime),
+			ProfessionalName: input.ProfessionalName,
+			Locale:           client.Locale,
+			Description:      input.Description,
+			InviteID:         mapClientIdInviteID[client.ID],
+		})
+	}
+
+	return nil
+}
+
+// InvitePartiallySelectedClients invites partially selected clients
+func (s *service) InvitePartiallySelectedClients(ctx context.Context, input InvitePartiallySelectedClientsInput) error {
+	appointmentIDs := make([]uuid.UUID, len(input.Clients))
+	startTime := make([]time.Time, len(input.Clients))
+	endTime := make([]time.Time, len(input.Clients))
+	professionalNames := make([]string, len(input.Clients))
+	types := make([]string, len(input.Clients))
+	descriptions := make([]string, len(input.Clients))
+	clientIDs := make([]uuid.UUID, len(input.Clients))
+
+	for i, client := range input.Clients {
+		appointmentIDs[i] = input.AppointmentID
+		startTime[i] = input.StartTime
+		endTime[i] = input.EndTime
+		professionalNames[i] = input.ProfessionalName
+		types[i] = input.Type
+		descriptions[i] = input.Description
+		clientIDs[i] = client.ID
+	}
+
+	err := s.repo.CreateInvites(ctx, &db.CreateInvitesParams{
+		Column1: appointmentIDs,
+		Column2: startTime,
+		Column3: endTime,
+		Column4: clientIDs,
+		Column5: descriptions,
+		Column6: types,
+		Column7: professionalNames,
+	})
+	if err != nil {
+		return err
+	}
+	invites, err := s.repo.GetInvitesByAppointmentIDAndClientIs(ctx, &db.GetInvitesByAppointmentIDAndClientIsParams{
+		AppointmentID: input.AppointmentID,
+		Column2:       clientIDs,
+	})
+	if err != nil {
+		return err
+	}
+	mapClientIdInviteID := buildMapClientIdInviteID(invites)
+
+	for _, client := range input.Clients {
+		input.NotificationsService.SendGroupVisitAppointmentNotification(ctx, notifications.SendGroupVisitAppointmentNotificationInput{
+			ChatID:           client.ChatID,
+			StartTime:        apiCommon.FormatTimeRFC3339(input.StartTime),
+			EndTime:          apiCommon.FormatTimeRFC3339(input.EndTime),
+			ProfessionalName: input.ProfessionalName,
+			Locale:           client.Locale,
+			Description:      input.Description,
+			InviteID:         mapClientIdInviteID[client.ID],
+		})
+	}
+	return nil
 }

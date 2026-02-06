@@ -14,6 +14,48 @@ import (
 	"github.com/lib/pq"
 )
 
+const CountPreviousAppointmentsByProfessionalID = `-- name: CountPreviousAppointmentsByProfessionalID :one
+SELECT COUNT(DISTINCT a.id)
+FROM appointments a
+WHERE a.professional_id = $1
+  AND a.status = 'confirmed'
+  and a.type != 'unavailable'
+  AND a.end_time < NOW()
+`
+
+func (q *Queries) CountPreviousAppointmentsByProfessionalID(ctx context.Context, professionalID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, CountPreviousAppointmentsByProfessionalID, professionalID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const CountPreviousAppointmentsByProfessionalIDAndClientID = `-- name: CountPreviousAppointmentsByProfessionalIDAndClientID :one
+SELECT COUNT(DISTINCT a.id)
+FROM appointments a
+WHERE a.professional_id = $1
+  AND a.status = 'confirmed'
+  AND a.type != 'unavailable'
+  AND a.end_time < NOW()
+  AND a.id IN (
+    SELECT DISTINCT(appointment_id)
+    FROM client_appointments ca
+    WHERE ca.client_id = $2
+  )
+`
+
+type CountPreviousAppointmentsByProfessionalIDAndClientIDParams struct {
+	ProfessionalID uuid.UUID `json:"professional_id"`
+	ClientID       uuid.UUID `json:"client_id"`
+}
+
+func (q *Queries) CountPreviousAppointmentsByProfessionalIDAndClientID(ctx context.Context, arg *CountPreviousAppointmentsByProfessionalIDAndClientIDParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, CountPreviousAppointmentsByProfessionalIDAndClientID, arg.ProfessionalID, arg.ClientID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const CountProfessionalAppointmentsWithStatusAndDate = `-- name: CountProfessionalAppointmentsWithStatusAndDate :one
 SELECT COUNT(*)
 FROM appointments a
@@ -54,26 +96,31 @@ func (q *Queries) CountProfessionals(ctx context.Context, clientID uuid.UUID) (i
 	return count, err
 }
 
-const CreateGroupVisitAppointment = `-- name: CreateGroupVisitAppointment :exec
+const CreateGroupVisitAppointment = `-- name: CreateGroupVisitAppointment :one
 INSERT INTO appointments (type, professional_id, start_time, end_time, status, description)
-VALUES ('group', $1, $2, $3, 'confirmed', $4)
+VALUES ($1, $2, $3, $4, 'confirmed', $5)
+RETURNING id
 `
 
 type CreateGroupVisitAppointmentParams struct {
+	Type           string         `json:"type"`
 	ProfessionalID uuid.UUID      `json:"professional_id"`
 	StartTime      time.Time      `json:"start_time"`
 	EndTime        time.Time      `json:"end_time"`
 	Description    sql.NullString `json:"description"`
 }
 
-func (q *Queries) CreateGroupVisitAppointment(ctx context.Context, arg *CreateGroupVisitAppointmentParams) error {
-	_, err := q.db.ExecContext(ctx, CreateGroupVisitAppointment,
+func (q *Queries) CreateGroupVisitAppointment(ctx context.Context, arg *CreateGroupVisitAppointmentParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, CreateGroupVisitAppointment,
+		arg.Type,
 		arg.ProfessionalID,
 		arg.StartTime,
 		arg.EndTime,
 		arg.Description,
 	)
-	return err
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const CreateProfessional = `-- name: CreateProfessional :one
@@ -109,6 +156,39 @@ func (q *Queries) CreateProfessional(ctx context.Context, arg *CreateProfessiona
 		&i.Locale,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return &i, err
+}
+
+const GetAppointmentDetailsByProfessionalIDAndAppointmentID = `-- name: GetAppointmentDetailsByProfessionalIDAndAppointmentID :one
+SELECT a.id, a.start_time, a.end_time, a.description, a.type
+FROM appointments a
+WHERE a.professional_id = $1
+AND a.id = $2
+`
+
+type GetAppointmentDetailsByProfessionalIDAndAppointmentIDParams struct {
+	ProfessionalID uuid.UUID `json:"professional_id"`
+	ID             uuid.UUID `json:"id"`
+}
+
+type GetAppointmentDetailsByProfessionalIDAndAppointmentIDRow struct {
+	ID          uuid.UUID      `json:"id"`
+	StartTime   time.Time      `json:"start_time"`
+	EndTime     time.Time      `json:"end_time"`
+	Description sql.NullString `json:"description"`
+	Type        string         `json:"type"`
+}
+
+func (q *Queries) GetAppointmentDetailsByProfessionalIDAndAppointmentID(ctx context.Context, arg *GetAppointmentDetailsByProfessionalIDAndAppointmentIDParams) (*GetAppointmentDetailsByProfessionalIDAndAppointmentIDRow, error) {
+	row := q.db.QueryRowContext(ctx, GetAppointmentDetailsByProfessionalIDAndAppointmentID, arg.ProfessionalID, arg.ID)
+	var i GetAppointmentDetailsByProfessionalIDAndAppointmentIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.StartTime,
+		&i.EndTime,
+		&i.Description,
+		&i.Type,
 	)
 	return &i, err
 }
@@ -173,6 +253,139 @@ func (q *Queries) GetAppointmentsByProfessionalWithStatusAndDate(ctx context.Con
 			&i.EndTime,
 			&i.Type,
 			pq.Array(&i.Clients),
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const GetPreviousAppointmentsByProfessionalID = `-- name: GetPreviousAppointmentsByProfessionalID :many
+SELECT 
+    a.id, 
+    a.start_time, 
+    a.end_time, 
+    a.description, 
+    a.type, 
+    COUNT(DISTINCT ca.client_id) AS users_count
+FROM appointments a
+LEFT JOIN client_appointments ca ON ca.appointment_id = a.id
+WHERE a.professional_id = $1
+  AND a.status = 'confirmed'
+  and a.type != 'unavailable'
+  AND a.end_time < NOW()
+GROUP BY a.id, a.start_time, a.end_time, a.description, a.type
+ORDER BY a.start_time DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetPreviousAppointmentsByProfessionalIDParams struct {
+	ProfessionalID uuid.UUID `json:"professional_id"`
+	Limit          int32     `json:"limit"`
+	Offset         int32     `json:"offset"`
+}
+
+type GetPreviousAppointmentsByProfessionalIDRow struct {
+	ID          uuid.UUID      `json:"id"`
+	StartTime   time.Time      `json:"start_time"`
+	EndTime     time.Time      `json:"end_time"`
+	Description sql.NullString `json:"description"`
+	Type        string         `json:"type"`
+	UsersCount  int64          `json:"users_count"`
+}
+
+func (q *Queries) GetPreviousAppointmentsByProfessionalID(ctx context.Context, arg *GetPreviousAppointmentsByProfessionalIDParams) ([]*GetPreviousAppointmentsByProfessionalIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, GetPreviousAppointmentsByProfessionalID, arg.ProfessionalID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetPreviousAppointmentsByProfessionalIDRow{}
+	for rows.Next() {
+		var i GetPreviousAppointmentsByProfessionalIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Description,
+			&i.Type,
+			&i.UsersCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const GetPreviousAppointmentsByProfessionalIDAndClientID = `-- name: GetPreviousAppointmentsByProfessionalIDAndClientID :many
+SELECT a.id, a.start_time, a.end_time, a.description, a.type, COUNT(DISTINCT ca.client_id) AS users_count
+FROM appointments a
+LEFT JOIN client_appointments ca ON ca.appointment_id = a.id
+WHERE a.professional_id = $1
+  AND a.status = 'confirmed'
+  and a.type != 'unavailable'
+  AND a.end_time < NOW()
+  AND a.id IN (
+    SELECT DISTINCT(appointment_id)
+    FROM client_appointments ca
+    WHERE ca.client_id = $2
+  )
+GROUP BY a.id, a.start_time, a.end_time, a.description, a.type
+ORDER BY a.start_time DESC
+LIMIT $3 OFFSET $4
+`
+
+type GetPreviousAppointmentsByProfessionalIDAndClientIDParams struct {
+	ProfessionalID uuid.UUID `json:"professional_id"`
+	ClientID       uuid.UUID `json:"client_id"`
+	Limit          int32     `json:"limit"`
+	Offset         int32     `json:"offset"`
+}
+
+type GetPreviousAppointmentsByProfessionalIDAndClientIDRow struct {
+	ID          uuid.UUID      `json:"id"`
+	StartTime   time.Time      `json:"start_time"`
+	EndTime     time.Time      `json:"end_time"`
+	Description sql.NullString `json:"description"`
+	Type        string         `json:"type"`
+	UsersCount  int64          `json:"users_count"`
+}
+
+func (q *Queries) GetPreviousAppointmentsByProfessionalIDAndClientID(ctx context.Context, arg *GetPreviousAppointmentsByProfessionalIDAndClientIDParams) ([]*GetPreviousAppointmentsByProfessionalIDAndClientIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, GetPreviousAppointmentsByProfessionalIDAndClientID,
+		arg.ProfessionalID,
+		arg.ClientID,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetPreviousAppointmentsByProfessionalIDAndClientIDRow{}
+	for rows.Next() {
+		var i GetPreviousAppointmentsByProfessionalIDAndClientIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Description,
+			&i.Type,
+			&i.UsersCount,
 		); err != nil {
 			return nil, err
 		}

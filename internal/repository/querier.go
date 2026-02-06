@@ -39,12 +39,15 @@ type Querier interface {
 	// LEFT JOIN professionals p ON p.id = na.professional_id;
 	ConfirmAppointmentById(ctx context.Context, id uuid.UUID) error
 	CountClientAppointmentsWithStatus(ctx context.Context, arg *CountClientAppointmentsWithStatusParams) (int64, error)
+	CountPreviousAppointmentsByProfessionalID(ctx context.Context, professionalID uuid.UUID) (int64, error)
+	CountPreviousAppointmentsByProfessionalIDAndClientID(ctx context.Context, arg *CountPreviousAppointmentsByProfessionalIDAndClientIDParams) (int64, error)
 	CountProfessionalAppointmentsWithStatusAndDate(ctx context.Context, arg *CountProfessionalAppointmentsWithStatusAndDateParams) (int64, error)
 	CountProfessionals(ctx context.Context, clientID uuid.UUID) (int64, error)
 	CountSubscriptionsByClientID(ctx context.Context, clientID uuid.UUID) (int64, error)
 	CreateClient(ctx context.Context, arg *CreateClientParams) (*Client, error)
 	CreateClientAppointment(ctx context.Context, arg *CreateClientAppointmentParams) error
-	CreateGroupVisitAppointment(ctx context.Context, arg *CreateGroupVisitAppointmentParams) error
+	CreateGroupVisitAppointment(ctx context.Context, arg *CreateGroupVisitAppointmentParams) (uuid.UUID, error)
+	CreateInvites(ctx context.Context, arg *CreateInvitesParams) error
 	CreatePersonalAppointment(ctx context.Context, arg *CreatePersonalAppointmentParams) (*CreatePersonalAppointmentRow, error)
 	CreateProfessional(ctx context.Context, arg *CreateProfessionalParams) (*Professional, error)
 	CreateSubscription(ctx context.Context, arg *CreateSubscriptionParams) error
@@ -78,6 +81,7 @@ type Querier interface {
 	DeleteSubscription(ctx context.Context, arg *DeleteSubscriptionParams) error
 	GetAppointmentByID(ctx context.Context, id uuid.UUID) (*Appointment, error)
 	GetAppointmentClientsByAppointmentID(ctx context.Context, appointmentID uuid.UUID) ([]*GetAppointmentClientsByAppointmentIDRow, error)
+	GetAppointmentDetailsByProfessionalIDAndAppointmentID(ctx context.Context, arg *GetAppointmentDetailsByProfessionalIDAndAppointmentIDParams) (*GetAppointmentDetailsByProfessionalIDAndAppointmentIDRow, error)
 	GetAppointmentInfoByAppointmentID(ctx context.Context, id uuid.UUID) (*GetAppointmentInfoByAppointmentIDRow, error)
 	GetAppointmentWithDetails(ctx context.Context, id uuid.UUID) (*GetAppointmentWithDetailsRow, error)
 	// -- name: GetAppointmentsByProfessionalWithStatus :many
@@ -137,6 +141,10 @@ type Querier interface {
 	GetAppointmentsByClientWithStatus(ctx context.Context, arg *GetAppointmentsByClientWithStatusParams) ([]*GetAppointmentsByClientWithStatusRow, error)
 	GetAppointmentsByProfessionalByDate(ctx context.Context, arg *GetAppointmentsByProfessionalByDateParams) ([]*GetAppointmentsByProfessionalByDateRow, error)
 	GetAppointmentsByProfessionalWithStatusAndDate(ctx context.Context, arg *GetAppointmentsByProfessionalWithStatusAndDateParams) ([]*GetAppointmentsByProfessionalWithStatusAndDateRow, error)
+	GetClientInvites(ctx context.Context, clientID uuid.UUID) ([]*GetClientInvitesRow, error)
+	GetInvitesByAppointmentIDAndClientIs(ctx context.Context, arg *GetInvitesByAppointmentIDAndClientIsParams) ([]*GetInvitesByAppointmentIDAndClientIsRow, error)
+	GetPreviousAppointmentsByProfessionalID(ctx context.Context, arg *GetPreviousAppointmentsByProfessionalIDParams) ([]*GetPreviousAppointmentsByProfessionalIDRow, error)
+	GetPreviousAppointmentsByProfessionalIDAndClientID(ctx context.Context, arg *GetPreviousAppointmentsByProfessionalIDAndClientIDParams) ([]*GetPreviousAppointmentsByProfessionalIDAndClientIDRow, error)
 	GetProfessionalByUsername(ctx context.Context, username string) (*Professional, error)
 	GetProfessionalClients(ctx context.Context, professionalID uuid.UUID) ([]*GetProfessionalClientsRow, error)
 	GetProfessionalInfoForNotification(ctx context.Context, id uuid.UUID) (*GetProfessionalInfoForNotificationRow, error)

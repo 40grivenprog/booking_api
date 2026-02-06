@@ -26,6 +26,13 @@ type ProfessionalsRepository interface {
 	ConfirmAppointmentById(ctx context.Context, id uuid.UUID) error
 	GetAppointmentClientsByAppointmentID(ctx context.Context, appointmentID uuid.UUID) ([]*db.GetAppointmentClientsByAppointmentIDRow, error)
 	DeleteAppointmentById(ctx context.Context, id uuid.UUID) error
-	CreateGroupVisitAppointment(ctx context.Context, arg *db.CreateGroupVisitAppointmentParams) error
+	CreateGroupVisitAppointment(ctx context.Context, arg *db.CreateGroupVisitAppointmentParams) (uuid.UUID, error)
 	GetSubscriptionsByProfessionalID(ctx context.Context, professionalID uuid.UUID) ([]*db.GetSubscriptionsByProfessionalIDRow, error)
+	GetPreviousAppointmentsByProfessionalID(ctx context.Context, arg *db.GetPreviousAppointmentsByProfessionalIDParams) ([]*db.GetPreviousAppointmentsByProfessionalIDRow, error)
+	CountPreviousAppointmentsByProfessionalID(ctx context.Context, professionalID uuid.UUID) (int64, error)
+	GetPreviousAppointmentsByProfessionalIDAndClientID(ctx context.Context, arg *db.GetPreviousAppointmentsByProfessionalIDAndClientIDParams) ([]*db.GetPreviousAppointmentsByProfessionalIDAndClientIDRow, error)
+	CountPreviousAppointmentsByProfessionalIDAndClientID(ctx context.Context, arg *db.CountPreviousAppointmentsByProfessionalIDAndClientIDParams) (int64, error)
+	GetAppointmentDetailsByProfessionalIDAndAppointmentID(ctx context.Context, arg *db.GetAppointmentDetailsByProfessionalIDAndAppointmentIDParams) (*db.GetAppointmentDetailsByProfessionalIDAndAppointmentIDRow, error)
+	CreateInvites(ctx context.Context, arg *db.CreateInvitesParams) error
+	GetInvitesByAppointmentIDAndClientIs(ctx context.Context, arg *db.GetInvitesByAppointmentIDAndClientIsParams) ([]*db.GetInvitesByAppointmentIDAndClientIsRow, error)
 }

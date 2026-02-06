@@ -62,7 +62,7 @@ SET status = 'confirmed', updated_at = NOW()
 WHERE id = $1;
 
 -- name: GetAppointmentClientsByAppointmentID :many
-SELECT c.chat_id as client_chat_id, c.locale as client_locale
+SELECT c.id, c.first_name, c.last_name, c.chat_id as client_chat_id, c.locale as client_locale
 FROM client_appointments ca
 JOIN clients c ON c.id = ca.client_id
 WHERE ca.appointment_id = $1;

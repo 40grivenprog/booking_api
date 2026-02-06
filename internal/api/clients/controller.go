@@ -158,7 +158,7 @@ func (h *ClientsHandler) BookAppointment(c *gin.Context) {
 		return
 	}
 
-	err := h.clientsService.CreateAppointment(c.Request.Context(), clients.CreateAppointmentInput{
+	appointmentID, err := h.clientsService.CreateAppointment(c.Request.Context(), clients.CreateAppointmentInput{
 		ClientID:       clientID,
 		ProfessionalID: professionalID,
 		StartTime:      startTime,
@@ -171,11 +171,12 @@ func (h *ClientsHandler) BookAppointment(c *gin.Context) {
 	}
 
 	err = h.notificationsService.SendAppointmentRequestNotification(c.Request.Context(), notifications.SendAppointmentRequestNotificationInput{
-		ChatID:     req.ProfessionalChatID,
-		ClientName: clientName,
-		StartTime:  common.FormatTimeRFC3339(startTime),
-		EndTime:    common.FormatTimeRFC3339(endTime),
-		Locale:     req.ProfessionalLocale,
+		ChatID:        req.ProfessionalChatID,
+		ClientName:    clientName,
+		StartTime:     common.FormatTimeRFC3339(startTime),
+		EndTime:       common.FormatTimeRFC3339(endTime),
+		Locale:        req.ProfessionalLocale,
+		AppointmentID: appointmentID,
 	})
 	if err != nil {
 		common.HandleNotificationError(c, err)
@@ -300,3 +301,19 @@ func (h *ClientsHandler) UnsubscribeFromProfessional(c *gin.Context) {
 
 	c.JSON(http.StatusAccepted, nil)
 }
+
+// GetClientInvites handles GET /api/clients/invites
+func (h *ClientsHandler) GetClientInvites(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	invites, err := h.clientsService.GetClientInvites(c.Request.Context(), clientID)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+}
+
+
