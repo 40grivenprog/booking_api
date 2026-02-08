@@ -61,6 +61,14 @@ UPDATE appointments
 SET status = 'confirmed', updated_at = NOW()
 WHERE id = $1;
 
+-- name: UpdateAppointment :exec
+UPDATE appointments
+SET 
+    type = COALESCE($2, type),
+    description = COALESCE($3, description),
+    updated_at = NOW()
+WHERE id = $1;
+
 -- name: GetAppointmentClientsByAppointmentID :many
 SELECT c.id, c.first_name, c.last_name, c.chat_id as client_chat_id, c.locale as client_locale
 FROM client_appointments ca

@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 const CreateClientAppointment = `-- name: CreateClientAppointment :exec
@@ -23,5 +24,20 @@ type CreateClientAppointmentParams struct {
 
 func (q *Queries) CreateClientAppointment(ctx context.Context, arg *CreateClientAppointmentParams) error {
 	_, err := q.db.ExecContext(ctx, CreateClientAppointment, arg.ClientID, arg.AppointmentID)
+	return err
+}
+
+const DeleteClientAppointmentsByAppointmentIDAndClientIDs = `-- name: DeleteClientAppointmentsByAppointmentIDAndClientIDs :exec
+DELETE FROM client_appointments
+WHERE appointment_id = $1 AND client_id = ANY($2::uuid[])
+`
+
+type DeleteClientAppointmentsByAppointmentIDAndClientIDsParams struct {
+	AppointmentID uuid.UUID   `json:"appointment_id"`
+	Column2       []uuid.UUID `json:"column_2"`
+}
+
+func (q *Queries) DeleteClientAppointmentsByAppointmentIDAndClientIDs(ctx context.Context, arg *DeleteClientAppointmentsByAppointmentIDAndClientIDsParams) error {
+	_, err := q.db.ExecContext(ctx, DeleteClientAppointmentsByAppointmentIDAndClientIDs, arg.AppointmentID, pq.Array(arg.Column2))
 	return err
 }

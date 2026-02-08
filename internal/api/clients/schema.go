@@ -72,6 +72,7 @@ type GetClientAppointmentsResponse struct {
 // ClientAppointment represents an appointment with professional details in client context
 type ClientAppointment struct {
 	ID           string                         `json:"id"`
+	Type         string                         `json:"type"`
 	StartTime    string                         `json:"start_time"`
 	EndTime      string                         `json:"end_time"`
 	Professional *ClientAppointmentProfessional `json:"professional,omitempty"`
@@ -174,4 +175,52 @@ type GetClientPreviousAppointmentsResponseItem struct {
 	Type      string `json:"type"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
+}
+
+// GetProfessionalsTimetableResponse represents the response for getting professionals timetable
+type GetProfessionalsTimetableResponse struct {
+	Date         string                                  `json:"date"`
+	Appointments []GetProfessionalsTimetableResponseItem `json:"appointments"`
+}
+
+// GetProfessionalsTimetableResponseItem represents an appointment in the response
+type GetProfessionalsTimetableResponseItem struct {
+	ID        string `json:"id"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+	Type      string `json:"type"`
+}
+
+// GetClientPackagesResponse represents the response for getting client packages
+type GetClientPackagesResponse struct {
+	Packages []GetClientPackagesResponseItem `json:"packages"`
+}
+
+// GetClientPackagesResponseItem represents a package in the response
+type GetClientPackagesResponseItem struct {
+	ID                  string `json:"id"`
+	IssuedAt            string `json:"issued_at"`
+	ExpiresAt           string `json:"expires_at"`
+	ApppointmentsNumber int64  `json:"apppointments_number"`
+	FirstName           string `json:"first_name"`
+	LastName            string `json:"last_name"`
+}
+
+// GetClientPackageDetailsResponse represents the response for getting client package details
+type GetClientPackageDetailsResponse struct {
+	ID                  string                                       `json:"id"`
+	IssuedAt            string                                       `json:"issued_at"`
+	ExpiresAt           string                                       `json:"expires_at"`
+	ApppointmentsNumber int64                                        `json:"apppointments_number"`
+	FirstName           string                                       `json:"first_name"`
+	LastName            string                                       `json:"last_name"`
+	Appointments        []GetClientPackageDetailsResponseAppointment `json:"appointments"`
+}
+
+// GetClientPackageDetailsResponseAppointment represents an appointment in the response
+type GetClientPackageDetailsResponseAppointment struct {
+	ID        string `json:"id"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+	Type      string `json:"type"`
 }

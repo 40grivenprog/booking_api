@@ -63,6 +63,15 @@ func ProfessionalsRegister(p ProfessionalsHandlerParams) error {
 		professionals.GET("/previous_appointments", h.GetPreviousAppointments)
 		professionals.PATCH("/update_locale", h.UpdateLocale)
 		professionals.GET("/appointments/:appointment_id", h.GetAppointmentDetails)
+		professionals.PATCH("/appointments/:appointment_id/update", h.UpdateAppointment)
+		professionals.PATCH("/previous_appointments/:appointment_id/update", h.UpdatePreviousAppointment)
+		professionals.GET("/appointments/:appointment_id/missing_invite_users", h.GetMissingInviteUsersForAppointment)
+		professionals.GET("/previous_appointments/:appointment_id/missing_clients", h.GetMissingClientsForPreviousAppointment)
+		professionals.GET("/appointments/:appointment_id/pending_invite_users", h.GetPendingInviteUsersForAppointment)
+		professionals.POST("/appointments/:appointment_id/invite", h.CreateInviteForAppointment)
+		professionals.POST("/packages", h.CreatePackage)
+		professionals.GET("/packages", h.GetListOfPackages)
+		professionals.GET("/packages/:package_id", h.GetPackageDetails)
 	}
 
 	return nil

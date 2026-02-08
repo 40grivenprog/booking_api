@@ -23,3 +23,9 @@ JOIN clients c ON s.client_id = c.id
 WHERE s.professional_id = $1
 ORDER BY c.first_name, c.last_name;
 
+
+-- name: GetClientSubscriptionByClientIDAndProfessionalID :one
+SELECT EXISTS(
+  SELECT 1 FROM subscriptions
+  WHERE client_id = $1 AND professional_id = $2
+) AS exists;

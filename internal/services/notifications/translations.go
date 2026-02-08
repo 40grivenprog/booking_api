@@ -42,9 +42,16 @@ type NotificationTranslations struct {
 		StartTime     string
 		EndTime       string
 		Type          string
-		Description   string
 	}
-	OpenApp string
+	PackageCreated struct {
+		Title              string
+		DetailsTitle       string
+		AppointmentsNumber string
+		IssuedAt           string
+		ExpiresAt          string
+	}
+	OpenApp           string
+	CheckNotification string
 }
 
 var translations = map[string]NotificationTranslations{
@@ -90,7 +97,8 @@ var translations = map[string]NotificationTranslations{
 			Date:         "📅 Date:",
 			Time:         "🕐 Time:",
 		},
-		OpenApp: "📱 Open App",
+		OpenApp:           "📱 Open App",
+		CheckNotification: "🔔 Check Notification",
 		Subscription: struct {
 			Title  string
 			Client string
@@ -118,7 +126,6 @@ var translations = map[string]NotificationTranslations{
 			StartTime     string
 			EndTime       string
 			Type          string
-			Description   string
 		}{
 			JoinedMessage: "%s joined the training",
 			DetailsTitle:  "Training Details",
@@ -126,7 +133,19 @@ var translations = map[string]NotificationTranslations{
 			StartTime:     "🕐 Start:",
 			EndTime:       "🕐 End:",
 			Type:          "📋 Type:",
-			Description:   "📝 Description:",
+		},
+		PackageCreated: struct {
+			Title              string
+			DetailsTitle       string
+			AppointmentsNumber string
+			IssuedAt           string
+			ExpiresAt          string
+		}{
+			Title:              "%s add new package for you!",
+			DetailsTitle:       "Details:",
+			AppointmentsNumber: "📦 Number of appointments:",
+			IssuedAt:           "📅 Issued at:",
+			ExpiresAt:          "⏰ Expires at:",
 		},
 	},
 	"ru": {
@@ -171,7 +190,8 @@ var translations = map[string]NotificationTranslations{
 			Date:         "📅 Дата:",
 			Time:         "🕐 Время:",
 		},
-		OpenApp: "📱 Открыть приложение",
+		OpenApp:           "📱 Открыть приложение",
+		CheckNotification: "🔔 Проверить уведомления",
 		Subscription: struct {
 			Title  string
 			Client string
@@ -199,7 +219,6 @@ var translations = map[string]NotificationTranslations{
 			StartTime     string
 			EndTime       string
 			Type          string
-			Description   string
 		}{
 			JoinedMessage: "%s присоединился к тренировке",
 			DetailsTitle:  "Детали тренировки",
@@ -207,7 +226,19 @@ var translations = map[string]NotificationTranslations{
 			StartTime:     "🕐 Начало:",
 			EndTime:       "🕐 Конец:",
 			Type:          "📋 Тип:",
-			Description:   "📝 Описание:",
+		},
+		PackageCreated: struct {
+			Title              string
+			DetailsTitle       string
+			AppointmentsNumber string
+			IssuedAt           string
+			ExpiresAt          string
+		}{
+			Title:              "%s добавил новый пакет для вас!",
+			DetailsTitle:       "Детали:",
+			AppointmentsNumber: "📦 Количество записей:",
+			IssuedAt:           "📅 Выдан:",
+			ExpiresAt:          "⏰ Истекает:",
 		},
 	},
 	"uk": {
@@ -252,7 +283,8 @@ var translations = map[string]NotificationTranslations{
 			Date:         "📅 Дата:",
 			Time:         "🕐 Час:",
 		},
-		OpenApp: "📱 Відкрити додаток",
+		OpenApp:           "📱 Відкрити додаток",
+		CheckNotification: "🔔 Перевірити сповіщення",
 		Subscription: struct {
 			Title  string
 			Client string
@@ -280,7 +312,6 @@ var translations = map[string]NotificationTranslations{
 			StartTime     string
 			EndTime       string
 			Type          string
-			Description   string
 		}{
 			JoinedMessage: "%s приєднався до тренування",
 			DetailsTitle:  "Деталі тренування",
@@ -288,7 +319,19 @@ var translations = map[string]NotificationTranslations{
 			StartTime:     "🕐 Початок:",
 			EndTime:       "🕐 Кінець:",
 			Type:          "📋 Тип:",
-			Description:   "📝 Опис:",
+		},
+		PackageCreated: struct {
+			Title              string
+			DetailsTitle       string
+			AppointmentsNumber string
+			IssuedAt           string
+			ExpiresAt          string
+		}{
+			Title:              "%s додав новий пакет для вас!",
+			DetailsTitle:       "Деталі:",
+			AppointmentsNumber: "📦 Кількість записів:",
+			IssuedAt:           "📅 Видано:",
+			ExpiresAt:          "⏰ Закінчується:",
 		},
 	},
 	"pl": {
@@ -333,7 +376,8 @@ var translations = map[string]NotificationTranslations{
 			Date:         "📅 Data:",
 			Time:         "🕐 Godzina:",
 		},
-		OpenApp: "📱 Otwórz aplikację",
+		OpenApp:           "📱 Otwórz aplikację",
+		CheckNotification: "🔔 Sprawdź powiadomienia",
 		Subscription: struct {
 			Title  string
 			Client string
@@ -361,7 +405,6 @@ var translations = map[string]NotificationTranslations{
 			StartTime     string
 			EndTime       string
 			Type          string
-			Description   string
 		}{
 			JoinedMessage: "%s dołączył do treningu",
 			DetailsTitle:  "Szczegóły treningu",
@@ -369,7 +412,19 @@ var translations = map[string]NotificationTranslations{
 			StartTime:     "🕐 Początek:",
 			EndTime:       "🕐 Koniec:",
 			Type:          "📋 Typ:",
-			Description:   "📝 Opis:",
+		},
+		PackageCreated: struct {
+			Title              string
+			DetailsTitle       string
+			AppointmentsNumber string
+			IssuedAt           string
+			ExpiresAt          string
+		}{
+			Title:              "%s dodał nowy pakiet dla Ciebie!",
+			DetailsTitle:       "Szczegóły:",
+			AppointmentsNumber: "📦 Liczba wizyt:",
+			IssuedAt:           "📅 Wydano:",
+			ExpiresAt:          "⏰ Wygasa:",
 		},
 	},
 }

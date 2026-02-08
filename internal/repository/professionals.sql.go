@@ -19,12 +19,20 @@ SELECT COUNT(DISTINCT a.id)
 FROM appointments a
 WHERE a.professional_id = $1
   AND a.status = 'confirmed'
-  and a.type != 'unavailable'
+  AND a.type != 'unavailable'
   AND a.end_time < NOW()
+  AND ($2::timestamptz IS NULL OR $2 < '1900-01-01'::timestamptz OR a.start_time >= $2)
+  AND ($3::timestamptz IS NULL OR $3 < '1900-01-01'::timestamptz OR a.start_time < $3)
 `
 
-func (q *Queries) CountPreviousAppointmentsByProfessionalID(ctx context.Context, professionalID uuid.UUID) (int64, error) {
-	row := q.db.QueryRowContext(ctx, CountPreviousAppointmentsByProfessionalID, professionalID)
+type CountPreviousAppointmentsByProfessionalIDParams struct {
+	ProfessionalID uuid.UUID `json:"professional_id"`
+	Column2        time.Time `json:"column_2"`
+	Column3        time.Time `json:"column_3"`
+}
+
+func (q *Queries) CountPreviousAppointmentsByProfessionalID(ctx context.Context, arg *CountPreviousAppointmentsByProfessionalIDParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, CountPreviousAppointmentsByProfessionalID, arg.ProfessionalID, arg.Column2, arg.Column3)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -42,15 +50,24 @@ WHERE a.professional_id = $1
     FROM client_appointments ca
     WHERE ca.client_id = $2
   )
+  AND ($3::timestamptz IS NULL OR $3 < '1900-01-01'::timestamptz OR a.start_time >= $3)
+  AND ($4::timestamptz IS NULL OR $4 < '1900-01-01'::timestamptz OR a.start_time < $4)
 `
 
 type CountPreviousAppointmentsByProfessionalIDAndClientIDParams struct {
 	ProfessionalID uuid.UUID `json:"professional_id"`
 	ClientID       uuid.UUID `json:"client_id"`
+	Column3        time.Time `json:"column_3"`
+	Column4        time.Time `json:"column_4"`
 }
 
 func (q *Queries) CountPreviousAppointmentsByProfessionalIDAndClientID(ctx context.Context, arg *CountPreviousAppointmentsByProfessionalIDAndClientIDParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, CountPreviousAppointmentsByProfessionalIDAndClientID, arg.ProfessionalID, arg.ClientID)
+	row := q.db.QueryRowContext(ctx, CountPreviousAppointmentsByProfessionalIDAndClientID,
+		arg.ProfessionalID,
+		arg.ClientID,
+		arg.Column3,
+		arg.Column4,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -160,6 +177,19 @@ func (q *Queries) CreateProfessional(ctx context.Context, arg *CreateProfessiona
 	return &i, err
 }
 
+const GetAppintmentClientsCountByAppointmentID = `-- name: GetAppintmentClientsCountByAppointmentID :one
+SELECT COUNT(*)
+FROM client_appointments ca
+WHERE ca.appointment_id = $1
+`
+
+func (q *Queries) GetAppintmentClientsCountByAppointmentID(ctx context.Context, appointmentID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, GetAppintmentClientsCountByAppointmentID, appointmentID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const GetAppointmentDetailsByProfessionalIDAndAppointmentID = `-- name: GetAppointmentDetailsByProfessionalIDAndAppointmentID :one
 SELECT a.id, a.start_time, a.end_time, a.description, a.type
 FROM appointments a
@@ -267,6 +297,179 @@ func (q *Queries) GetAppointmentsByProfessionalWithStatusAndDate(ctx context.Con
 	return items, nil
 }
 
+const GetClientInfoByID = `-- name: GetClientInfoByID :one
+SELECT id, first_name, last_name, chat_id, locale FROM clients WHERE id = $1
+`
+
+type GetClientInfoByIDRow struct {
+	ID        uuid.UUID     `json:"id"`
+	FirstName string        `json:"first_name"`
+	LastName  string        `json:"last_name"`
+	ChatID    sql.NullInt64 `json:"chat_id"`
+	Locale    string        `json:"locale"`
+}
+
+func (q *Queries) GetClientInfoByID(ctx context.Context, id uuid.UUID) (*GetClientInfoByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, GetClientInfoByID, id)
+	var i GetClientInfoByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.FirstName,
+		&i.LastName,
+		&i.ChatID,
+		&i.Locale,
+	)
+	return &i, err
+}
+
+const GetMissingClientsForPreviousAppointment = `-- name: GetMissingClientsForPreviousAppointment :many
+SELECT c.id, c.first_name, c.last_name, c.chat_id, c.locale
+FROM clients c
+WHERE c.id NOT IN (
+    SELECT DISTINCT(client_id)
+    FROM client_appointments ca
+    WHERE ca.appointment_id = $1
+)
+AND c.id IN (
+  SELECT s.client_id
+  FROM subscriptions s
+  WHERE s.professional_id = $2
+)
+`
+
+type GetMissingClientsForPreviousAppointmentParams struct {
+	AppointmentID  uuid.UUID `json:"appointment_id"`
+	ProfessionalID uuid.UUID `json:"professional_id"`
+}
+
+type GetMissingClientsForPreviousAppointmentRow struct {
+	ID        uuid.UUID     `json:"id"`
+	FirstName string        `json:"first_name"`
+	LastName  string        `json:"last_name"`
+	ChatID    sql.NullInt64 `json:"chat_id"`
+	Locale    string        `json:"locale"`
+}
+
+func (q *Queries) GetMissingClientsForPreviousAppointment(ctx context.Context, arg *GetMissingClientsForPreviousAppointmentParams) ([]*GetMissingClientsForPreviousAppointmentRow, error) {
+	rows, err := q.db.QueryContext(ctx, GetMissingClientsForPreviousAppointment, arg.AppointmentID, arg.ProfessionalID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetMissingClientsForPreviousAppointmentRow{}
+	for rows.Next() {
+		var i GetMissingClientsForPreviousAppointmentRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.FirstName,
+			&i.LastName,
+			&i.ChatID,
+			&i.Locale,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const GetMissingInviteUsersForAppointment = `-- name: GetMissingInviteUsersForAppointment :many
+SELECT c.id, c.first_name, c.last_name, c.chat_id, c.locale
+FROM clients c
+WHERE c.id NOT IN (
+    SELECT DISTINCT(client_id)
+    FROM invites i
+    WHERE i.appointment_id = $1
+)
+AND c.id NOT IN(
+  SELECT DISTINCT(client_id)
+  FROM client_appointments ca
+  WHERE ca.appointment_id = $1
+)
+`
+
+type GetMissingInviteUsersForAppointmentRow struct {
+	ID        uuid.UUID     `json:"id"`
+	FirstName string        `json:"first_name"`
+	LastName  string        `json:"last_name"`
+	ChatID    sql.NullInt64 `json:"chat_id"`
+	Locale    string        `json:"locale"`
+}
+
+func (q *Queries) GetMissingInviteUsersForAppointment(ctx context.Context, appointmentID uuid.UUID) ([]*GetMissingInviteUsersForAppointmentRow, error) {
+	rows, err := q.db.QueryContext(ctx, GetMissingInviteUsersForAppointment, appointmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetMissingInviteUsersForAppointmentRow{}
+	for rows.Next() {
+		var i GetMissingInviteUsersForAppointmentRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.FirstName,
+			&i.LastName,
+			&i.ChatID,
+			&i.Locale,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const GetPendingInviteUsersForAppointment = `-- name: GetPendingInviteUsersForAppointment :many
+SELECT c.id, c.first_name, c.last_name
+FROM clients c
+WHERE c.id IN (
+    SELECT DISTINCT(client_id)
+    FROM invites i
+    WHERE i.appointment_id = $1
+)
+`
+
+type GetPendingInviteUsersForAppointmentRow struct {
+	ID        uuid.UUID `json:"id"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+}
+
+func (q *Queries) GetPendingInviteUsersForAppointment(ctx context.Context, appointmentID uuid.UUID) ([]*GetPendingInviteUsersForAppointmentRow, error) {
+	rows, err := q.db.QueryContext(ctx, GetPendingInviteUsersForAppointment, appointmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetPendingInviteUsersForAppointmentRow{}
+	for rows.Next() {
+		var i GetPendingInviteUsersForAppointmentRow
+		if err := rows.Scan(&i.ID, &i.FirstName, &i.LastName); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const GetPreviousAppointmentsByProfessionalID = `-- name: GetPreviousAppointmentsByProfessionalID :many
 SELECT 
     a.id, 
@@ -279,15 +482,19 @@ FROM appointments a
 LEFT JOIN client_appointments ca ON ca.appointment_id = a.id
 WHERE a.professional_id = $1
   AND a.status = 'confirmed'
-  and a.type != 'unavailable'
+  AND a.type != 'unavailable'
   AND a.end_time < NOW()
+  AND ($2::timestamptz IS NULL OR $2 < '1900-01-01'::timestamptz OR a.start_time >= $2)
+  AND ($3::timestamptz IS NULL OR $3 < '1900-01-01'::timestamptz OR a.start_time < $3)
 GROUP BY a.id, a.start_time, a.end_time, a.description, a.type
 ORDER BY a.start_time DESC
-LIMIT $2 OFFSET $3
+LIMIT $4 OFFSET $5
 `
 
 type GetPreviousAppointmentsByProfessionalIDParams struct {
 	ProfessionalID uuid.UUID `json:"professional_id"`
+	Column2        time.Time `json:"column_2"`
+	Column3        time.Time `json:"column_3"`
 	Limit          int32     `json:"limit"`
 	Offset         int32     `json:"offset"`
 }
@@ -302,7 +509,13 @@ type GetPreviousAppointmentsByProfessionalIDRow struct {
 }
 
 func (q *Queries) GetPreviousAppointmentsByProfessionalID(ctx context.Context, arg *GetPreviousAppointmentsByProfessionalIDParams) ([]*GetPreviousAppointmentsByProfessionalIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, GetPreviousAppointmentsByProfessionalID, arg.ProfessionalID, arg.Limit, arg.Offset)
+	rows, err := q.db.QueryContext(ctx, GetPreviousAppointmentsByProfessionalID,
+		arg.ProfessionalID,
+		arg.Column2,
+		arg.Column3,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -337,21 +550,25 @@ FROM appointments a
 LEFT JOIN client_appointments ca ON ca.appointment_id = a.id
 WHERE a.professional_id = $1
   AND a.status = 'confirmed'
-  and a.type != 'unavailable'
+  AND a.type != 'unavailable'
   AND a.end_time < NOW()
   AND a.id IN (
     SELECT DISTINCT(appointment_id)
     FROM client_appointments ca
     WHERE ca.client_id = $2
   )
+  AND ($3::timestamptz IS NULL OR $3 < '1900-01-01'::timestamptz OR a.start_time >= $3)
+  AND ($4::timestamptz IS NULL OR $4 < '1900-01-01'::timestamptz OR a.start_time < $4)
 GROUP BY a.id, a.start_time, a.end_time, a.description, a.type
 ORDER BY a.start_time DESC
-LIMIT $3 OFFSET $4
+LIMIT $5 OFFSET $6
 `
 
 type GetPreviousAppointmentsByProfessionalIDAndClientIDParams struct {
 	ProfessionalID uuid.UUID `json:"professional_id"`
 	ClientID       uuid.UUID `json:"client_id"`
+	Column3        time.Time `json:"column_3"`
+	Column4        time.Time `json:"column_4"`
 	Limit          int32     `json:"limit"`
 	Offset         int32     `json:"offset"`
 }
@@ -369,6 +586,8 @@ func (q *Queries) GetPreviousAppointmentsByProfessionalIDAndClientID(ctx context
 	rows, err := q.db.QueryContext(ctx, GetPreviousAppointmentsByProfessionalIDAndClientID,
 		arg.ProfessionalID,
 		arg.ClientID,
+		arg.Column3,
+		arg.Column4,
 		arg.Limit,
 		arg.Offset,
 	)

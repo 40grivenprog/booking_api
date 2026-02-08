@@ -55,3 +55,12 @@ type SendAcceptInviteNotificationInput struct {
 	ClientName  string `json:"client_name" binding:"required"`
 	Locale      string `json:"locale,omitempty"`
 }
+
+type SendPackageCreatedNotificationInput struct {
+	ChatID              int64  `json:"chat_id" binding:"required"`
+	Locale              string `json:"locale,omitempty"`
+	ProfessionalName    string `json:"professional_name" binding:"required"`
+	ApppointmentsNumber int64  `json:"apppointments_number" binding:"required"`
+	IssuedAt            string `json:"issued_at" binding:"required"`
+	ExpiresAt           string `json:"expires_at" binding:"required"`
+}

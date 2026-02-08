@@ -30,7 +30,8 @@ type Config struct {
 	JWTSecret string `env:"JWT_SECRET" envDefault:"test-jwt-secret-key-at-least-32-chars-long-hmmmmmmmm"`
 
 	// Telegram Bot config
-	TelegramBotToken string `env:"TELEGRAM_BOT_TOKEN" envDefault:"8591276929:AAHM0XCGfJSywE9CaMkD8FG3R7BdfHRhuHg"`
+	TelegramBotToken   string `env:"TELEGRAM_BOT_TOKEN" envDefault:"8591276929:AAHM0XCGfJSywE9CaMkD8FG3R7BdfHRhuHg"`
+	TelegramMiniAppURL string `env:"TELEGRAM_MINI_APP_URL" envDefault:"https://t.me/testMfiAppBot/someRandomTestApp777"`
 
 	// Log config
 	LogLevel  string `env:"LOG_LEVEL" envDefault:"info"`

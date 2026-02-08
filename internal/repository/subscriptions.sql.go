@@ -54,6 +54,25 @@ func (q *Queries) DeleteSubscription(ctx context.Context, arg *DeleteSubscriptio
 	return err
 }
 
+const GetClientSubscriptionByClientIDAndProfessionalID = `-- name: GetClientSubscriptionByClientIDAndProfessionalID :one
+SELECT EXISTS(
+  SELECT 1 FROM subscriptions
+  WHERE client_id = $1 AND professional_id = $2
+) AS exists
+`
+
+type GetClientSubscriptionByClientIDAndProfessionalIDParams struct {
+	ClientID       uuid.UUID `json:"client_id"`
+	ProfessionalID uuid.UUID `json:"professional_id"`
+}
+
+func (q *Queries) GetClientSubscriptionByClientIDAndProfessionalID(ctx context.Context, arg *GetClientSubscriptionByClientIDAndProfessionalIDParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, GetClientSubscriptionByClientIDAndProfessionalID, arg.ClientID, arg.ProfessionalID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const GetSubscriptionsByClientID = `-- name: GetSubscriptionsByClientID :many
 SELECT p.id, p.first_name, p.last_name, p.chat_id, p.locale FROM subscriptions s
 JOIN professionals p ON s.professional_id = p.id

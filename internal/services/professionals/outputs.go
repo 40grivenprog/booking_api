@@ -28,3 +28,13 @@ type GetAppointmentDetailsOutput struct {
 	Type        string
 	Clients     []*db.GetAppointmentClientsByAppointmentIDRow
 }
+
+type GetPackageDetailsOutput struct {
+	ID                  uuid.UUID
+	ClientID            uuid.UUID
+	ProfessionalID      uuid.UUID
+	IssuedAt            time.Time
+	ExpiresAt           time.Time
+	ApppointmentsNumber int32
+	Appointments        []*db.GetAppointmentsForThePackageRow
+}

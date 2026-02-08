@@ -35,6 +35,11 @@ func ParseAppointmentID(c *gin.Context, idStr string) (uuid.UUID, bool) {
 	return ParseUUID(c, idStr, ErrorMsgInvalidAppointmentID)
 }
 
+// ParsePackageID is a convenience wrapper for parsing package IDs
+func ParsePackageID(c *gin.Context, idStr string) (uuid.UUID, bool) {
+	return ParseUUID(c, idStr, ErrorMsgInvalidPackageID)
+}
+
 // ParseTime parses RFC3339 time string and handles error response automatically
 func ParseTime(c *gin.Context, timeStr string, errorMsg string) (time.Time, bool) {
 	t, err := time.Parse(time.RFC3339, timeStr)

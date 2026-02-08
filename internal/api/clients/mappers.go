@@ -3,6 +3,7 @@ package api
 import (
 	common "github.com/vention/booking_api/internal/api/common"
 	db "github.com/vention/booking_api/internal/repository"
+	"github.com/vention/booking_api/internal/services/clients"
 )
 
 // mapClientToClientRegisterResponse maps a client to a ClientRegisterResponse
@@ -27,6 +28,7 @@ func mapAppointmentToGetClientAppointmentsResponse(appointments []*db.GetAppoint
 			ID:        appt.ID.String(),
 			StartTime: common.FormatTimeRFC3339(appt.StartTime),
 			EndTime:   common.FormatTimeRFC3339(appt.EndTime),
+			Type:      appt.Type,
 		}
 		professional := &ClientAppointmentProfessional{
 			FirstName: appt.ProfessionalFirstName.String,
@@ -47,6 +49,64 @@ func mapAppointmentToGetClientAppointmentsResponse(appointments []*db.GetAppoint
 			Page:        page,
 			PageSize:    pageSize,
 		},
+	}
+
+	return response
+}
+
+// mapProfessionalsTimetableToGetProfessionalsTimetableResponse maps a list of appointments to a GetProfessionalsTimetableResponse
+func mapProfessionalsTimetableToGetProfessionalsTimetableResponse(appointments []*db.GetProfessionalTimetableRow, dateStr string) GetProfessionalsTimetableResponse {
+	responseAppointments := make([]GetProfessionalsTimetableResponseItem, len(appointments))
+	for i, appt := range appointments {
+		responseAppointments[i] = GetProfessionalsTimetableResponseItem{
+			ID:        appt.ID.String(),
+			StartTime: common.FormatTimeRFC3339(appt.StartTime),
+			EndTime:   common.FormatTimeRFC3339(appt.EndTime),
+			Type:      appt.Type,
+		}
+	}
+
+	return GetProfessionalsTimetableResponse{
+		Date:         dateStr,
+		Appointments: responseAppointments,
+	}
+}
+
+// mapPackagesToGetClientPackagesResponse maps a list of packages to a GetClientPackagesResponse
+func mapPackagesToGetClientPackagesResponse(packages []*db.GetPackagesByClientIdRow) GetClientPackagesResponse {
+	responsePackages := make([]GetClientPackagesResponseItem, len(packages))
+	for i, pkg := range packages {
+		responsePackages[i] = GetClientPackagesResponseItem{
+			ID:                  pkg.ID.String(),
+			IssuedAt:            common.FormatTimeRFC3339(pkg.IssuedAt),
+			ExpiresAt:           common.FormatTimeRFC3339(pkg.ExpiresAt),
+			ApppointmentsNumber: int64(pkg.ApppointmentsNumber),
+			FirstName:           pkg.FirstName.String,
+			LastName:            pkg.LastName.String,
+		}
+	}
+	return GetClientPackagesResponse{
+		Packages: responsePackages,
+	}
+}
+
+// mapPackageDetailsToGetClientPackageDetailsResponse maps a package details to a GetClientPackageDetailsResponse
+func mapPackageDetailsToGetClientPackageDetailsResponse(packageDetails *clients.GetClientPackageDetailsOutput) GetClientPackageDetailsResponse {
+	response := GetClientPackageDetailsResponse{
+		ID:                  packageDetails.ID.String(),
+		IssuedAt:            common.FormatTimeRFC3339(packageDetails.IssuedAt),
+		ExpiresAt:           common.FormatTimeRFC3339(packageDetails.ExpiresAt),
+		ApppointmentsNumber: int64(packageDetails.ApppointmentsNumber),
+		Appointments:        make([]GetClientPackageDetailsResponseAppointment, len(packageDetails.Appointments)),
+	}
+
+	for i, apt := range packageDetails.Appointments {
+		response.Appointments[i] = GetClientPackageDetailsResponseAppointment{
+			ID:        apt.ID.String(),
+			StartTime: common.FormatTimeRFC3339(apt.StartTime),
+			EndTime:   common.FormatTimeRFC3339(apt.EndTime),
+			Type:      apt.Type,
+		}
 	}
 
 	return response

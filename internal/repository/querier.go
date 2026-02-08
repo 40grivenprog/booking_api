@@ -41,7 +41,7 @@ type Querier interface {
 	CountClientAppointmentsByAppointmentID(ctx context.Context, appointmentID uuid.UUID) (int64, error)
 	CountClientAppointmentsWithStatus(ctx context.Context, arg *CountClientAppointmentsWithStatusParams) (int64, error)
 	CountPreviousAppointmentsByClientID(ctx context.Context, clientID uuid.UUID) (int64, error)
-	CountPreviousAppointmentsByProfessionalID(ctx context.Context, professionalID uuid.UUID) (int64, error)
+	CountPreviousAppointmentsByProfessionalID(ctx context.Context, arg *CountPreviousAppointmentsByProfessionalIDParams) (int64, error)
 	CountPreviousAppointmentsByProfessionalIDAndClientID(ctx context.Context, arg *CountPreviousAppointmentsByProfessionalIDAndClientIDParams) (int64, error)
 	CountProfessionalAppointmentsWithStatusAndDate(ctx context.Context, arg *CountProfessionalAppointmentsWithStatusAndDateParams) (int64, error)
 	CountProfessionals(ctx context.Context, clientID uuid.UUID) (int64, error)
@@ -50,6 +50,7 @@ type Querier interface {
 	CreateClientAppointment(ctx context.Context, arg *CreateClientAppointmentParams) error
 	CreateGroupVisitAppointment(ctx context.Context, arg *CreateGroupVisitAppointmentParams) (uuid.UUID, error)
 	CreateInvites(ctx context.Context, arg *CreateInvitesParams) error
+	CreatePackage(ctx context.Context, arg *CreatePackageParams) error
 	CreatePersonalAppointment(ctx context.Context, arg *CreatePersonalAppointmentParams) (*CreatePersonalAppointmentRow, error)
 	CreateProfessional(ctx context.Context, arg *CreateProfessionalParams) (*Professional, error)
 	CreateSubscription(ctx context.Context, arg *CreateSubscriptionParams) error
@@ -79,9 +80,13 @@ type Querier interface {
 	// LEFT JOIN clients c ON c.id = ua.client_id
 	// LEFT JOIN professionals p ON p.id = ua.professional_id;
 	CreateUnavailableAppointment(ctx context.Context, arg *CreateUnavailableAppointmentParams) error
+	DeactivatePackage(ctx context.Context, id uuid.UUID) error
 	DeleteAppointmentById(ctx context.Context, id uuid.UUID) error
+	DeleteClientAppointmentsByAppointmentIDAndClientIDs(ctx context.Context, arg *DeleteClientAppointmentsByAppointmentIDAndClientIDsParams) error
 	DeleteInviteByID(ctx context.Context, arg *DeleteInviteByIDParams) error
 	DeleteSubscription(ctx context.Context, arg *DeleteSubscriptionParams) error
+	GetAppintmentClientsCountByAppointmentID(ctx context.Context, appointmentID uuid.UUID) (int64, error)
+	GetAppintmentNumberByClientIDAndProfessionalID(ctx context.Context, arg *GetAppintmentNumberByClientIDAndProfessionalIDParams) (int64, error)
 	GetAppointmentByID(ctx context.Context, id uuid.UUID) (*Appointment, error)
 	GetAppointmentClientsByAppointmentID(ctx context.Context, appointmentID uuid.UUID) ([]*GetAppointmentClientsByAppointmentIDRow, error)
 	GetAppointmentDetailsByProfessionalIDAndAppointmentID(ctx context.Context, arg *GetAppointmentDetailsByProfessionalIDAndAppointmentIDParams) (*GetAppointmentDetailsByProfessionalIDAndAppointmentIDRow, error)
@@ -144,10 +149,20 @@ type Querier interface {
 	GetAppointmentsByClientWithStatus(ctx context.Context, arg *GetAppointmentsByClientWithStatusParams) ([]*GetAppointmentsByClientWithStatusRow, error)
 	GetAppointmentsByProfessionalByDate(ctx context.Context, arg *GetAppointmentsByProfessionalByDateParams) ([]*GetAppointmentsByProfessionalByDateRow, error)
 	GetAppointmentsByProfessionalWithStatusAndDate(ctx context.Context, arg *GetAppointmentsByProfessionalWithStatusAndDateParams) ([]*GetAppointmentsByProfessionalWithStatusAndDateRow, error)
+	GetAppointmentsForThePackage(ctx context.Context, arg *GetAppointmentsForThePackageParams) ([]*GetAppointmentsForThePackageRow, error)
+	GetClientInfoByID(ctx context.Context, id uuid.UUID) (*GetClientInfoByIDRow, error)
 	GetClientInvites(ctx context.Context, clientID uuid.UUID) ([]*GetClientInvitesRow, error)
+	GetClientSubscriptionByClientIDAndProfessionalID(ctx context.Context, arg *GetClientSubscriptionByClientIDAndProfessionalIDParams) (bool, error)
 	GetInfoForAcceptInviteNotification(ctx context.Context, id uuid.UUID) (*GetInfoForAcceptInviteNotificationRow, error)
 	GetInviteByID(ctx context.Context, arg *GetInviteByIDParams) (*GetInviteByIDRow, error)
 	GetInvitesByAppointmentIDAndClientIs(ctx context.Context, arg *GetInvitesByAppointmentIDAndClientIsParams) ([]*GetInvitesByAppointmentIDAndClientIsRow, error)
+	GetListOfPackagesByProfessionalID(ctx context.Context, professionalID uuid.UUID) ([]*GetListOfPackagesByProfessionalIDRow, error)
+	GetMissingClientsForPreviousAppointment(ctx context.Context, arg *GetMissingClientsForPreviousAppointmentParams) ([]*GetMissingClientsForPreviousAppointmentRow, error)
+	GetMissingInviteUsersForAppointment(ctx context.Context, appointmentID uuid.UUID) ([]*GetMissingInviteUsersForAppointmentRow, error)
+	GetPackageByClientIDAndProfessionalID(ctx context.Context, arg *GetPackageByClientIDAndProfessionalIDParams) (*Package, error)
+	GetPackageById(ctx context.Context, id uuid.UUID) (*Package, error)
+	GetPackagesByClientId(ctx context.Context, clientID uuid.UUID) ([]*GetPackagesByClientIdRow, error)
+	GetPendingInviteUsersForAppointment(ctx context.Context, appointmentID uuid.UUID) ([]*GetPendingInviteUsersForAppointmentRow, error)
 	// -- name: GetPreviousProfessionalAppointmentsByClient :many
 	// SELECT id, start_time, end_time, description
 	// FROM appointments
@@ -186,6 +201,7 @@ type Querier interface {
 	GetSubscriptionsByClientID(ctx context.Context, arg *GetSubscriptionsByClientIDParams) ([]*GetSubscriptionsByClientIDRow, error)
 	GetSubscriptionsByProfessionalID(ctx context.Context, professionalID uuid.UUID) ([]*GetSubscriptionsByProfessionalIDRow, error)
 	GetUserByChatID(ctx context.Context, chatID sql.NullInt64) (*GetUserByChatIDRow, error)
+	UpdateAppointment(ctx context.Context, arg *UpdateAppointmentParams) error
 	UpdateClientLocale(ctx context.Context, arg *UpdateClientLocaleParams) error
 	UpdateProfessionalChatID(ctx context.Context, arg *UpdateProfessionalChatIDParams) (*Professional, error)
 	UpdateProfessionalLocale(ctx context.Context, arg *UpdateProfessionalLocaleParams) error

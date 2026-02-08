@@ -743,3 +743,23 @@ func (q *Queries) GetProfessionalTimetable(ctx context.Context, arg *GetProfessi
 	}
 	return items, nil
 }
+
+const UpdateAppointment = `-- name: UpdateAppointment :exec
+UPDATE appointments
+SET 
+    type = COALESCE($2, type),
+    description = COALESCE($3, description),
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateAppointmentParams struct {
+	ID          uuid.UUID      `json:"id"`
+	Type        string         `json:"type"`
+	Description sql.NullString `json:"description"`
+}
+
+func (q *Queries) UpdateAppointment(ctx context.Context, arg *UpdateAppointmentParams) error {
+	_, err := q.db.ExecContext(ctx, UpdateAppointment, arg.ID, arg.Type, arg.Description)
+	return err
+}

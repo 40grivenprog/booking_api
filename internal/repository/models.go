@@ -54,6 +54,18 @@ type Invite struct {
 	UpdatedAt        time.Time `json:"updated_at"`
 }
 
+type Package struct {
+	ID                  uuid.UUID    `json:"id"`
+	ClientID            uuid.UUID    `json:"client_id"`
+	ProfessionalID      uuid.UUID    `json:"professional_id"`
+	IssuedAt            time.Time    `json:"issued_at"`
+	ExpiresAt           time.Time    `json:"expires_at"`
+	ApppointmentsNumber int32        `json:"apppointments_number"`
+	DeactivatedAt       sql.NullTime `json:"deactivated_at"`
+	CreatedAt           time.Time    `json:"created_at"`
+	UpdatedAt           time.Time    `json:"updated_at"`
+}
+
 type Professional struct {
 	ID           uuid.UUID     `json:"id"`
 	ChatID       sql.NullInt64 `json:"chat_id"`

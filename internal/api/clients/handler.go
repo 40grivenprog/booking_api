@@ -69,6 +69,9 @@ func ClientsRegister(p ClientsHandlerParams) error {
 		clients.DELETE("/invites/:invite_id", h.DeleteClientInvite)
 		clients.POST("/invites/:invite_id/accept", h.AcceptClientInvite)
 		clients.GET("/previous_appointments", h.GetPreviosAppointments)
+		clients.GET("/professionals/:professional_id/timetable", h.GetProfessionalsTimetable)
+		clients.GET("/packages", h.GetClientPackages)
+		clients.GET("/packages/:package_id", h.GetClientPackageDetails)
 	}
 
 	return nil

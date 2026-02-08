@@ -9,32 +9,6 @@ import (
 	svcCommon "github.com/vention/booking_api/internal/services/common"
 )
 
-// import (
-// 	"context"
-// 	"time"
-
-// 	"github.com/google/uuid"
-// 	db "github.com/vention/booking_api/internal/repository"
-// 	svcCommon "github.com/vention/booking_api/internal/services/common"
-// )
-
-// // validateAppointmentOwnership validates that the appointment belongs to the client
-// func (s *service) validateAppointmentOwnership(appointment *db.Appointment, clientID uuid.UUID) error {
-// 	if appointment.ClientID.UUID != clientID {
-// 		return svcCommon.ErrForbidden
-// 	}
-// 	return nil
-// }
-
-// // validateAppointmentCancellable validates that the appointment can be cancelled
-// func (s *service) validateAppointmentCancellable(appointment *db.Appointment) error {
-// 	if appointment.Status.AppointmentStatus != db.AppointmentStatusPending &&
-// 		appointment.Status.AppointmentStatus != db.AppointmentStatusConfirmed {
-// 		return svcCommon.ErrAppointmentNotPendingOrConfirmed
-// 	}
-// 	return nil
-// }
-
 // validateAppointmentTime validates the appointment time range
 func (s *service) validateAppointmentTime(startTime, endTime time.Time) error {
 	now := time.Now()
@@ -67,5 +41,20 @@ func (s *service) validateAppointmentConflict(ctx context.Context, clientID, pro
 		return svcCommon.ErrAppointmentTimeConflict
 	}
 
+	return nil
+}
+
+// validateClientSubscription validates that the client is subscribed to the professional
+func (s *service) validateClientSubscription(ctx context.Context, clientID uuid.UUID, professionalID uuid.UUID) error {
+	exists, err := s.repo.GetClientSubscriptionByClientIDAndProfessionalID(ctx, &db.GetClientSubscriptionByClientIDAndProfessionalIDParams{
+		ClientID:       clientID,
+		ProfessionalID: professionalID,
+	})
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return svcCommon.ErrClientNotSubscribed
+	}
 	return nil
 }

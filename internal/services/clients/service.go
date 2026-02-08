@@ -3,6 +3,8 @@ package clients
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	db "github.com/vention/booking_api/internal/repository"
@@ -26,6 +28,9 @@ type Service interface {
 	DeleteClientInvite(ctx context.Context, clientID uuid.UUID, inviteID uuid.UUID) error
 	AcceptClientInvite(ctx context.Context, input AcceptClientInviteInput) (*db.GetInfoForAcceptInviteNotificationRow, error)
 	GetPreviosAppointments(ctx context.Context, clientID uuid.UUID, page, pageSize int) ([]*db.GetPreviousAppointmentsByClientIDRow, int, error)
+	GetProfessionalsTimetable(ctx context.Context, clientID uuid.UUID, professionalID uuid.UUID, date time.Time) ([]*db.GetProfessionalTimetableRow, error)
+	GetClientPackages(ctx context.Context, clientID uuid.UUID) ([]*db.GetPackagesByClientIdRow, error)
+	GetClientPackageDetails(ctx context.Context, clientID uuid.UUID, packageID uuid.UUID) (*GetClientPackageDetailsOutput, error)
 }
 
 type service struct {
@@ -246,6 +251,9 @@ func (s *service) GetClientInvite(ctx context.Context, clientID uuid.UUID, invit
 		ClientID: clientID,
 	})
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, svcCommon.ErrInviteWasAlreadyConfirmedOrNotificationWasAlreadyAccepted
+		}
 		return nil, err
 	}
 
@@ -334,4 +342,55 @@ func (s *service) GetPreviosAppointments(ctx context.Context, clientID uuid.UUID
 	}
 
 	return appointments, int(total), nil
+}
+
+// GetProfessionalsTimetable gets the timetable for a client
+func (s *service) GetProfessionalsTimetable(ctx context.Context, clientID uuid.UUID, professionalID uuid.UUID, date time.Time) ([]*db.GetProfessionalTimetableRow, error) {
+	err := s.validateClientSubscription(ctx, clientID, professionalID)
+	if err != nil {
+		return nil, err
+	}
+
+	appointments, err := s.repo.GetProfessionalTimetable(ctx, &db.GetProfessionalTimetableParams{
+		ProfessionalID: professionalID,
+		StartTime:      date,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return appointments, nil
+}
+
+// GetClientPackages gets the packages for a client
+func (s *service) GetClientPackages(ctx context.Context, clientID uuid.UUID) ([]*db.GetPackagesByClientIdRow, error) {
+	packages, err := s.repo.GetPackagesByClientId(ctx, clientID)
+	if err != nil {
+		return nil, err
+	}
+
+	return packages, nil
+}
+
+// GetClientPackageDetails gets the details of a package for a client
+func (s *service) GetClientPackageDetails(ctx context.Context, clientID uuid.UUID, packageID uuid.UUID) (*GetClientPackageDetailsOutput, error) {
+	packageDetails, err := s.repo.GetPackageById(ctx, packageID)
+
+	appointments, err := s.repo.GetAppointmentsForThePackage(ctx, &db.GetAppointmentsForThePackageParams{
+		ClientID:       packageDetails.ClientID,
+		ProfessionalID: packageDetails.ProfessionalID,
+		StartTime:      packageDetails.IssuedAt,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	result := &GetClientPackageDetailsOutput{
+		ID:                  packageDetails.ID,
+		IssuedAt:            packageDetails.IssuedAt,
+		ExpiresAt:           packageDetails.ExpiresAt,
+		ApppointmentsNumber: packageDetails.ApppointmentsNumber,
+		Appointments:        appointments,
+	}
+
+	return result, nil
 }

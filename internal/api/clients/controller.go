@@ -3,12 +3,14 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	common "github.com/vention/booking_api/internal/api/common"
 	db "github.com/vention/booking_api/internal/repository"
 	"github.com/vention/booking_api/internal/services/clients"
 	"github.com/vention/booking_api/internal/services/notifications"
+	"github.com/vention/booking_api/internal/util"
 )
 
 // RegisterClient handles POST /api/clients/register
@@ -430,5 +432,78 @@ func (h *ClientsHandler) GetPreviosAppointments(c *gin.Context) {
 	}
 
 	response := mapPreviousAppointmentsToGetClientPreviousAppointmentsResponse(appointments, total, page, pageSize)
+	c.JSON(http.StatusOK, response)
+}
+
+// GetProfessionalsTimetable handles GET /api/clients/professionals/{professional_id}/timetable
+func (h *ClientsHandler) GetProfessionalsTimetable(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	dateStr, ok := common.RequireQueryParam(c, "date")
+	if !ok {
+		return
+	}
+
+	date, ok := common.ParseDate(c, dateStr, common.ErrorMsgInvalidDate)
+	if !ok {
+		return
+	}
+
+	dateApp := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, util.GetAppTimezone())
+
+	professionalID, ok := common.ParseProfessionalID(c, c.Param("professional_id"))
+	if !ok {
+		return
+	}
+
+	appointments, err := h.clientsService.GetProfessionalsTimetable(c.Request.Context(), clientID, professionalID, dateApp)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	response := mapProfessionalsTimetableToGetProfessionalsTimetableResponse(appointments, dateStr)
+	c.JSON(http.StatusOK, response)
+}
+
+// GetClientPackages handles GET /api/clients/packages
+func (h *ClientsHandler) GetClientPackages(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	packages, err := h.clientsService.GetClientPackages(c.Request.Context(), clientID)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	response := mapPackagesToGetClientPackagesResponse(packages)
+	c.JSON(http.StatusOK, response)
+}
+
+// GetClientPackageDetails handles GET /api/clients/packages/{package_id}
+func (h *ClientsHandler) GetClientPackageDetails(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	packageID, ok := common.ParsePackageID(c, c.Param("package_id"))
+	if !ok {
+		return
+	}
+
+	packageDetails, err := h.clientsService.GetClientPackageDetails(c.Request.Context(), clientID, packageID)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	response := mapPackageDetailsToGetClientPackageDetailsResponse(packageDetails)
 	c.JSON(http.StatusOK, response)
 }

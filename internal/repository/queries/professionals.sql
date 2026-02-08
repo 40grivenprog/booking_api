@@ -118,19 +118,23 @@ FROM appointments a
 LEFT JOIN client_appointments ca ON ca.appointment_id = a.id
 WHERE a.professional_id = $1
   AND a.status = 'confirmed'
-  and a.type != 'unavailable'
+  AND a.type != 'unavailable'
   AND a.end_time < NOW()
+  AND ($2::timestamptz IS NULL OR $2 < '1900-01-01'::timestamptz OR a.start_time >= $2)
+  AND ($3::timestamptz IS NULL OR $3 < '1900-01-01'::timestamptz OR a.start_time < $3)
 GROUP BY a.id, a.start_time, a.end_time, a.description, a.type
 ORDER BY a.start_time DESC
-LIMIT $2 OFFSET $3;
+LIMIT $4 OFFSET $5;
 
 -- name: CountPreviousAppointmentsByProfessionalID :one
 SELECT COUNT(DISTINCT a.id)
 FROM appointments a
 WHERE a.professional_id = $1
   AND a.status = 'confirmed'
-  and a.type != 'unavailable'
-  AND a.end_time < NOW();
+  AND a.type != 'unavailable'
+  AND a.end_time < NOW()
+  AND ($2::timestamptz IS NULL OR $2 < '1900-01-01'::timestamptz OR a.start_time >= $2)
+  AND ($3::timestamptz IS NULL OR $3 < '1900-01-01'::timestamptz OR a.start_time < $3);
 
 -- name: GetPreviousAppointmentsByProfessionalIDAndClientID :many
 SELECT a.id, a.start_time, a.end_time, a.description, a.type, COUNT(DISTINCT ca.client_id) AS users_count
@@ -138,16 +142,18 @@ FROM appointments a
 LEFT JOIN client_appointments ca ON ca.appointment_id = a.id
 WHERE a.professional_id = $1
   AND a.status = 'confirmed'
-  and a.type != 'unavailable'
+  AND a.type != 'unavailable'
   AND a.end_time < NOW()
   AND a.id IN (
     SELECT DISTINCT(appointment_id)
     FROM client_appointments ca
     WHERE ca.client_id = $2
   )
+  AND ($3::timestamptz IS NULL OR $3 < '1900-01-01'::timestamptz OR a.start_time >= $3)
+  AND ($4::timestamptz IS NULL OR $4 < '1900-01-01'::timestamptz OR a.start_time < $4)
 GROUP BY a.id, a.start_time, a.end_time, a.description, a.type
 ORDER BY a.start_time DESC
-LIMIT $3 OFFSET $4;
+LIMIT $5 OFFSET $6;
 
 -- name: CountPreviousAppointmentsByProfessionalIDAndClientID :one
 SELECT COUNT(DISTINCT a.id)
@@ -160,7 +166,9 @@ WHERE a.professional_id = $1
     SELECT DISTINCT(appointment_id)
     FROM client_appointments ca
     WHERE ca.client_id = $2
-  );
+  )
+  AND ($3::timestamptz IS NULL OR $3 < '1900-01-01'::timestamptz OR a.start_time >= $3)
+  AND ($4::timestamptz IS NULL OR $4 < '1900-01-01'::timestamptz OR a.start_time < $4);
 
 
 -- name: GetAppointmentDetailsByProfessionalIDAndAppointmentID :one
@@ -168,3 +176,50 @@ SELECT a.id, a.start_time, a.end_time, a.description, a.type
 FROM appointments a
 WHERE a.professional_id = $1
 AND a.id = $2;
+
+
+-- name: GetAppintmentClientsCountByAppointmentID :one
+SELECT COUNT(*)
+FROM client_appointments ca
+WHERE ca.appointment_id = $1;
+
+
+-- name: GetMissingInviteUsersForAppointment :many
+SELECT c.id, c.first_name, c.last_name, c.chat_id, c.locale
+FROM clients c
+WHERE c.id NOT IN (
+    SELECT DISTINCT(client_id)
+    FROM invites i
+    WHERE i.appointment_id = $1
+)
+AND c.id NOT IN(
+  SELECT DISTINCT(client_id)
+  FROM client_appointments ca
+  WHERE ca.appointment_id = $1
+);
+
+-- name: GetPendingInviteUsersForAppointment :many
+SELECT c.id, c.first_name, c.last_name
+FROM clients c
+WHERE c.id IN (
+    SELECT DISTINCT(client_id)
+    FROM invites i
+    WHERE i.appointment_id = $1
+);
+
+-- name: GetMissingClientsForPreviousAppointment :many
+SELECT c.id, c.first_name, c.last_name, c.chat_id, c.locale
+FROM clients c
+WHERE c.id NOT IN (
+    SELECT DISTINCT(client_id)
+    FROM client_appointments ca
+    WHERE ca.appointment_id = $1
+)
+AND c.id IN (
+  SELECT s.client_id
+  FROM subscriptions s
+  WHERE s.professional_id = $2
+);
+
+-- name: GetClientInfoByID :one
+SELECT id, first_name, last_name, chat_id, locale FROM clients WHERE id = $1;

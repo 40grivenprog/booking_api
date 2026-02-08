@@ -32,4 +32,9 @@ type ClientsRepository interface {
 	GetInfoForAcceptInviteNotification(ctx context.Context, appointmentID uuid.UUID) (*db.GetInfoForAcceptInviteNotificationRow, error)
 	GetPreviousAppointmentsByClientID(ctx context.Context, arg *db.GetPreviousAppointmentsByClientIDParams) ([]*db.GetPreviousAppointmentsByClientIDRow, error)
 	CountPreviousAppointmentsByClientID(ctx context.Context, clientID uuid.UUID) (int64, error)
+	GetClientSubscriptionByClientIDAndProfessionalID(ctx context.Context, arg *db.GetClientSubscriptionByClientIDAndProfessionalIDParams) (bool, error)
+	GetProfessionalTimetable(ctx context.Context, arg *db.GetProfessionalTimetableParams) ([]*db.GetProfessionalTimetableRow, error)
+	GetPackagesByClientId(ctx context.Context, clientID uuid.UUID) ([]*db.GetPackagesByClientIdRow, error)
+	GetPackageById(ctx context.Context, id uuid.UUID) (*db.Package, error)
+	GetAppointmentsForThePackage(ctx context.Context, arg *db.GetAppointmentsForThePackageParams) ([]*db.GetAppointmentsForThePackageRow, error)
 }

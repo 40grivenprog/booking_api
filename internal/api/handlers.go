@@ -22,7 +22,7 @@ import (
 
 func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, queries *db.Queries, database *sql.DB, tokenMaker token.Maker) error {
 	// Register clients API
-	notificationsService, err := notifications.NewService(cfg.TelegramBotToken)
+	notificationsService, err := notifications.NewService(cfg.TelegramBotToken, cfg.TelegramMiniAppURL)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create notifications service")
 		return err
@@ -41,7 +41,7 @@ func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, 
 	if err := professionalsAPI.ProfessionalsRegister(professionalsAPI.ProfessionalsHandlerParams{
 		TokenMaker:           tokenMaker,
 		Router:               router,
-		ProfessionalsService: professionalsService.NewService(queries),
+		ProfessionalsService: professionalsService.NewService(queries, database),
 		NotificationsService: notificationsService,
 	}); err != nil {
 		return err
