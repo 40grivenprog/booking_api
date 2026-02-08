@@ -24,7 +24,34 @@ type NotificationTranslations struct {
 		Date         string
 		Time         string
 	}
-	OpenApp string
+	Subscription struct {
+		Title  string
+		Client string
+	}
+	GroupVisitAppointment struct {
+		Professional string
+		Message      string
+		Date         string
+		Time         string
+		Description  string
+	}
+	AcceptInvite struct {
+		JoinedMessage string
+		DetailsTitle  string
+		Date          string
+		StartTime     string
+		EndTime       string
+		Type          string
+	}
+	PackageCreated struct {
+		Title              string
+		DetailsTitle       string
+		AppointmentsNumber string
+		IssuedAt           string
+		ExpiresAt          string
+	}
+	OpenApp           string
+	CheckNotification string
 }
 
 var translations = map[string]NotificationTranslations{
@@ -70,7 +97,56 @@ var translations = map[string]NotificationTranslations{
 			Date:         "📅 Date:",
 			Time:         "🕐 Time:",
 		},
-		OpenApp: "📱 Open App",
+		OpenApp:           "📱 Open App",
+		CheckNotification: "🔔 Check Notification",
+		Subscription: struct {
+			Title  string
+			Client string
+		}{
+			Title:  "🔔 New client subscription!",
+			Client: "👤 Client:",
+		},
+		GroupVisitAppointment: struct {
+			Professional string
+			Message      string
+			Date         string
+			Time         string
+			Description  string
+		}{
+			Professional: "👤 Trainer:",
+			Message:      "📋 Posted a slot for a group visit",
+			Date:         "📅 Date:",
+			Time:         "🕐 Time:",
+			Description:  "📝 Description:",
+		},
+		AcceptInvite: struct {
+			JoinedMessage string
+			DetailsTitle  string
+			Date          string
+			StartTime     string
+			EndTime       string
+			Type          string
+		}{
+			JoinedMessage: "%s joined the training",
+			DetailsTitle:  "Training Details",
+			Date:          "📅 Date:",
+			StartTime:     "🕐 Start:",
+			EndTime:       "🕐 End:",
+			Type:          "📋 Type:",
+		},
+		PackageCreated: struct {
+			Title              string
+			DetailsTitle       string
+			AppointmentsNumber string
+			IssuedAt           string
+			ExpiresAt          string
+		}{
+			Title:              "%s add new package for you!",
+			DetailsTitle:       "Details:",
+			AppointmentsNumber: "📦 Number of appointments:",
+			IssuedAt:           "📅 Issued at:",
+			ExpiresAt:          "⏰ Expires at:",
+		},
 	},
 	"ru": {
 		AppointmentRequest: struct {
@@ -114,7 +190,56 @@ var translations = map[string]NotificationTranslations{
 			Date:         "📅 Дата:",
 			Time:         "🕐 Время:",
 		},
-		OpenApp: "📱 Открыть приложение",
+		OpenApp:           "📱 Открыть приложение",
+		CheckNotification: "🔔 Проверить уведомления",
+		Subscription: struct {
+			Title  string
+			Client string
+		}{
+			Title:  "🔔 Новая подписка клиента!",
+			Client: "👤 Клиент:",
+		},
+		GroupVisitAppointment: struct {
+			Professional string
+			Message      string
+			Date         string
+			Time         string
+			Description  string
+		}{
+			Professional: "👤 Тренер:",
+			Message:      "📋 Выложил слот для группового визита",
+			Date:         "📅 Дата:",
+			Time:         "🕐 Время:",
+			Description:  "📝 Описание:",
+		},
+		AcceptInvite: struct {
+			JoinedMessage string
+			DetailsTitle  string
+			Date          string
+			StartTime     string
+			EndTime       string
+			Type          string
+		}{
+			JoinedMessage: "%s присоединился к тренировке",
+			DetailsTitle:  "Детали тренировки",
+			Date:          "📅 Дата:",
+			StartTime:     "🕐 Начало:",
+			EndTime:       "🕐 Конец:",
+			Type:          "📋 Тип:",
+		},
+		PackageCreated: struct {
+			Title              string
+			DetailsTitle       string
+			AppointmentsNumber string
+			IssuedAt           string
+			ExpiresAt          string
+		}{
+			Title:              "%s добавил новый пакет для вас!",
+			DetailsTitle:       "Детали:",
+			AppointmentsNumber: "📦 Количество записей:",
+			IssuedAt:           "📅 Выдан:",
+			ExpiresAt:          "⏰ Истекает:",
+		},
 	},
 	"uk": {
 		AppointmentRequest: struct {
@@ -158,7 +283,56 @@ var translations = map[string]NotificationTranslations{
 			Date:         "📅 Дата:",
 			Time:         "🕐 Час:",
 		},
-		OpenApp: "📱 Відкрити додаток",
+		OpenApp:           "📱 Відкрити додаток",
+		CheckNotification: "🔔 Перевірити сповіщення",
+		Subscription: struct {
+			Title  string
+			Client string
+		}{
+			Title:  "🔔 Нова підписка клієнта!",
+			Client: "👤 Клієнт:",
+		},
+		GroupVisitAppointment: struct {
+			Professional string
+			Message      string
+			Date         string
+			Time         string
+			Description  string
+		}{
+			Professional: "👤 Тренер:",
+			Message:      "📋 Виклав слот для групового візиту",
+			Date:         "📅 Дата:",
+			Time:         "🕐 Час:",
+			Description:  "📝 Опис:",
+		},
+		AcceptInvite: struct {
+			JoinedMessage string
+			DetailsTitle  string
+			Date          string
+			StartTime     string
+			EndTime       string
+			Type          string
+		}{
+			JoinedMessage: "%s приєднався до тренування",
+			DetailsTitle:  "Деталі тренування",
+			Date:          "📅 Дата:",
+			StartTime:     "🕐 Початок:",
+			EndTime:       "🕐 Кінець:",
+			Type:          "📋 Тип:",
+		},
+		PackageCreated: struct {
+			Title              string
+			DetailsTitle       string
+			AppointmentsNumber string
+			IssuedAt           string
+			ExpiresAt          string
+		}{
+			Title:              "%s додав новий пакет для вас!",
+			DetailsTitle:       "Деталі:",
+			AppointmentsNumber: "📦 Кількість записів:",
+			IssuedAt:           "📅 Видано:",
+			ExpiresAt:          "⏰ Закінчується:",
+		},
 	},
 	"pl": {
 		AppointmentRequest: struct {
@@ -202,7 +376,56 @@ var translations = map[string]NotificationTranslations{
 			Date:         "📅 Data:",
 			Time:         "🕐 Godzina:",
 		},
-		OpenApp: "📱 Otwórz aplikację",
+		OpenApp:           "📱 Otwórz aplikację",
+		CheckNotification: "🔔 Sprawdź powiadomienia",
+		Subscription: struct {
+			Title  string
+			Client string
+		}{
+			Title:  "🔔 Nowa subskrypcja klienta!",
+			Client: "👤 Klient:",
+		},
+		GroupVisitAppointment: struct {
+			Professional string
+			Message      string
+			Date         string
+			Time         string
+			Description  string
+		}{
+			Professional: "👤 Trener:",
+			Message:      "📋 Opublikował slot na wizytę grupową",
+			Date:         "📅 Data:",
+			Time:         "🕐 Godzina:",
+			Description:  "📝 Opis:",
+		},
+		AcceptInvite: struct {
+			JoinedMessage string
+			DetailsTitle  string
+			Date          string
+			StartTime     string
+			EndTime       string
+			Type          string
+		}{
+			JoinedMessage: "%s dołączył do treningu",
+			DetailsTitle:  "Szczegóły treningu",
+			Date:          "📅 Data:",
+			StartTime:     "🕐 Początek:",
+			EndTime:       "🕐 Koniec:",
+			Type:          "📋 Typ:",
+		},
+		PackageCreated: struct {
+			Title              string
+			DetailsTitle       string
+			AppointmentsNumber string
+			IssuedAt           string
+			ExpiresAt          string
+		}{
+			Title:              "%s dodał nowy pakiet dla Ciebie!",
+			DetailsTitle:       "Szczegóły:",
+			AppointmentsNumber: "📦 Liczba wizyt:",
+			IssuedAt:           "📅 Wydano:",
+			ExpiresAt:          "⏰ Wygasa:",
+		},
 	},
 }
 

@@ -28,6 +28,9 @@ const (
 	ErrorMsgAppointmentNotPending            = "Appointment is not pending"
 	ErrorMsgAppointmentNotPendingOrConfirmed = "Appointment is not pending or confirmed. Please check the status of the appointment."
 	ErrorMsgAppointmentTimeConflict          = "You already have an appointment for this time. Please cancel it first or wait for approval."
+	ErrorMsgAppointmentFullyBooked           = "Sorry. This appointment is fully booked."
+	ErrorMsgInvalidInviteID                  = "Invalid invite_id format"
+	ErrorMsgInvalidPackageID                 = "Invalid package_id format"
 
 	// Authentication errors
 	ErrorMsgMissingAuthToken    = "Authorization header is required"
@@ -49,13 +52,16 @@ const (
 	ErrorMsgFailedToUpdateUserLocale      = "Failed to update user locale"
 
 	// Not found errors
-	ErrorMsgUserNotFound         = "User not found"
-	ErrorMsgProfessionalNotFound = "Professional with such username not found"
+	ErrorMsgUserNotFound                                              = "User not found"
+	ErrorMsgProfessionalNotFound                                      = "Professional with such username not found"
+	ErrorMsgClientNotSubscribed                                       = "Client is not subscribed to this professional"
+	ErrorMsgInviteWasAlreadyConfirmedOrNotificationWasAlreadyAccepted = "Invite was already confirmed or notification was already accepted"
 	// Forbidden errors
 	ErrorMsgNotAllowedToAccessResource = "You are not allowed to access this resource"
 
 	// Conflict errors
-	ErrorMsgUsernameAlreadyExists = "Username already exists"
+	ErrorMsgUsernameAlreadyExists         = "Username already exists"
+	ErrorMsgClientsCurrentPackageIsActive = "Client's current package is active"
 
 	// Internal errors
 	ErrorMsgInternalServerError = "Internal server error"

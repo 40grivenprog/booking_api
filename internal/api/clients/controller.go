@@ -3,21 +3,144 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	common "github.com/vention/booking_api/internal/api/common"
+	db "github.com/vention/booking_api/internal/repository"
 	"github.com/vention/booking_api/internal/services/clients"
 	"github.com/vention/booking_api/internal/services/notifications"
+	"github.com/vention/booking_api/internal/util"
 )
 
-// BookAppointment handles POST /api/clients/book_appointment
-func (h *ClientsHandler) BookAppointment(c *gin.Context) {
-	req, ok := common.BindAndValidate[CreateAppointmentRequest](c)
+// RegisterClient handles POST /api/clients/register
+func (h *ClientsHandler) RegisterClient(c *gin.Context) {
+	req, ok := common.BindAndValidate[ClientRegisterRequest](c)
 	if !ok {
 		return
 	}
 
+	client, err := h.clientsService.RegisterClient(c.Request.Context(), clients.RegisterClientInput{
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		ChatID:    req.ChatID,
+		Locale:    req.Locale,
+	})
+	if err != nil {
+		if common.IsUniqueConstraintError(err) {
+			common.HandleErrorResponse(c, http.StatusConflict, common.ErrorTypeConflict, common.ErrorMsgUsernameAlreadyExists, nil)
+			return
+		}
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToCreateClient, err)
+		return
+	}
+
+	token, err := h.tokenMaker.CreateToken(client.ID, fmt.Sprintf("%s %s", client.FirstName, client.LastName))
+	if err != nil {
+		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeInternal, common.ErrorMsgFailedToCreateToken, err)
+		return
+	}
+
+	response := mapClientToClientRegisterResponse(client, token)
+	c.JSON(http.StatusCreated, response)
+}
+
+// GetAllProfessionals handles GET /api/clients/professionals/all
+func (h *ClientsHandler) GetAllProfessionals(c *gin.Context) {
 	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+	page := common.ParseIntQuery(c, "page", 1, 1, 10000)
+	pageSize := common.ParseIntQuery(c, "pageSize", 15, 1, 100)
+
+	offset := (page - 1) * pageSize
+
+	dbParams := &db.GetProfessionalsParams{
+		ClientID: clientID,
+		Limit:    int32(pageSize),
+		Offset:   int32(offset),
+	}
+
+	professionals, total, err := h.clientsService.GetAllProfessionals(c.Request.Context(), dbParams)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	response := mapProfessionalsToGetProfessionalsResponse(professionals, total, page, pageSize)
+
+	c.JSON(http.StatusOK, response)
+}
+
+// GetSubscribedProfessionals handles GET /api/clients/professionals
+func (h *ClientsHandler) GetSubscribedProfessionals(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	page := common.ParseIntQuery(c, "page", 1, 1, 10000)
+	pageSize := common.ParseIntQuery(c, "pageSize", 15, 1, 100)
+
+	professionals, total, err := h.clientsService.GetSubscribedProfessionals(c.Request.Context(), clientID, page, pageSize)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+	response := mapProfessionalsToGetSubscribedProfessionalsResponse(professionals, total, page, pageSize)
+
+	c.JSON(http.StatusOK, response)
+}
+
+// SubscribeToProfessional handles POST /api/clients/subscribe
+func (h *ClientsHandler) SubscribeToProfessional(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+	clientName := common.GetUserName(c)
+
+	req, ok := common.BindAndValidate[SubscribedProfessionalRequest](c)
+	if !ok {
+		return
+	}
+
+	professionalID, ok := common.ParseProfessionalID(c, req.ProfessionalID)
+	if !ok {
+		return
+	}
+
+	err := h.clientsService.SubscribeToProfessional(c.Request.Context(), clients.SubscribeToProfessionalInput{
+		ClientID:       clientID,
+		ProfessionalID: professionalID,
+	})
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+	err = h.notificationsService.SendSubscriptionNotification(c.Request.Context(), notifications.SendSubscriptionNotificationInput{
+		ChatID:     req.ChatID,
+		ClientName: clientName,
+		Locale:     req.Locale,
+	})
+	if err != nil {
+		common.HandleNotificationError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusAccepted, nil)
+}
+
+// BookAppointment handles POST /api/clients/book_appointment
+func (h *ClientsHandler) BookAppointment(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	clientName := common.GetUserName(c)
+	req, ok := common.BindAndValidate[CreateAppointmentRequest](c)
 	if !ok {
 		return
 	}
@@ -37,12 +160,11 @@ func (h *ClientsHandler) BookAppointment(c *gin.Context) {
 		return
 	}
 
-	result, err := h.clientsService.CreateAppointment(c.Request.Context(), clients.CreateAppointmentInput{
+	appointmentID, err := h.clientsService.CreateAppointment(c.Request.Context(), clients.CreateAppointmentInput{
 		ClientID:       clientID,
 		ProfessionalID: professionalID,
 		StartTime:      startTime,
 		EndTime:        endTime,
-		Description:    "Personal training",
 	})
 
 	if err != nil {
@@ -51,59 +173,19 @@ func (h *ClientsHandler) BookAppointment(c *gin.Context) {
 	}
 
 	err = h.notificationsService.SendAppointmentRequestNotification(c.Request.Context(), notifications.SendAppointmentRequestNotificationInput{
-		ChatID:      common.Int64Value(common.FromNullInt64(result.ProfessionalChatID)),
-		ClientName:  result.ClientFirstName.String + " " + result.ClientLastName.String,
-		StartTime:   common.FormatTimeRFC3339(result.StartTime),
-		EndTime:     common.FormatTimeRFC3339(result.EndTime),
-		Description: result.Description.String,
-		Locale:      result.ProfessionalLocale.String,
+		ChatID:        req.ProfessionalChatID,
+		ClientName:    clientName,
+		StartTime:     common.FormatTimeRFC3339(startTime),
+		EndTime:       common.FormatTimeRFC3339(endTime),
+		Locale:        req.ProfessionalLocale,
+		AppointmentID: appointmentID,
 	})
 	if err != nil {
 		common.HandleNotificationError(c, err)
 		return
 	}
 
-	response := mapAppointmentToCreateAppointmentResponse(result)
-	c.JSON(http.StatusCreated, response)
-}
-
-// RegisterClient handles POST /api/clients/register
-func (h *ClientsHandler) RegisterClient(c *gin.Context) {
-	req, ok := common.BindAndValidate[ClientRegisterRequest](c)
-	if !ok {
-		return
-	}
-
-	phoneNumber := ""
-	if req.PhoneNumber != nil {
-		phoneNumber = *req.PhoneNumber
-	}
-	fmt.Println("req.Locale", req.Locale)
-
-	client, err := h.clientsService.RegisterClient(c.Request.Context(), clients.RegisterClientInput{
-		FirstName:   req.FirstName,
-		LastName:    req.LastName,
-		PhoneNumber: phoneNumber,
-		ChatID:      req.ChatID,
-		Locale:      req.Locale,
-	})
-	if err != nil {
-		if common.IsUniqueConstraintError(err) {
-			common.HandleErrorResponse(c, http.StatusConflict, common.ErrorTypeConflict, common.ErrorMsgUsernameAlreadyExists, nil)
-			return
-		}
-		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeDatabase, common.ErrorMsgFailedToCreateClient, err)
-		return
-	}
-
-	token, err := h.tokenMaker.CreateToken(client.ID)
-	if err != nil {
-		common.HandleErrorResponse(c, http.StatusInternalServerError, common.ErrorTypeInternal, common.ErrorMsgFailedToCreateToken, err)
-		return
-	}
-
-	response := mapClientToClientRegisterResponse(client, token)
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusCreated, nil)
 }
 
 // GetClientAppointments handles GET /api/clients/appointments
@@ -132,12 +214,13 @@ func (h *ClientsHandler) GetClientAppointments(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// CancelClientAppointment handles PATCH /api/clients/appointments/{appointment_id}/cancel
+// CancelClientAppointment handles DELETE /api/clients/appointments/{appointment_id}/cancel
 func (h *ClientsHandler) CancelClientAppointment(c *gin.Context) {
 	clientID, ok := common.GetUserID(c)
 	if !ok {
 		return
 	}
+	clientName := common.GetUserName(c)
 
 	appointmentID, ok := common.ParseAppointmentID(c, c.Param("appointment_id"))
 	if !ok {
@@ -163,14 +246,13 @@ func (h *ClientsHandler) CancelClientAppointment(c *gin.Context) {
 		ChatID:             common.Int64Value(common.FromNullInt64(result.ProfessionalChatID)),
 		StartTime:          common.FormatTimeRFC3339(result.StartTime),
 		EndTime:            common.FormatTimeRFC3339(result.EndTime),
-		RespondentName:     result.ClientFirstName.String + " " + result.ClientLastName.String,
+		RespondentName:     clientName,
 		CancellationReason: req.CancellationReason,
 		Type:               "client",
-		Locale:             result.ProfessionalLocale.String,
+		Locale:             result.ProfessionalLocale,
 	})
 
-	response := mapAppointmentToCancelClientAppointmentResponse(result)
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusAccepted, nil)
 }
 
 // UpdateLocale handles PATCH /api/clients/update_locale
@@ -195,4 +277,233 @@ func (h *ClientsHandler) UpdateLocale(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusAccepted, nil)
+}
+
+// UnsubscribeFromProfessional handles DELETE /api/clients/unsubscribe/{professional_id}
+func (h *ClientsHandler) UnsubscribeFromProfessional(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	professionalID, ok := common.ParseProfessionalID(c, c.Param("professional_id"))
+	if !ok {
+		return
+	}
+
+	err := h.clientsService.UnsubscribeFromProfessional(c.Request.Context(), clients.UnsubscribeFromProfessionalInput{
+		ClientID:       clientID,
+		ProfessionalID: professionalID,
+	})
+
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusAccepted, nil)
+}
+
+// GetClientInvites handles GET /api/clients/invites
+func (h *ClientsHandler) GetClientInvites(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	invites, err := h.clientsService.GetClientInvites(c.Request.Context(), clientID)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+	response := mapInvitesToGetClientInvitesResponse(invites)
+	c.JSON(http.StatusOK, response)
+}
+
+// GetClientInvite handles GET /api/clients/invites/{invite_id}
+func (h *ClientsHandler) GetClientInvite(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	inviteID, ok := common.ParseInviteID(c, c.Param("invite_id"))
+	if !ok {
+		return
+	}
+
+	invite, err := h.clientsService.GetClientInvite(c.Request.Context(), clientID, inviteID)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	response := mapInviteToGetClientInviteResponse(invite)
+
+	c.JSON(http.StatusOK, response)
+}
+
+// DeleteClientInvite handles DELETE /api/clients/invites/{invite_id}
+func (h *ClientsHandler) DeleteClientInvite(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	inviteID, ok := common.ParseInviteID(c, c.Param("invite_id"))
+	if !ok {
+		return
+	}
+
+	err := h.clientsService.DeleteClientInvite(c.Request.Context(), clientID, inviteID)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusAccepted, nil)
+}
+
+// AcceptClientInvite handles POST /api/clients/invites/{invite_id}/accept
+func (h *ClientsHandler) AcceptClientInvite(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+	clientName := common.GetUserName(c)
+
+	inviteID, ok := common.ParseInviteID(c, c.Param("invite_id"))
+	if !ok {
+		return
+	}
+
+	req, ok := common.BindAndValidate[AcceptClientInviteRequest](c)
+	if !ok {
+		return
+	}
+
+	appointmentID, ok := common.ParseAppointmentID(c, req.AppointmentID)
+	if !ok {
+		return
+	}
+
+	notificationInfo, err := h.clientsService.AcceptClientInvite(c.Request.Context(), clients.AcceptClientInviteInput{
+		ClientID:      clientID,
+		InviteID:      inviteID,
+		AppointmentID: appointmentID,
+		Type:          req.Type,
+	})
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+	err = h.notificationsService.SendAcceptInviteNotification(c.Request.Context(), notifications.SendAcceptInviteNotificationInput{
+		ChatID:      common.Int64Value(common.FromNullInt64(notificationInfo.ChatID)),
+		StartTime:   common.FormatTimeRFC3339(notificationInfo.StartTime),
+		EndTime:     common.FormatTimeRFC3339(notificationInfo.EndTime),
+		Description: common.StringValue(common.FromNullString(notificationInfo.Description)),
+		Type:        notificationInfo.Type,
+		ClientName:  clientName,
+		Locale:      common.StringValue(common.FromNullString(notificationInfo.Locale)),
+	})
+	if err != nil {
+		common.HandleNotificationError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusAccepted, nil)
+}
+
+// GetPreviosAppointments handles GET /api/clients/previous_appointments
+func (h *ClientsHandler) GetPreviosAppointments(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	// Parse pagination parameters: page (min 1, default 1) and pageSize (min 1, default 15)
+	page := common.ParseIntQuery(c, "page", 1, 1, 10000)
+	pageSize := common.ParseIntQuery(c, "pageSize", 15, 1, 100)
+
+	appointments, total, err := h.clientsService.GetPreviosAppointments(c.Request.Context(), clientID, page, pageSize)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	response := mapPreviousAppointmentsToGetClientPreviousAppointmentsResponse(appointments, total, page, pageSize)
+	c.JSON(http.StatusOK, response)
+}
+
+// GetProfessionalsTimetable handles GET /api/clients/professionals/{professional_id}/timetable
+func (h *ClientsHandler) GetProfessionalsTimetable(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	dateStr, ok := common.RequireQueryParam(c, "date")
+	if !ok {
+		return
+	}
+
+	date, ok := common.ParseDate(c, dateStr, common.ErrorMsgInvalidDate)
+	if !ok {
+		return
+	}
+
+	dateApp := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, util.GetAppTimezone())
+
+	professionalID, ok := common.ParseProfessionalID(c, c.Param("professional_id"))
+	if !ok {
+		return
+	}
+
+	appointments, err := h.clientsService.GetProfessionalsTimetable(c.Request.Context(), clientID, professionalID, dateApp)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	response := mapProfessionalsTimetableToGetProfessionalsTimetableResponse(appointments, dateStr)
+	c.JSON(http.StatusOK, response)
+}
+
+// GetClientPackages handles GET /api/clients/packages
+func (h *ClientsHandler) GetClientPackages(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	packages, err := h.clientsService.GetClientPackages(c.Request.Context(), clientID)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	response := mapPackagesToGetClientPackagesResponse(packages)
+	c.JSON(http.StatusOK, response)
+}
+
+// GetClientPackageDetails handles GET /api/clients/packages/{package_id}
+func (h *ClientsHandler) GetClientPackageDetails(c *gin.Context) {
+	clientID, ok := common.GetUserID(c)
+	if !ok {
+		return
+	}
+
+	packageID, ok := common.ParsePackageID(c, c.Param("package_id"))
+	if !ok {
+		return
+	}
+
+	packageDetails, err := h.clientsService.GetClientPackageDetails(c.Request.Context(), clientID, packageID)
+	if err != nil {
+		common.HandleServiceError(c, err)
+		return
+	}
+
+	response := mapPackageDetailsToGetClientPackageDetailsResponse(packageDetails)
+	c.JSON(http.StatusOK, response)
 }

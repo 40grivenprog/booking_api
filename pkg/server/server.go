@@ -62,7 +62,7 @@ func Start(ctx context.Context, cfg *config.Config, logger zerolog.Logger) error
 	apiGroup.Use(middleware.AuthMiddleware(tokenMaker))
 
 	// Register API routes with JWT protection
-	if err := api.Register(ctx, cfg, apiGroup, queries, tokenMaker); err != nil {
+	if err := api.Register(ctx, cfg, apiGroup, queries, database.DB, tokenMaker); err != nil {
 		return fmt.Errorf("failed to register API routes: %w", err)
 	}
 

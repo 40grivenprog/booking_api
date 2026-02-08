@@ -38,15 +38,8 @@ func (s *service) CreateProfessional(ctx context.Context, input CreateProfession
 		LastName:  input.LastName,
 	}
 
-	// Set optional phone number
-	if input.PhoneNumber != "" {
-		params.PhoneNumber.String = input.PhoneNumber
-		params.PhoneNumber.Valid = true
-	}
-
 	// Set password hash
-	params.PasswordHash.String = string(hashedPassword)
-	params.PasswordHash.Valid = true
+	params.PasswordHash = string(hashedPassword)
 
 	// Create professional in database
 	professional, err := s.repo.CreateProfessional(ctx, params)

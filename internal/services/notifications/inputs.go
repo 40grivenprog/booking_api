@@ -1,12 +1,15 @@
 package notifications
 
+import "github.com/google/uuid"
+
 type SendAppointmentRequestNotificationInput struct {
-	ChatID      int64  `json:"chat_id" binding:"required"`
-	ClientName  string `json:"client_name" binding:"required"` // "FirstName LastName"
-	StartTime   string `json:"start_time" binding:"required"`  // RFC3339 format
-	EndTime     string `json:"end_time" binding:"required"`    // RFC3339 format
-	Description string `json:"description,omitempty"`
-	Locale      string `json:"locale,omitempty"` // Optional locale, defaults to "en"
+	ChatID        int64     `json:"chat_id" binding:"required"`
+	AppointmentID uuid.UUID `json:"appointment_id" binding:"required"`
+	ClientName    string    `json:"client_name" binding:"required"` // "FirstName LastName"
+	StartTime     string    `json:"start_time" binding:"required"`  // RFC3339 format
+	EndTime       string    `json:"end_time" binding:"required"`    // RFC3339 format
+	Description   string    `json:"description,omitempty"`
+	Locale        string    `json:"locale,omitempty"` // Optional locale, defaults to "en"
 }
 
 type SendAppointmentCancellationNotificationInput struct {
@@ -25,4 +28,39 @@ type SendAppointmentConfirmationNotificationInput struct {
 	EndTime          string `json:"end_time" binding:"required"`
 	ProfessionalName string `json:"professional_name" binding:"required"`
 	Locale           string `json:"locale,omitempty"` // Optional locale, defaults to "en"
+}
+
+type SendSubscriptionNotificationInput struct {
+	ChatID     int64  `json:"chat_id" binding:"required"`
+	ClientName string `json:"client_name" binding:"required"`
+	Locale     string `json:"locale,omitempty"`
+}
+
+type SendGroupVisitAppointmentNotificationInput struct {
+	Description      string    `json:"description,omitempty"`
+	ChatID           int64     `json:"chat_id" binding:"required"`
+	StartTime        string    `json:"start_time" binding:"required"`
+	EndTime          string    `json:"end_time" binding:"required"`
+	ProfessionalName string    `json:"professional_name" binding:"required"`
+	Locale           string    `json:"locale,omitempty"`
+	InviteID         uuid.UUID `json:"invite_id" binding:"required"`
+}
+
+type SendAcceptInviteNotificationInput struct {
+	ChatID      int64  `json:"chat_id" binding:"required"`
+	StartTime   string `json:"start_time" binding:"required"`
+	EndTime     string `json:"end_time" binding:"required"`
+	Description string `json:"description,omitempty"`
+	Type        string `json:"type" binding:"required"`
+	ClientName  string `json:"client_name" binding:"required"`
+	Locale      string `json:"locale,omitempty"`
+}
+
+type SendPackageCreatedNotificationInput struct {
+	ChatID              int64  `json:"chat_id" binding:"required"`
+	Locale              string `json:"locale,omitempty"`
+	ProfessionalName    string `json:"professional_name" binding:"required"`
+	ApppointmentsNumber int64  `json:"apppointments_number" binding:"required"`
+	IssuedAt            string `json:"issued_at" binding:"required"`
+	ExpiresAt           string `json:"expires_at" binding:"required"`
 }

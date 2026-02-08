@@ -23,7 +23,7 @@ type AvailabilityConfig struct {
 }
 
 // GenerateAvailabilitySlots generates time slots for a specific date with availability info
-func (s *service) GenerateAvailabilitySlots(date time.Time, appointments []*db.GetAppointmentsByProfessionalAndDateWithClientRow, config AvailabilityConfig) []TimeSlot {
+func (s *service) GenerateAvailabilitySlots(date time.Time, appointments []*db.GetAppointmentsByProfessionalByDateRow, config AvailabilityConfig) []TimeSlot {
 	slots := make([]TimeSlot, 0, 18)
 
 	// Use provided timezone for current time

@@ -13,27 +13,23 @@ import (
 )
 
 const CreateClient = `-- name: CreateClient :one
-INSERT INTO clients (first_name, last_name, phone_number, chat_id, created_by, locale)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, chat_id, first_name, last_name, phone_number, created_by, created_at, updated_at, locale
+INSERT INTO clients (first_name, last_name, chat_id, locale)
+VALUES ($1, $2, $3, $4)
+RETURNING id, chat_id, first_name, last_name, locale, created_at, updated_at
 `
 
 type CreateClientParams struct {
-	FirstName   string         `json:"first_name"`
-	LastName    string         `json:"last_name"`
-	PhoneNumber sql.NullString `json:"phone_number"`
-	ChatID      sql.NullInt64  `json:"chat_id"`
-	CreatedBy   uuid.NullUUID  `json:"created_by"`
-	Locale      sql.NullString `json:"locale"`
+	FirstName string        `json:"first_name"`
+	LastName  string        `json:"last_name"`
+	ChatID    sql.NullInt64 `json:"chat_id"`
+	Locale    string        `json:"locale"`
 }
 
 func (q *Queries) CreateClient(ctx context.Context, arg *CreateClientParams) (*Client, error) {
 	row := q.db.QueryRowContext(ctx, CreateClient,
 		arg.FirstName,
 		arg.LastName,
-		arg.PhoneNumber,
 		arg.ChatID,
-		arg.CreatedBy,
 		arg.Locale,
 	)
 	var i Client
@@ -42,11 +38,9 @@ func (q *Queries) CreateClient(ctx context.Context, arg *CreateClientParams) (*C
 		&i.ChatID,
 		&i.FirstName,
 		&i.LastName,
-		&i.PhoneNumber,
-		&i.CreatedBy,
+		&i.Locale,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Locale,
 	)
 	return &i, err
 }
@@ -58,8 +52,8 @@ WHERE id = $1
 `
 
 type UpdateClientLocaleParams struct {
-	ID     uuid.UUID      `json:"id"`
-	Locale sql.NullString `json:"locale"`
+	ID     uuid.UUID `json:"id"`
+	Locale string    `json:"locale"`
 }
 
 func (q *Queries) UpdateClientLocale(ctx context.Context, arg *UpdateClientLocaleParams) error {

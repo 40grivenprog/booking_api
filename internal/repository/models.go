@@ -6,172 +6,82 @@ package db
 
 import (
 	"database/sql"
-	"database/sql/driver"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-type AppointmentStatus string
-
-const (
-	AppointmentStatusPending   AppointmentStatus = "pending"
-	AppointmentStatusConfirmed AppointmentStatus = "confirmed"
-	AppointmentStatusCancelled AppointmentStatus = "cancelled"
-	AppointmentStatusCompleted AppointmentStatus = "completed"
-)
-
-func (e *AppointmentStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = AppointmentStatus(s)
-	case string:
-		*e = AppointmentStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for AppointmentStatus: %T", src)
-	}
-	return nil
-}
-
-type NullAppointmentStatus struct {
-	AppointmentStatus AppointmentStatus `json:"appointment_status"`
-	Valid             bool              `json:"valid"` // Valid is true if AppointmentStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullAppointmentStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.AppointmentStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.AppointmentStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullAppointmentStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.AppointmentStatus), nil
-}
-
-func (e AppointmentStatus) Valid() bool {
-	switch e {
-	case AppointmentStatusPending,
-		AppointmentStatusConfirmed,
-		AppointmentStatusCancelled,
-		AppointmentStatusCompleted:
-		return true
-	}
-	return false
-}
-
-func AllAppointmentStatusValues() []AppointmentStatus {
-	return []AppointmentStatus{
-		AppointmentStatusPending,
-		AppointmentStatusConfirmed,
-		AppointmentStatusCancelled,
-		AppointmentStatusCompleted,
-	}
-}
-
-type AppointmentType string
-
-const (
-	AppointmentTypeAppointment AppointmentType = "appointment"
-	AppointmentTypeUnavailable AppointmentType = "unavailable"
-)
-
-func (e *AppointmentType) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = AppointmentType(s)
-	case string:
-		*e = AppointmentType(s)
-	default:
-		return fmt.Errorf("unsupported scan type for AppointmentType: %T", src)
-	}
-	return nil
-}
-
-type NullAppointmentType struct {
-	AppointmentType AppointmentType `json:"appointment_type"`
-	Valid           bool            `json:"valid"` // Valid is true if AppointmentType is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullAppointmentType) Scan(value interface{}) error {
-	if value == nil {
-		ns.AppointmentType, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.AppointmentType.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullAppointmentType) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.AppointmentType), nil
-}
-
-func (e AppointmentType) Valid() bool {
-	switch e {
-	case AppointmentTypeAppointment,
-		AppointmentTypeUnavailable:
-		return true
-	}
-	return false
-}
-
-func AllAppointmentTypeValues() []AppointmentType {
-	return []AppointmentType{
-		AppointmentTypeAppointment,
-		AppointmentTypeUnavailable,
-	}
-}
-
 type Appointment struct {
-	ID                        uuid.UUID             `json:"id"`
-	Type                      AppointmentType       `json:"type"`
-	ClientID                  uuid.NullUUID         `json:"client_id"`
-	ProfessionalID            uuid.UUID             `json:"professional_id"`
-	StartTime                 time.Time             `json:"start_time"`
-	EndTime                   time.Time             `json:"end_time"`
-	Status                    NullAppointmentStatus `json:"status"`
-	CancellationReason        sql.NullString        `json:"cancellation_reason"`
-	CancelledByProfessionalID uuid.NullUUID         `json:"cancelled_by_professional_id"`
-	CancelledByClientID       uuid.NullUUID         `json:"cancelled_by_client_id"`
-	CreatedAt                 time.Time             `json:"created_at"`
-	UpdatedAt                 time.Time             `json:"updated_at"`
-	Description               sql.NullString        `json:"description"`
+	ID             uuid.UUID      `json:"id"`
+	Type           string         `json:"type"`
+	ProfessionalID uuid.UUID      `json:"professional_id"`
+	StartTime      time.Time      `json:"start_time"`
+	EndTime        time.Time      `json:"end_time"`
+	Status         string         `json:"status"`
+	Description    sql.NullString `json:"description"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
 }
 
 type Client struct {
-	ID          uuid.UUID      `json:"id"`
-	ChatID      sql.NullInt64  `json:"chat_id"`
-	FirstName   string         `json:"first_name"`
-	LastName    string         `json:"last_name"`
-	PhoneNumber sql.NullString `json:"phone_number"`
-	CreatedBy   uuid.NullUUID  `json:"created_by"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	Locale      sql.NullString `json:"locale"`
+	ID        uuid.UUID     `json:"id"`
+	ChatID    sql.NullInt64 `json:"chat_id"`
+	FirstName string        `json:"first_name"`
+	LastName  string        `json:"last_name"`
+	Locale    string        `json:"locale"`
+	CreatedAt time.Time     `json:"created_at"`
+	UpdatedAt time.Time     `json:"updated_at"`
+}
+
+type ClientAppointment struct {
+	ID            uuid.UUID `json:"id"`
+	ClientID      uuid.UUID `json:"client_id"`
+	AppointmentID uuid.UUID `json:"appointment_id"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+type Invite struct {
+	ID               uuid.UUID `json:"id"`
+	AppointmentID    uuid.UUID `json:"appointment_id"`
+	StartTime        time.Time `json:"start_time"`
+	EndTime          time.Time `json:"end_time"`
+	ClientID         uuid.UUID `json:"client_id"`
+	Description      string    `json:"description"`
+	Type             string    `json:"type"`
+	ProfessionalName string    `json:"professional_name"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+type Package struct {
+	ID                  uuid.UUID    `json:"id"`
+	ClientID            uuid.UUID    `json:"client_id"`
+	ProfessionalID      uuid.UUID    `json:"professional_id"`
+	IssuedAt            time.Time    `json:"issued_at"`
+	ExpiresAt           time.Time    `json:"expires_at"`
+	ApppointmentsNumber int32        `json:"apppointments_number"`
+	DeactivatedAt       sql.NullTime `json:"deactivated_at"`
+	CreatedAt           time.Time    `json:"created_at"`
+	UpdatedAt           time.Time    `json:"updated_at"`
 }
 
 type Professional struct {
-	ID           uuid.UUID      `json:"id"`
-	ChatID       sql.NullInt64  `json:"chat_id"`
-	FirstName    string         `json:"first_name"`
-	LastName     string         `json:"last_name"`
-	PhoneNumber  sql.NullString `json:"phone_number"`
-	Username     string         `json:"username"`
-	PasswordHash sql.NullString `json:"password_hash"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
-	Locale       sql.NullString `json:"locale"`
+	ID           uuid.UUID     `json:"id"`
+	ChatID       sql.NullInt64 `json:"chat_id"`
+	FirstName    string        `json:"first_name"`
+	LastName     string        `json:"last_name"`
+	Username     string        `json:"username"`
+	PasswordHash string        `json:"password_hash"`
+	Locale       string        `json:"locale"`
+	CreatedAt    time.Time     `json:"created_at"`
+	UpdatedAt    time.Time     `json:"updated_at"`
+}
+
+type Subscription struct {
+	ID             uuid.UUID `json:"id"`
+	ClientID       uuid.UUID `json:"client_id"`
+	ProfessionalID uuid.UUID `json:"professional_id"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }

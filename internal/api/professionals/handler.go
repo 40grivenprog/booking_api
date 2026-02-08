@@ -51,18 +51,27 @@ func ProfessionalsRegister(p ProfessionalsHandlerParams) error {
 
 	professionals := p.Router.Group("/professionals")
 	{
-		professionals.GET("", h.GetProfessionals)
 		professionals.POST("/sign_in", h.SignInProfessional)
 		professionals.GET("/appointments", h.GetProfessionalAppointments)
-		professionals.GET("/:id/appointment_dates", h.GetProfessionalAppointmentDates)
 		professionals.PATCH("/appointments/:appointment_id/confirm", h.ConfirmAppointment)
 		professionals.PATCH("/appointments/:appointment_id/cancel", h.CancelAppointment)
 		professionals.POST("/unavailable_appointments", h.CreateUnavailableAppointment)
 		professionals.GET("/:id/availability", h.GetProfessionalAvailability)
 		professionals.GET("/timetable", h.GetProfessionalTimetable)
-		professionals.GET("/:id/clients", h.GetProfessionalClients)
-		professionals.GET("/:id/previous_appointments", h.GetPreviousAppointmentsByClient)
+		professionals.POST("/group_visit_appointments", h.CreateGroupVisitAppointment)
+		professionals.GET("/subscriptions", h.GetProfessionalSubscriptions)
+		professionals.GET("/previous_appointments", h.GetPreviousAppointments)
 		professionals.PATCH("/update_locale", h.UpdateLocale)
+		professionals.GET("/appointments/:appointment_id", h.GetAppointmentDetails)
+		professionals.PATCH("/appointments/:appointment_id/update", h.UpdateAppointment)
+		professionals.PATCH("/previous_appointments/:appointment_id/update", h.UpdatePreviousAppointment)
+		professionals.GET("/appointments/:appointment_id/missing_invite_users", h.GetMissingInviteUsersForAppointment)
+		professionals.GET("/previous_appointments/:appointment_id/missing_clients", h.GetMissingClientsForPreviousAppointment)
+		professionals.GET("/appointments/:appointment_id/pending_invite_users", h.GetPendingInviteUsersForAppointment)
+		professionals.POST("/appointments/:appointment_id/invite", h.CreateInviteForAppointment)
+		professionals.POST("/packages", h.CreatePackage)
+		professionals.GET("/packages", h.GetListOfPackages)
+		professionals.GET("/packages/:package_id", h.GetPackageDetails)
 	}
 
 	return nil

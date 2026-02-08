@@ -58,8 +58,20 @@ func ClientsRegister(p ClientsHandlerParams) error {
 		clients.POST("/book_appointment", h.BookAppointment)
 		clients.POST("/register", h.RegisterClient)
 		clients.GET("/appointments", h.GetClientAppointments)
-		clients.PATCH("/appointments/:appointment_id/cancel", h.CancelClientAppointment)
+		clients.DELETE("/appointments/:appointment_id", h.CancelClientAppointment)
 		clients.PATCH("/update_locale", h.UpdateLocale)
+		clients.POST("/subscribe", h.SubscribeToProfessional)
+		clients.DELETE("/unsubscribe/:professional_id", h.UnsubscribeFromProfessional)
+		clients.GET("/professionals/all", h.GetAllProfessionals)
+		clients.GET("/professionals", h.GetSubscribedProfessionals)
+		clients.GET("/invites", h.GetClientInvites)
+		clients.GET("/invites/:invite_id", h.GetClientInvite)
+		clients.DELETE("/invites/:invite_id", h.DeleteClientInvite)
+		clients.POST("/invites/:invite_id/accept", h.AcceptClientInvite)
+		clients.GET("/previous_appointments", h.GetPreviosAppointments)
+		clients.GET("/professionals/:professional_id/timetable", h.GetProfessionalsTimetable)
+		clients.GET("/packages", h.GetClientPackages)
+		clients.GET("/packages/:package_id", h.GetClientPackageDetails)
 	}
 
 	return nil

@@ -2,18 +2,17 @@ package api
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	adminAPI "github.com/vention/booking_api/internal/api/admin"
-	appointmentsAPI "github.com/vention/booking_api/internal/api/appointments"
 	clientsAPI "github.com/vention/booking_api/internal/api/clients"
 	professionalsAPI "github.com/vention/booking_api/internal/api/professionals"
 	usersAPI "github.com/vention/booking_api/internal/api/users"
 	"github.com/vention/booking_api/internal/config"
 	db "github.com/vention/booking_api/internal/repository"
 	adminService "github.com/vention/booking_api/internal/services/admin"
-	appointmentsService "github.com/vention/booking_api/internal/services/appointments"
 	clientsService "github.com/vention/booking_api/internal/services/clients"
 	"github.com/vention/booking_api/internal/services/notifications"
 	professionalsService "github.com/vention/booking_api/internal/services/professionals"
@@ -21,17 +20,18 @@ import (
 	"github.com/vention/booking_api/internal/token"
 )
 
-func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, queries *db.Queries, tokenMaker token.Maker) error {
+func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, queries *db.Queries, database *sql.DB, tokenMaker token.Maker) error {
 	// Register clients API
-	notificationsService, err := notifications.NewService(cfg.TelegramBotToken)
+	notificationsService, err := notifications.NewService(cfg.TelegramBotToken, cfg.TelegramMiniAppURL)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create notifications service")
 		return err
 	}
+
 	if err := clientsAPI.ClientsRegister(clientsAPI.ClientsHandlerParams{
 		TokenMaker:           tokenMaker,
 		Router:               router,
-		ClientsService:       clientsService.NewService(queries),
+		ClientsService:       clientsService.NewService(queries, database),
 		NotificationsService: notificationsService,
 	}); err != nil {
 		return err
@@ -41,7 +41,7 @@ func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, 
 	if err := professionalsAPI.ProfessionalsRegister(professionalsAPI.ProfessionalsHandlerParams{
 		TokenMaker:           tokenMaker,
 		Router:               router,
-		ProfessionalsService: professionalsService.NewService(queries),
+		ProfessionalsService: professionalsService.NewService(queries, database),
 		NotificationsService: notificationsService,
 	}); err != nil {
 		return err
@@ -55,13 +55,13 @@ func Register(ctx context.Context, cfg *config.Config, router *gin.RouterGroup, 
 		return err
 	}
 
-	// Register appointments API
-	if err := appointmentsAPI.AppointmentsRegister(appointmentsAPI.AppointmentsHandlerParams{
-		Router:              router,
-		AppointmentsService: appointmentsService.NewService(queries),
-	}); err != nil {
-		return err
-	}
+	// // Register appointments API
+	// if err := appointmentsAPI.AppointmentsRegister(appointmentsAPI.AppointmentsHandlerParams{
+	// 	Router:              router,
+	// 	AppointmentsService: appointmentsService.NewService(queries),
+	// }); err != nil {
+	// 	return err
+	// }
 
 	// Register users API
 	if err := usersAPI.UsersRegister(usersAPI.UsersHandlerParams{

@@ -3,20 +3,20 @@ package api
 import (
 	common "github.com/vention/booking_api/internal/api/common"
 	db "github.com/vention/booking_api/internal/repository"
+	"github.com/vention/booking_api/internal/services/clients"
 )
 
 // mapClientToClientRegisterResponse maps a client to a ClientRegisterResponse
 func mapClientToClientRegisterResponse(client *db.Client, token string) ClientRegisterResponse {
 	return ClientRegisterResponse{
-		ID:          client.ID.String(),
-		FirstName:   client.FirstName,
-		LastName:    client.LastName,
-		Role:        common.RoleClient,
-		PhoneNumber: common.FromNullString(client.PhoneNumber),
-		ChatID:      common.FromNullInt64(client.ChatID),
-		Token:       token,
-		CreatedAt:   common.FormatTimeWithTimezone(client.CreatedAt),
-		UpdatedAt:   common.FormatTimeWithTimezone(client.UpdatedAt),
+		ID:        client.ID.String(),
+		FirstName: client.FirstName,
+		LastName:  client.LastName,
+		Role:      common.RoleClient,
+		ChatID:    common.FromNullInt64(client.ChatID),
+		Token:     token,
+		CreatedAt: common.FormatTimeWithTimezone(client.CreatedAt),
+		UpdatedAt: common.FormatTimeWithTimezone(client.UpdatedAt),
 	}
 }
 
@@ -25,10 +25,10 @@ func mapAppointmentToGetClientAppointmentsResponse(appointments []*db.GetAppoint
 	var responseAppointments []ClientAppointment
 	for _, appt := range appointments {
 		appointment := ClientAppointment{
-			ID:          appt.ID.String(),
-			StartTime:   common.FormatTimeRFC3339(appt.StartTime),
-			EndTime:     common.FormatTimeRFC3339(appt.EndTime),
-			Description: appt.Description.String,
+			ID:        appt.ID.String(),
+			StartTime: common.FormatTimeRFC3339(appt.StartTime),
+			EndTime:   common.FormatTimeRFC3339(appt.EndTime),
+			Type:      appt.Type,
 		}
 		professional := &ClientAppointmentProfessional{
 			FirstName: appt.ProfessionalFirstName.String,
@@ -54,38 +54,187 @@ func mapAppointmentToGetClientAppointmentsResponse(appointments []*db.GetAppoint
 	return response
 }
 
-// mapAppointmentToCancelClientAppointmentResponse maps an appointment to a CancelClientAppointmentResponse
-func mapAppointmentToCancelClientAppointmentResponse(appointment *db.CancelAppointmentByClientWithDetailsRow) CancelClientAppointmentResponse {
-	return CancelClientAppointmentResponse{
-		Appointment: CancelledAppointment{
-			StartTime:          common.FormatTimeRFC3339(appointment.StartTime),
-			EndTime:            common.FormatTimeRFC3339(appointment.EndTime),
-			CancellationReason: appointment.CancellationReason.String,
-		},
-		Client: CancelledAppointmentClient{
-			FirstName: appointment.ClientFirstName.String,
-			LastName:  appointment.ClientLastName.String,
-		},
-		Professional: CancelledAppointmentProfessional{
-			ChatID: common.FromNullInt64(appointment.ProfessionalChatID),
+// mapProfessionalsTimetableToGetProfessionalsTimetableResponse maps a list of appointments to a GetProfessionalsTimetableResponse
+func mapProfessionalsTimetableToGetProfessionalsTimetableResponse(appointments []*db.GetProfessionalTimetableRow, dateStr string) GetProfessionalsTimetableResponse {
+	responseAppointments := make([]GetProfessionalsTimetableResponseItem, len(appointments))
+	for i, appt := range appointments {
+		responseAppointments[i] = GetProfessionalsTimetableResponseItem{
+			ID:        appt.ID.String(),
+			StartTime: common.FormatTimeRFC3339(appt.StartTime),
+			EndTime:   common.FormatTimeRFC3339(appt.EndTime),
+			Type:      appt.Type,
+		}
+	}
+
+	return GetProfessionalsTimetableResponse{
+		Date:         dateStr,
+		Appointments: responseAppointments,
+	}
+}
+
+// mapPackagesToGetClientPackagesResponse maps a list of packages to a GetClientPackagesResponse
+func mapPackagesToGetClientPackagesResponse(packages []*db.GetPackagesByClientIdRow) GetClientPackagesResponse {
+	responsePackages := make([]GetClientPackagesResponseItem, len(packages))
+	for i, pkg := range packages {
+		responsePackages[i] = GetClientPackagesResponseItem{
+			ID:                  pkg.ID.String(),
+			IssuedAt:            common.FormatTimeRFC3339(pkg.IssuedAt),
+			ExpiresAt:           common.FormatTimeRFC3339(pkg.ExpiresAt),
+			ApppointmentsNumber: int64(pkg.ApppointmentsNumber),
+			FirstName:           pkg.FirstName.String,
+			LastName:            pkg.LastName.String,
+		}
+	}
+	return GetClientPackagesResponse{
+		Packages: responsePackages,
+	}
+}
+
+// mapPackageDetailsToGetClientPackageDetailsResponse maps a package details to a GetClientPackageDetailsResponse
+func mapPackageDetailsToGetClientPackageDetailsResponse(packageDetails *clients.GetClientPackageDetailsOutput) GetClientPackageDetailsResponse {
+	response := GetClientPackageDetailsResponse{
+		ID:                  packageDetails.ID.String(),
+		IssuedAt:            common.FormatTimeRFC3339(packageDetails.IssuedAt),
+		ExpiresAt:           common.FormatTimeRFC3339(packageDetails.ExpiresAt),
+		ApppointmentsNumber: int64(packageDetails.ApppointmentsNumber),
+		Appointments:        make([]GetClientPackageDetailsResponseAppointment, len(packageDetails.Appointments)),
+	}
+
+	for i, apt := range packageDetails.Appointments {
+		response.Appointments[i] = GetClientPackageDetailsResponseAppointment{
+			ID:        apt.ID.String(),
+			StartTime: common.FormatTimeRFC3339(apt.StartTime),
+			EndTime:   common.FormatTimeRFC3339(apt.EndTime),
+			Type:      apt.Type,
+		}
+	}
+
+	return response
+}
+
+// // mapAppointmentToCancelClientAppointmentResponse maps an appointment to a CancelClientAppointmentResponse
+// func mapAppointmentToCancelClientAppointmentResponse(appointment *db.CancelAppointmentByClientWithDetailsRow) CancelClientAppointmentResponse {
+// 	return CancelClientAppointmentResponse{
+// 		Appointment: CancelledAppointment{
+// 			StartTime:          common.FormatTimeRFC3339(appointment.StartTime),
+// 			EndTime:            common.FormatTimeRFC3339(appointment.EndTime),
+// 			CancellationReason: appointment.CancellationReason.String,
+// 		},
+// 		Client: CancelledAppointmentClient{
+// 			FirstName: appointment.ClientFirstName.String,
+// 			LastName:  appointment.ClientLastName.String,
+// 		},
+// 		Professional: CancelledAppointmentProfessional{
+// 			ChatID: common.FromNullInt64(appointment.ProfessionalChatID),
+// 		},
+// 	}
+// }
+
+// mapProfessionalsToGetSubscribedProfessionalsResponse maps a list of professionals to a GetSubscribedProfessionalsResponse
+func mapProfessionalsToGetSubscribedProfessionalsResponse(professionals []*db.GetSubscriptionsByClientIDRow, total, page, pageSize int) GetSubscribedProfessionalsResponse {
+	responseProfessionals := make([]GetSubscribedProfessionalsResponseItem, len(professionals))
+	for i, professional := range professionals {
+		responseProfessionals[i] = GetSubscribedProfessionalsResponseItem{
+			ID:        professional.ID.String(),
+			FirstName: professional.FirstName,
+			LastName:  professional.LastName,
+			ChatID:    common.FromNullInt64(professional.ChatID),
+			Locale:    professional.Locale,
+		}
+	}
+
+	offset := (page - 1) * pageSize
+	hasNextPage := offset+pageSize < total
+
+	return GetSubscribedProfessionalsResponse{
+		Professionals: responseProfessionals,
+		Pagination: common.PaginationResponse{
+			HasNextPage: hasNextPage,
+			Page:        page,
+			PageSize:    pageSize,
 		},
 	}
 }
 
-// mapAppointmentToCreateAppointmentResponse maps database result to API response
-func mapAppointmentToCreateAppointmentResponse(appointment *db.CreateAppointmentWithDetailsRow) CreateAppointmentResponse {
-	return CreateAppointmentResponse{
-		Appointment: Appointment{
-			StartTime:   common.FormatTimeRFC3339(appointment.StartTime),
-			EndTime:     common.FormatTimeRFC3339(appointment.EndTime),
-			Description: appointment.Description.String,
+func mapProfessionalsToGetProfessionalsResponse(rows []*db.GetProfessionalsRow, total, page, pageSize int) GetProfessionalsResponse {
+	responseItems := make([]GetProfessionalsResponseItem, len(rows))
+	for i, row := range rows {
+		responseItems[i] = GetProfessionalsResponseItem{
+			ID:        row.ID.String(),
+			FirstName: row.FirstName,
+			LastName:  row.LastName,
+			ChatID:    common.FromNullInt64(row.ChatID),
+			Locale:    row.Locale,
+		}
+	}
+
+	offset := (page - 1) * pageSize
+	hasNextPage := offset+pageSize < total
+
+	return GetProfessionalsResponse{
+		Professionals: responseItems,
+		Pagination: common.PaginationResponse{
+			HasNextPage: hasNextPage,
+			Page:        page,
+			PageSize:    pageSize,
 		},
-		Client: Client{
-			FirstName: appointment.ClientFirstName.String,
-			LastName:  appointment.ClientLastName.String,
-		},
-		Professional: Professional{
-			ChatID: common.Int64Value(common.FromNullInt64(appointment.ProfessionalChatID)),
+	}
+}
+
+func mapInvitesToGetClientInvitesResponse(invites []*db.GetClientInvitesRow) GetClientInvitesResponse {
+	responseInvites := make([]GetClientInvitesResponseItem, len(invites))
+	for i, invite := range invites {
+		responseInvites[i] = GetClientInvitesResponseItem{
+			ID:               invite.ID.String(),
+			AppointmentID:    invite.AppointmentID.String(),
+			StartTime:        common.FormatTimeRFC3339(invite.StartTime),
+			EndTime:          common.FormatTimeRFC3339(invite.EndTime),
+			Description:      invite.Description,
+			Type:             invite.Type,
+			ProfessionalName: invite.ProfessionalName,
+			ClientID:         invite.ClientID.String(),
+		}
+	}
+	return GetClientInvitesResponse{
+		Invites: responseInvites,
+	}
+}
+
+func mapInviteToGetClientInviteResponse(invite *db.GetInviteByIDRow) GetClientInviteResponse {
+	return GetClientInviteResponse{
+		ID:               invite.ID.String(),
+		AppointmentID:    invite.AppointmentID.String(),
+		StartTime:        common.FormatTimeRFC3339(invite.StartTime),
+		EndTime:          common.FormatTimeRFC3339(invite.EndTime),
+		Description:      invite.Description,
+		Type:             invite.Type,
+		ProfessionalName: invite.ProfessionalName,
+	}
+}
+
+// mapPreviousAppointmentsToGetClientPreviousAppointmentsResponse maps a list of previous appointments to a GetClientPreviousAppointmentsResponse
+func mapPreviousAppointmentsToGetClientPreviousAppointmentsResponse(appointments []*db.GetPreviousAppointmentsByClientIDRow, total, page, pageSize int) GetClientPreviousAppointmentsResponse {
+	responseAppointments := make([]GetClientPreviousAppointmentsResponseItem, len(appointments))
+	for i, appt := range appointments {
+		responseAppointments[i] = GetClientPreviousAppointmentsResponseItem{
+			ID:        appt.ID.String(),
+			StartTime: common.FormatTimeRFC3339(appt.StartTime),
+			EndTime:   common.FormatTimeRFC3339(appt.EndTime),
+			Type:      appt.Type,
+			FirstName: appt.FirstName,
+			LastName:  appt.LastName,
+		}
+	}
+
+	offset := (page - 1) * pageSize
+	hasNextPage := offset+pageSize < total
+
+	return GetClientPreviousAppointmentsResponse{
+		Appointments: responseAppointments,
+		Pagination: common.PaginationResponse{
+			HasNextPage: hasNextPage,
+			Page:        page,
+			PageSize:    pageSize,
 		},
 	}
 }

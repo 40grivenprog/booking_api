@@ -35,8 +35,20 @@ func HandleServiceError(c *gin.Context, err error) {
 	case errors.Is(err, svcCommon.ErrAppointmentTimeConflict):
 		HandleErrorResponse(c, http.StatusConflict, ErrorTypeConflict, ErrorMsgAppointmentTimeConflict, err)
 
+	case errors.Is(err, svcCommon.ErrAppointmentFullyBooked):
+		HandleErrorResponse(c, http.StatusConflict, ErrorTypeConflict, ErrorMsgAppointmentFullyBooked, err)
+
 	case errors.Is(err, svcCommon.ErrProfessionalNotFound):
 		HandleErrorResponse(c, http.StatusNotFound, ErrorTypeNotFound, ErrorMsgProfessionalNotFound, err)
+
+	case errors.Is(err, svcCommon.ErrClientNotSubscribed):
+		HandleErrorResponse(c, http.StatusForbidden, ErrorTypeForbidden, ErrorMsgClientNotSubscribed, err)
+
+	case errors.Is(err, svcCommon.ErrInviteWasAlreadyConfirmedOrNotificationWasAlreadyAccepted):
+		HandleErrorResponse(c, http.StatusNotFound, ErrorTypeNotFound, ErrorMsgInviteWasAlreadyConfirmedOrNotificationWasAlreadyAccepted, err)
+
+	case errors.Is(err, svcCommon.ErrClientsCurrentPackageIsActive):
+		HandleErrorResponse(c, http.StatusConflict, ErrorTypeConflict, ErrorMsgClientsCurrentPackageIsActive, err)
 
 	default:
 		// For unknown errors, return internal server error

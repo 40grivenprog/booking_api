@@ -2,11 +2,11 @@ package api
 
 // GetUserByChatIDResponse represents the response for getting a user by chat_id
 type GetUserByChatIDResponse struct {
-	User User `json:"user"`
+	User GetUserByChatIDResponseItem `json:"user"`
 }
 
 // User represents a user in API responses (unified for both clients and professionals)
-type User struct {
+type GetUserByChatIDResponseItem struct {
 	ID        string `json:"id"`
 	ChatID    *int64 `json:"chat_id,omitempty"`
 	Username  string `json:"username"`

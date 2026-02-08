@@ -12,6 +12,7 @@ const (
 	RequestIDKey string = "request_id"
 	LoggerKey    string = "logger"
 	UserIDKey    string = "user_id"
+	UserNameKey  string = "user_name"
 )
 
 func GetRequestID(c *gin.Context) string {
@@ -41,4 +42,13 @@ func GetUserID(c *gin.Context) (uuid.UUID, bool) {
 	}
 
 	return userID, true
+}
+
+func GetUserName(c *gin.Context) string {
+	userNameValue, exists := c.Get(UserNameKey)
+	if !exists {
+		HandleErrorResponse(c, http.StatusUnauthorized, ErrorTypeAuth, ErrorMsgMissingAuthToken, nil)
+		return ""
+	}
+	return userNameValue.(string)
 }

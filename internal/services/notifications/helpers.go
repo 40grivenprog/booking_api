@@ -22,3 +22,18 @@ func formatAppointmentTime(startTimeStr, endTimeStr string) (string, string, str
 
 	return date, startTimeFormatted, endTimeFormatted
 }
+
+// formatDate formats a date string for display
+// Input: RFC3339 format (e.g., "2024-01-15T10:00:00Z")
+// Output: formatted date string (YYYY-MM-DD)
+func formatDate(dateStr string) string {
+	t, err := time.Parse(time.RFC3339, dateStr)
+	if err != nil {
+		// If parsing fails, try to extract date part
+		if len(dateStr) >= 10 {
+			return dateStr[:10]
+		}
+		return dateStr
+	}
+	return t.Format("2006-01-02")
+}
