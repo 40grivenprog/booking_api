@@ -115,6 +115,11 @@ func (s *service) ConfirmAppointment(ctx context.Context, input ConfirmAppointme
 		return nil, err
 	}
 
+	// validate that prof doesn't have appointment at the same time
+	if err := s.validateProfessionalAppointmentConflict(ctx, input.ProfessionalID, appointment.StartTime, appointment.EndTime); err != nil {
+		return nil, err
+	}
+
 	// Confirm appointment
 	err = s.repo.ConfirmAppointmentById(ctx, input.AppointmentID)
 	if err != nil {

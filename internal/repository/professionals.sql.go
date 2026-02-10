@@ -14,6 +14,29 @@ import (
 	"github.com/lib/pq"
 )
 
+const CheckProfessionalAppointmentConflict = `-- name: CheckProfessionalAppointmentConflict :one
+SELECT EXISTS(
+    SELECT 1 FROM appointments a
+    WHERE a.professional_id = $1
+    AND a.start_time = $2
+    AND a.end_time = $3
+    AND a.status = 'confirmed'
+)
+`
+
+type CheckProfessionalAppointmentConflictParams struct {
+	ProfessionalID uuid.UUID `json:"professional_id"`
+	StartTime      time.Time `json:"start_time"`
+	EndTime        time.Time `json:"end_time"`
+}
+
+func (q *Queries) CheckProfessionalAppointmentConflict(ctx context.Context, arg *CheckProfessionalAppointmentConflictParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, CheckProfessionalAppointmentConflict, arg.ProfessionalID, arg.StartTime, arg.EndTime)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const CountPreviousAppointmentsByProfessionalID = `-- name: CountPreviousAppointmentsByProfessionalID :one
 SELECT COUNT(DISTINCT a.id)
 FROM appointments a

@@ -20,6 +20,7 @@ type Querier interface {
 	//   AND status not in ('cancelled', 'pending')
 	// ORDER BY start_time ASC;
 	CheckClientAppointmentConflict(ctx context.Context, arg *CheckClientAppointmentConflictParams) (bool, error)
+	CheckProfessionalAppointmentConflict(ctx context.Context, arg *CheckProfessionalAppointmentConflictParams) (bool, error)
 	// -- name: CreateAppointmentWithDetails :one
 	// WITH new_appointment AS (
 	//     INSERT INTO appointments (type, professional_id, start_time, end_time, status, description)
