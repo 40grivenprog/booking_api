@@ -154,3 +154,19 @@ func (s *service) validatePreviousPackage(ctx context.Context, clientID uuid.UUI
 
 	return currentPackage.ID, nil
 }
+
+// validateProfessionalAppointmentConflict validates that the professional doesn't have an appointment at the same time
+func (s *service) validateProfessionalAppointmentConflict(ctx context.Context, professionalID uuid.UUID, startTime time.Time, endTime time.Time) error {
+	hasConflict, err := s.repo.CheckProfessionalAppointmentConflict(ctx, &db.CheckProfessionalAppointmentConflictParams{
+		ProfessionalID: professionalID,
+		StartTime:      startTime,
+		EndTime:        endTime,
+	})
+	if err != nil {
+		return err
+	}
+	if hasConflict {
+		return svcCommon.ErrAppointmentTimeConflict
+	}
+	return nil
+}

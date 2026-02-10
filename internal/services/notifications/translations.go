@@ -64,7 +64,7 @@ var translations = map[string]NotificationTranslations{
 			Description string
 			Action      string
 		}{
-			Title:       "🔔 New Appointment request!",
+			Title:       "🔔 New Appointment request",
 			Client:      "👤 Client:",
 			Date:        "📅 Date:",
 			Time:        "🕐 Time:",
@@ -79,7 +79,7 @@ var translations = map[string]NotificationTranslations{
 			Time         string
 			Reason       string
 		}{
-			Title:        "🔔 Appointment Cancelled!",
+			Title:        "🔔 Appointment Cancelled",
 			Client:       "👤 Client:",
 			Professional: "👤 Professional:",
 			Date:         "📅 Date:",
@@ -92,7 +92,7 @@ var translations = map[string]NotificationTranslations{
 			Date         string
 			Time         string
 		}{
-			Title:        "🔔 Appointment Confirmed!",
+			Title:        "🔔 Appointment Confirmed",
 			Professional: "👤 Professional:",
 			Date:         "📅 Date:",
 			Time:         "🕐 Time:",
@@ -103,7 +103,7 @@ var translations = map[string]NotificationTranslations{
 			Title  string
 			Client string
 		}{
-			Title:  "🔔 New client subscription!",
+			Title:  "🔔 New client subscription",
 			Client: "👤 Client:",
 		},
 		GroupVisitAppointment: struct {
@@ -141,7 +141,7 @@ var translations = map[string]NotificationTranslations{
 			IssuedAt           string
 			ExpiresAt          string
 		}{
-			Title:              "%s add new package for you!",
+			Title:              "%s add new package for you",
 			DetailsTitle:       "Details:",
 			AppointmentsNumber: "📦 Number of appointments:",
 			IssuedAt:           "📅 Issued at:",
@@ -157,7 +157,7 @@ var translations = map[string]NotificationTranslations{
 			Description string
 			Action      string
 		}{
-			Title:       "🔔 Новый запрос на запись!",
+			Title:       "🔔 Новый запрос на запись",
 			Client:      "👤 Клиент:",
 			Date:        "📅 Дата:",
 			Time:        "🕐 Время:",
@@ -172,7 +172,7 @@ var translations = map[string]NotificationTranslations{
 			Time         string
 			Reason       string
 		}{
-			Title:        "🔔 Запись отменена!",
+			Title:        "🔔 Запись отменена",
 			Client:       "👤 Клиент:",
 			Professional: "👤 Профессионал:",
 			Date:         "📅 Дата:",
@@ -185,7 +185,7 @@ var translations = map[string]NotificationTranslations{
 			Date         string
 			Time         string
 		}{
-			Title:        "🔔 Запись подтверждена!",
+			Title:        "🔔 Запись подтверждена",
 			Professional: "👤 Профессионал:",
 			Date:         "📅 Дата:",
 			Time:         "🕐 Время:",
@@ -196,7 +196,7 @@ var translations = map[string]NotificationTranslations{
 			Title  string
 			Client string
 		}{
-			Title:  "🔔 Новая подписка клиента!",
+			Title:  "🔔 Новая подписка клиента",
 			Client: "👤 Клиент:",
 		},
 		GroupVisitAppointment: struct {
@@ -234,7 +234,7 @@ var translations = map[string]NotificationTranslations{
 			IssuedAt           string
 			ExpiresAt          string
 		}{
-			Title:              "%s добавил новый пакет для вас!",
+			Title:              "%s добавил новый пакет для вас",
 			DetailsTitle:       "Детали:",
 			AppointmentsNumber: "📦 Количество записей:",
 			IssuedAt:           "📅 Выдан:",
@@ -250,7 +250,7 @@ var translations = map[string]NotificationTranslations{
 			Description string
 			Action      string
 		}{
-			Title:       "🔔 Новий запит на запис!",
+			Title:       "🔔 Новий запит на запис",
 			Client:      "👤 Клієнт:",
 			Date:        "📅 Дата:",
 			Time:        "🕐 Час:",
@@ -265,7 +265,7 @@ var translations = map[string]NotificationTranslations{
 			Time         string
 			Reason       string
 		}{
-			Title:        "🔔 Запис скасовано!",
+			Title:        "🔔 Запис скасовано",
 			Client:       "👤 Клієнт:",
 			Professional: "👤 Професіонал:",
 			Date:         "📅 Дата:",
@@ -278,7 +278,7 @@ var translations = map[string]NotificationTranslations{
 			Date         string
 			Time         string
 		}{
-			Title:        "🔔 Запис підтверджено!",
+			Title:        "🔔 Запис підтверджено",
 			Professional: "👤 Професіонал:",
 			Date:         "📅 Дата:",
 			Time:         "🕐 Час:",
@@ -289,7 +289,7 @@ var translations = map[string]NotificationTranslations{
 			Title  string
 			Client string
 		}{
-			Title:  "🔔 Нова підписка клієнта!",
+			Title:  "🔔 Нова підписка клієнта",
 			Client: "👤 Клієнт:",
 		},
 		GroupVisitAppointment: struct {
@@ -327,7 +327,7 @@ var translations = map[string]NotificationTranslations{
 			IssuedAt           string
 			ExpiresAt          string
 		}{
-			Title:              "%s додав новий пакет для вас!",
+			Title:              "%s додав новий пакет для вас",
 			DetailsTitle:       "Деталі:",
 			AppointmentsNumber: "📦 Кількість записів:",
 			IssuedAt:           "📅 Видано:",
@@ -343,7 +343,7 @@ var translations = map[string]NotificationTranslations{
 			Description string
 			Action      string
 		}{
-			Title:       "🔔 Nowe żądanie wizyty!",
+			Title:       "🔔 Nowe żądanie wizyty",
 			Client:      "👤 Klient:",
 			Date:        "📅 Data:",
 			Time:        "🕐 Godzina:",
@@ -358,7 +358,7 @@ var translations = map[string]NotificationTranslations{
 			Time         string
 			Reason       string
 		}{
-			Title:        "🔔 Wizyta anulowana!",
+			Title:        "🔔 Wizyta anulowana",
 			Client:       "👤 Klient:",
 			Professional: "👤 Profesjonalista:",
 			Date:         "📅 Data:",
@@ -371,7 +371,7 @@ var translations = map[string]NotificationTranslations{
 			Date         string
 			Time         string
 		}{
-			Title:        "🔔 Wizyta potwierdzona!",
+			Title:        "🔔 Wizyta potwierdzona",
 			Professional: "👤 Profesjonalista:",
 			Date:         "📅 Data:",
 			Time:         "🕐 Godzina:",
@@ -382,7 +382,7 @@ var translations = map[string]NotificationTranslations{
 			Title  string
 			Client string
 		}{
-			Title:  "🔔 Nowa subskrypcja klienta!",
+			Title:  "🔔 Nowa subskrypcja klienta",
 			Client: "👤 Klient:",
 		},
 		GroupVisitAppointment: struct {
@@ -420,7 +420,7 @@ var translations = map[string]NotificationTranslations{
 			IssuedAt           string
 			ExpiresAt          string
 		}{
-			Title:              "%s dodał nowy pakiet dla Ciebie!",
+			Title:              "%s dodał nowy pakiet dla Ciebie",
 			DetailsTitle:       "Szczegóły:",
 			AppointmentsNumber: "📦 Liczba wizyt:",
 			IssuedAt:           "📅 Wydano:",

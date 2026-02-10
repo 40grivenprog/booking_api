@@ -223,3 +223,13 @@ AND c.id IN (
 
 -- name: GetClientInfoByID :one
 SELECT id, first_name, last_name, chat_id, locale FROM clients WHERE id = $1;
+
+
+-- name: CheckProfessionalAppointmentConflict :one
+SELECT EXISTS(
+    SELECT 1 FROM appointments a
+    WHERE a.professional_id = $1
+    AND a.start_time = $2
+    AND a.end_time = $3
+    AND a.status = 'confirmed'
+);

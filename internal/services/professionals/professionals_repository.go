@@ -50,4 +50,5 @@ type ProfessionalsRepository interface {
 	GetAppointmentsForThePackage(ctx context.Context, arg *db.GetAppointmentsForThePackageParams) ([]*db.GetAppointmentsForThePackageRow, error)
 	GetPackageById(ctx context.Context, id uuid.UUID) (*db.Package, error)
 	GetClientInfoByID(ctx context.Context, id uuid.UUID) (*db.GetClientInfoByIDRow, error)
+	CheckProfessionalAppointmentConflict(ctx context.Context, arg *db.CheckProfessionalAppointmentConflictParams) (bool, error)
 }

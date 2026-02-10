@@ -141,11 +141,12 @@ func (h *ProfessionalsHandler) CancelAppointment(c *gin.Context) {
 	if result.StartTime.After(time.Now()) {
 		for _, client := range result.CancelAppointmentClients {
 			err = h.notificationsService.SendAppointmentCancellationNotification(c.Request.Context(), notifications.SendAppointmentCancellationNotificationInput{
-				ChatID:         common.Int64Value(common.FromNullInt64(client.ClientChatID)),
-				StartTime:      common.FormatTimeRFC3339(result.StartTime),
-				EndTime:        common.FormatTimeRFC3339(result.EndTime),
-				RespondentName: userName,
-				Locale:         client.ClientLocale,
+				ChatID:             common.Int64Value(common.FromNullInt64(client.ClientChatID)),
+				StartTime:          common.FormatTimeRFC3339(result.StartTime),
+				EndTime:            common.FormatTimeRFC3339(result.EndTime),
+				RespondentName:     userName,
+				Locale:             client.ClientLocale,
+				CancellationReason: req.CancellationReason,
 			})
 		}
 	}
@@ -655,7 +656,6 @@ func (h *ProfessionalsHandler) GetListOfPackages(c *gin.Context) {
 		common.HandleServiceError(c, err)
 		return
 	}
-	fmt.Println("packages.ID", packages[0].ID)
 
 	response := mapPackagesToGetListOfPackagesResponse(packages)
 	c.JSON(http.StatusOK, response)
